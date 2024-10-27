@@ -1,8 +1,25 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 void main() {
+
+  if(kIsWeb) { // Only for Web!
+    Firebase.initializeApp(options: FirebaseOptions(
+        apiKey: "AIzaSyBRElGRhjY1HjJqe7Zt-PKLn1YRy9IEkXs",
+        authDomain: "budget-management-app-a9b5e.firebaseapp.com",
+        projectId: "budget-management-app-a9b5e",
+        storageBucket: "budget-management-app-a9b5e.appspot.com",
+        messagingSenderId: "528312897299",
+        appId: "1:528312897299:web:e19b90d51e49dba62b54e6",
+        measurementId: "G-LKZ75WL9T7"));
+  }else{ // Android or iOS
+    Firebase.initializeApp();
+  }
+
   runApp(const MyApp());
 }
+
 
 //lolol jajaja
 class MyApp extends StatelessWidget {

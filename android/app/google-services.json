@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "528312897299",
+    "project_id": "budget-management-app-a9b5e",
+    "storage_bucket": "budget-management-app-a9b5e.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:528312897299:android:e614d892744fef312b54e6",
+        "android_client_info": {
+          "package_name": "com.example.budget_management_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBU8Y6afuxKVI1PxAmpGT6-KrXsPTT_EE8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
