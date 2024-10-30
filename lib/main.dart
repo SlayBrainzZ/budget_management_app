@@ -8,7 +8,7 @@ void main() async {
 
   try {
     if (kIsWeb) { // Only for Web!
-      await Firebase.initializeApp(options: FirebaseOptions(
+      await Firebase.initializeApp(options: const FirebaseOptions(
         apiKey: "AIzaSyBRElGRhjY1HjJqe7Zt-PKLn1YRy9IEkXs",
         authDomain: "budget-management-app-a9b5e.firebaseapp.com",
         projectId: "budget-management-app-a9b5e",

@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:budget_management_app/auth.dart';
 
 class HomePage extends StatelessWidget{
-  HomePage({Key? key}) : super(key: key);
+  HomePage({super.key});
 
   final User? user = Auth().currentUser;
 

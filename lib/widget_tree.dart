@@ -4,7 +4,7 @@ import 'package:budget_management_app/pages/home_page.dart';
 import 'package:budget_management_app/pages/login_register_page.dart';
 
 class WidgetTree extends StatefulWidget{
-  const WidgetTree({Key? key}) : super(key: key);
+  const WidgetTree({super.key});
 
   @override
   State<WidgetTree> createState() => _WidgetTreeState();
