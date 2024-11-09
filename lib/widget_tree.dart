@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:budget_management_app/auth.dart';
 import 'package:budget_management_app/pages/home_page.dart';
 import 'package:budget_management_app/pages/login_register_page.dart';
-import 'package:budget_management_app/MoneyGuard/app.dart';
+import 'package:budget_management_app/MoneyGuard/home_page.dart';
 
 class WidgetTree extends StatefulWidget{
   const WidgetTree({super.key});
