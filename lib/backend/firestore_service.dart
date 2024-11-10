@@ -3,6 +3,7 @@ import 'package:budget_management_app/backend/User.dart';
 import 'package:budget_management_app/backend/Transaction.dart';
 import 'package:budget_management_app/backend/Category.dart';
 import 'package:budget_management_app/backend/BankAccount.dart';
+import 'package:budget_management_app/backend/Subscriptions.dart';
 
 class FirestoreService {
   final firestore.FirebaseFirestore _db = firestore.FirebaseFirestore.instance;
@@ -12,6 +13,7 @@ class FirestoreService {
   final firestore.CollectionReference bankAccountsRef = firestore.FirebaseFirestore.instance.collection('bankAccounts');
   final firestore.CollectionReference categoriesRef = firestore.FirebaseFirestore.instance.collection('Categories');
   final firestore.CollectionReference transactionsRef = firestore.FirebaseFirestore.instance.collection('Transactions');
+  final firestore.CollectionReference subscriptionsRef = firestore.FirebaseFirestore.instance.collection("Subscriptions");
 
   // =======================
   //  User Functions
