@@ -12,7 +12,7 @@ class Category {
   Map<String, dynamic> toMap() {
     return {
       'name': name,
-      'budgetLimit': budgetLimit,
+      'budgetLimit': budgetLimit.toString(),
     };
   }
 
@@ -20,7 +20,7 @@ class Category {
     return Category(
       id: documentId,
       name: data['name'],
-      budgetLimit: data['budgetLimit'],
+      budgetLimit: double.parse(data['budgetLimit']),
     );
   }
 }

@@ -28,7 +28,7 @@ class Transaction {
     return {
       'userId': userId,
       'bankAccountId': bankAccountId,
-      'amount': amount,
+      'amount': amount.toString(),
       'date': date.toIso8601String(),
       'time': time,
       'categoryId': categoryId,
@@ -43,7 +43,7 @@ class Transaction {
       id: documentId,
       userId: data['userId'],
       bankAccountId: data['bankAccountId'],
-      amount: data['amount'],
+      amount: double.parse(data['amount']),
       date: DateTime.parse(data['date']),
       time: data['time'],
       categoryId: data['categoryId'],
