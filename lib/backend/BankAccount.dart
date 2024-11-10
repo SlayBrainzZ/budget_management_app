@@ -1,30 +1,30 @@
 class BankAccount {
   final String id;
   final String userId;
-  final String bankName;
-  final String? accountNumber;
+  final String accountName;
   final double balance;
   final DateTime lastUpdated;
   final String accountType;
+  final bool exclude;
 
   BankAccount({
     required this.id,
     required this.userId,
-    required this.bankName,
-    this.accountNumber,
+    required this.accountName,
     required this.balance,
     required this.lastUpdated,
     required this.accountType,
+    required this.exclude
   });
 
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
-      'bankName': bankName,
-      'accountNumber': accountNumber ?? '',
-      'balance': balance,
+      'accountName': accountName,
+      'balance': balance.toString(),
       'lastUpdated': lastUpdated.toIso8601String(),
       'accountType': accountType,
+      'exclude' : exclude
     };
   }
 
@@ -32,11 +32,11 @@ class BankAccount {
     return BankAccount(
       id: documentId,
       userId: data['userId'],
-      bankName: data['bankName'],
-      accountNumber: data['accountNumber'],
-      balance: data['balance'],
+      accountName: data['accountName'],
       lastUpdated: DateTime.parse(data['lastUpdated']),
+      balance: double.parse(data['balance']),
       accountType: data['accountType'],
+      exclude: data['exclude']
     );
   }
 }

@@ -8,10 +8,10 @@ class FirestoreService {
   final firestore.FirebaseFirestore _db = firestore.FirebaseFirestore.instance;
 
   // Collection references
-  final firestore.CollectionReference usersRef = firestore.FirebaseFirestore.instance.collection('users');
+  final firestore.CollectionReference usersRef = firestore.FirebaseFirestore.instance.collection('Users');
   final firestore.CollectionReference bankAccountsRef = firestore.FirebaseFirestore.instance.collection('bankAccounts');
-  final firestore.CollectionReference categoriesRef = firestore.FirebaseFirestore.instance.collection('categories');
-  final firestore.CollectionReference transactionsRef = firestore.FirebaseFirestore.instance.collection('transactions');
+  final firestore.CollectionReference categoriesRef = firestore.FirebaseFirestore.instance.collection('Categories');
+  final firestore.CollectionReference transactionsRef = firestore.FirebaseFirestore.instance.collection('Transactions');
 
   // =======================
   //  User Functions

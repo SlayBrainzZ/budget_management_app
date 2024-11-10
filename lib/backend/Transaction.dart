@@ -9,6 +9,7 @@ class Transaction {
   final String categoryId;
   final String type;
   final String? note;
+  final bool importance;
 
   Transaction({
     required this.id,
@@ -19,6 +20,7 @@ class Transaction {
     required this.time,
     required this.categoryId,
     required this.type,
+    required this.importance,
     this.note,
   });
 
@@ -31,6 +33,7 @@ class Transaction {
       'time': time,
       'categoryId': categoryId,
       'type': type,
+      'importance' : importance,
       'note': note ?? '',
     };
   }
@@ -45,6 +48,7 @@ class Transaction {
       time: data['time'],
       categoryId: data['categoryId'],
       type: data['type'],
+      importance: data['importance'],
       note: data['note'],
     );
   }
