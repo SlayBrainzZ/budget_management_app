@@ -128,6 +128,29 @@ class FirestoreService {
   }
 
   // =======================
+  //  Subscription Functions
+  // =======================
+
+  Future<void> createSubscription(Subscription subscription) async {
+    await subscriptionsRef.doc(subscription.id).set(subscription.toMap());
+  }
+
+  Future<List<Subscription>> getUserSubscriptions(String userId) async {
+    firestore.QuerySnapshot snapshot = await subscriptionsRef
+        .where('userId', isEqualTo: userId)
+        .get();
+    return snapshot.docs.map((doc) => Subscription.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+  }
+
+  Future<void> updateSubscription(Subscription subscription) async {
+    await subscriptionsRef.doc(subscription.id).update(subscription.toMap());
+  }
+
+  Future<void> deleteSubscription(String subscriptionId) async {
+    await subscriptionsRef.doc(subscriptionId).delete();
+  }
+
+  // =======================
   //  Summary and Utility Functions
   // =======================
 
