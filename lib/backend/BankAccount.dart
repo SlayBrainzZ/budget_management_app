@@ -1,3 +1,11 @@
+/**
+ * This class represents a user's bank account. It stores information
+ * such as ID, user ID, account name, balance, last updated date, account type,
+ * and an "exclude" flag to indicate if the account should be excluded from calculations.
+ *
+ * @author Ahmad
+ */
+
 class BankAccount {
   final String id;
   final String userId;

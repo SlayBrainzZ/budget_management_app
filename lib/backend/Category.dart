@@ -1,3 +1,10 @@
+/**
+ * This class represents a spending category. It stores information
+ * such as ID, name, and budget limit.
+ *
+ * @author Ahmad
+ */
+
 class Category {
   final String id;
   final String name;

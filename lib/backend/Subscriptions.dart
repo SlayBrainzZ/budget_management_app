@@ -1,3 +1,11 @@
+/**
+ * This class represents a recurring expense. It stores information
+ * such as ID, user ID, subscription name, amount, renewal date, flags for recurring status
+ * and reminder sent status.
+ *
+ * @author Ahmad
+ */
+
 class Subscription {
   final String id;
   final String userId;

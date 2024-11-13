@@ -1,3 +1,10 @@
+/**
+ * This class represents a user in the application. It stores user information
+ * such as ID, user ID, email, encrypted password, and creation date.
+ *
+ * @author Ahmad
+ */
+
 class User {
 
   final String id;

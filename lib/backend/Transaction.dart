@@ -1,4 +1,11 @@
-// Transaction.dart
+/**
+ * This class represents a financial transaction. It stores information
+ * such as ID, user ID, bank account ID, amount, date, time, category ID, transaction type,
+ * importance flag, and optional note.
+ *
+ * @author Ahmad
+ */
+
 class Transaction {
   final String id;
   final String userId;
