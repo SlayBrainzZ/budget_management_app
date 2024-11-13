@@ -5,6 +5,15 @@ import 'package:budget_management_app/backend/Category.dart';
 import 'package:budget_management_app/backend/BankAccount.dart';
 import 'package:budget_management_app/backend/Subscriptions.dart';
 
+/**
+ *
+ * This class provides a set of functions for interacting with the Firebase Firestore database.
+ * It handles CRUD operations for users, bank accounts, categories, transactions, and subscriptions.
+ * Additionally, it provides utility functions for data analysis and calculations.
+ *
+ * @author Ahmad
+ */
+
 class FirestoreService {
   final firestore.FirebaseFirestore _db = firestore.FirebaseFirestore.instance;
 
