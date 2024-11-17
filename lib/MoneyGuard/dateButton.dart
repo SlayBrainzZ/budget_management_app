@@ -56,7 +56,7 @@ class DateButton extends StatelessWidget {
                 Text(
                   day,
                   style: TextStyle(
-                    fontSize: 50,
+                    fontSize: 60,
                     fontWeight: FontWeight.bold,
                     color: Colors.green[600],
                   ),

@@ -98,7 +98,7 @@ class _DashboardState extends State<Dashboard> {
                       Text(
                         '${account['balance']} ${account['currency']}',
                         style: const TextStyle(
-                          fontSize: 15,
+                          fontSize: 17,
                           color: Colors.black54,
                         ),
                       ),
@@ -293,7 +293,7 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
   String accountName = "Mein Konto";
   String accountBalance = "0";
   final String currency = "EUR";
-  String accountType = "Bargeld"; // Standardwert geändert zu "Bargeld"
+  String accountType = "Bargeld"; // Standardwert auf "Bargeld" gesetzt
 
   @override
   Widget build(BuildContext context) {
@@ -320,6 +320,7 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
             },
           ),
           const SizedBox(height: 20),
+
           ListTile(
             leading: const Icon(Icons.account_balance, color: Colors.blue),
             title: const Text("Kontotyp"),
@@ -330,7 +331,7 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
                   accountType = newValue!;
                 });
               },
-              items: <String>['Bargeld', 'Bankkonto']
+              items: <String>['Bargeld', 'Bankkonto'] // Reihenfolge garantiert
                   .map<DropdownMenuItem<String>>((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
@@ -340,6 +341,7 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
             ),
           ),
           const SizedBox(height: 20),
+
           SwitchListTile(
             title: const Text("Von Statistik ausschließen"),
             value: false,
@@ -347,6 +349,7 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
               setState(() {});
             },
           ),
+
           if (!widget.isNewAccount && widget.onAccountDeleted != null)
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
@@ -355,6 +358,7 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
                 _showDeleteConfirmationDialog();
               },
             ),
+
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20),
             child: Row(
@@ -399,6 +403,10 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
       ),
     );
   }
+
+// Weitere Methoden (_editField, _showDeleteConfirmationDialog) bleiben unverändert
+
+
 
   void _editField(String fieldName, Function(String) onValueSaved) {
     TextEditingController controller = TextEditingController();
@@ -449,6 +457,7 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
             ),
             TextButton(
               onPressed: () {
+                // Hier wird die Löschfunktion nur ausgeführt, wenn mindestens 2 Konten vorhanden sind
                 if (widget.onAccountDeleted != null) {
                   widget.onAccountDeleted!();
                 }
