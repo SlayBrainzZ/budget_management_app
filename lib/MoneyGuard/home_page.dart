@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dashboard.dart';
 
 /*
 void main() {
@@ -40,7 +41,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   final List<Widget> _views = [
-    const Center(child: Text('Dashboard')),
+    Dashboard(),
     const Center(child: Text('Statistiken')),
     const Center(child: Text('Add')),
     const Center(child: Text('Sparmaßnahmen')),
