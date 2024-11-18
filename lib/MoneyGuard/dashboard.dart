@@ -364,7 +364,7 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                if (widget.isNewAccount)
+             /*   if (widget.isNewAccount)
                   OutlinedButton(
                     onPressed: () {
                       Navigator.of(context).pop();
@@ -377,7 +377,7 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
                       style: TextStyle(color: Colors.black),
                     ),
                   ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 8),*/
                 ElevatedButton(
                   onPressed: () {
                     widget.onAccountCreated({
