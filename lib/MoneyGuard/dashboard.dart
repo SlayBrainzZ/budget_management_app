@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dateButton.dart'; // Import the DateButton widget
-//import 'category.dart';
+import 'category.dart';
 
 class Dashboard extends StatefulWidget {
   @override
@@ -171,7 +171,7 @@ class _DashboardState extends State<Dashboard> {
           Center(
             child: SizedBox(
               height: 250,  // Fixed height for CategoryButton to ensure visibility
-              //child: CategoryButton(),
+              child: CategoryButton(),
             ),
           ),
 

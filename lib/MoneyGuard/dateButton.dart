@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
+/*
 void main() {
   runApp(MaterialApp(
     home: DateButton(),
   ));
-}
+}*/
 
 class DateButton extends StatelessWidget {
   @override
@@ -17,7 +18,7 @@ class DateButton extends StatelessWidget {
     return Scaffold(
       body: Center(
         child: SizedBox(
-          width: 250,  // Feste Breite
+          width: 250, // Feste Breite
           height: 250, // Feste Höhe
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -93,16 +94,85 @@ class DateButtonScreen extends StatefulWidget {
 class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
+  List<String> categories = ['Kategorie 1', 'Kategorie 2', 'Kategorie 3'];
+  List<String> accounts = ['Konto 1', 'Konto 2', 'Konto 3'];
+  List<String> selectedCategories = [];
+  List<String> selectedAccounts = [];
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    selectedCategories = ['Alle']; // Standardauswahl
+    selectedAccounts = ['Alle'];
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _showMultiSelectDialog({
+    required List<String> options,
+    required List<String> selectedValues,
+    required ValueChanged<List<String>> onConfirm,
+    required String title,
+  }) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        List<String> tempSelectedValues = List.from(selectedValues);
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text(title),
+              content: SingleChildScrollView(
+                child: Column(
+                  children: options.map((option) {
+                    return CheckboxListTile(
+                      title: Text(option),
+                      value: tempSelectedValues.contains(option),
+                      onChanged: (bool? checked) {
+                        setState(() {
+                          if (checked == true) {
+                            if (option == 'Alle') {
+                              tempSelectedValues.clear();
+                              tempSelectedValues.add('Alle');
+                            } else {
+                              tempSelectedValues.remove('Alle');
+                              tempSelectedValues.add(option);
+                            }
+                          } else {
+                            tempSelectedValues.remove(option);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  child: Text('Abbrechen'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+                TextButton(
+                  child: Text('Bestätigen'),
+                  onPressed: () {
+                    onConfirm(tempSelectedValues);
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -120,6 +190,86 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
       ),
       body: Column(
         children: [
+          // Filterleiste
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      _showMultiSelectDialog(
+                        options: ['Alle', ...categories],
+                        selectedValues: selectedCategories,
+                        onConfirm: (values) {
+                          setState(() {
+                            selectedCategories = values.isEmpty ? ['Alle'] : values;
+                          });
+                        },
+                        title: 'Kategorien auswählen',
+                      );
+                    },
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      side: BorderSide(color: Colors.grey),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          selectedCategories.contains('Alle')
+                              ? 'Alle Kategorien'
+                              : selectedCategories.join(', '),
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: Colors.black),
+                        ),
+                        Icon(Icons.arrow_drop_down, color: Colors.black),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      _showMultiSelectDialog(
+                        options: ['Alle', ...accounts],
+                        selectedValues: selectedAccounts,
+                        onConfirm: (values) {
+                          setState(() {
+                            selectedAccounts = values.isEmpty ? ['Alle'] : values;
+                          });
+                        },
+                        title: 'Konten auswählen',
+                      );
+                    },
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      side: BorderSide(color: Colors.grey),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          selectedAccounts.contains('Alle')
+                              ? 'Alle Konten'
+                              : selectedAccounts.join(', '),
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: Colors.black),
+                        ),
+                        Icon(Icons.arrow_drop_down, color: Colors.black),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Einnahmen-/Ausgaben-Info
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: Row(
