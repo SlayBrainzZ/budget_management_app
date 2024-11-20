@@ -18,6 +18,7 @@ class _LoginPageState extends State<LoginPage>{
   Future<void> signInWithEmailAndPassword() async{
     try {
       await Auth().signInWithEmailAndPassword(
+          context: context, // Pass the context here
           email: _controllerEmail.text,
           password: _controllerPassword.text,);
     } on FirebaseAuthException catch (e) {
