@@ -1,3 +1,4 @@
+import 'package:budget_management_app/backend/user_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:budget_management_app/backend/firestore_service.dart';
 import 'package:budget_management_app/widget_tree.dart';
@@ -8,6 +9,7 @@ import 'package:budget_management_app/backend/User.dart' as testUser;
 import 'package:budget_management_app/backend/Transaction.dart' as testTransaction;
 import 'package:budget_management_app/backend/Subscriptions.dart' as testSubscriptions;
 import 'package:budget_management_app/backend/BankAccount.dart' as testBankAccount;
+import 'package:provider/provider.dart';
 
 
 void main() async {
@@ -32,7 +34,12 @@ void main() async {
     FirestoreService firestoreService = FirestoreService();
 
 
-    runApp(const MyApp());
+    runApp(
+      ChangeNotifierProvider(
+          create: (context) => UserProvider(),
+          child: const MyApp(),
+      ),
+    );
   } catch (e) {
     print("Firebase initialization failed: $e");
     // Optionally, you can show a Snackbar or some UI to indicate the error.
