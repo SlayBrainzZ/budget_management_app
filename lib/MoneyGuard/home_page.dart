@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dashboard.dart';
 
 /*
 void main() {
@@ -31,18 +32,19 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _selectedIndex = 0;
+  int _selectedIndex = 0;  // Diese Variable speichert den aktuell ausgewählten Index der BottomNavigationBar.
 
-  void _onItemTapped(int index) {
+  void _tappedItem(int index) {
     setState(() {
-      _selectedIndex = index;
+      _selectedIndex = index;  // Überschreibt index und aktualisiert den Zustand der App, sodass das UI neu gezeichnet wird.
     });
   }
 
   final List<Widget> _views = [
-    const Center(child: Text('Dashboard')),
+    Dashboard(), // Dashboard Widget
     const Center(child: Text('Statistiken')),
-    const Center(child: Text('Add')),
+   //AddTransactionPage(),
+    const Center(child: Text('Transaktion')),
     const Center(child: Text('Sparmaßnahmen')),
     const Center(child: Text('Einstellungen')),
   ];
@@ -50,19 +52,21 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: _selectedIndex == 2
+          ? null  // Wenn der Index 2 (Plus-Button) ist, wird die AppBar nicht angezeigt.
+          : AppBar(  // Wenn der Index nicht 2 ist, zeigen wir die AppBar an.
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         centerTitle: true,
         title: Text(
           widget.title,
           style: const TextStyle(
-            color: Colors.white, // Titel "MoneyGuard" in Weiß
+            color: Colors.white,
             fontFamily: 'Roboto',
           ),
         ),
-        actions: [    //actions: [: Dies beginnt eine Liste von Widgets, die in der rechten Ecke der App-Leiste angezeigt werden (
+        actions: [
           IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.white), // Glocken-Symbol
+            icon: const Icon(Icons.notifications, color: Colors.white),
             onPressed: () {
               // Aktion für Benachrichtigungen
             },
@@ -70,7 +74,7 @@ class _MyHomePageState extends State<MyHomePage> {
         ],
       ),
       body: Center(
-        child: _views[_selectedIndex],
+        child: _views[_selectedIndex],  // Zeigt die aktuell ausgewählte Seite basierend auf dem Index.
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
@@ -105,8 +109,9 @@ class _MyHomePageState extends State<MyHomePage> {
         currentIndex: _selectedIndex,
         selectedItemColor: Colors.teal[300]!,
         unselectedItemColor: Colors.grey,
-        onTap: _onItemTapped,
+        onTap: _tappedItem,
       ),
     );
   }
 }
+
