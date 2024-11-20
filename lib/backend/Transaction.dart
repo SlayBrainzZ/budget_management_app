@@ -6,26 +6,26 @@
  * @author Ahmad
  */
 
+
 class Transaction {
-  final String id;
+  String? id; // Make id nullable to handle creation scenario
   final String userId;
-  final String bankAccountId;
-  final double amount;
+  String bankAccountId;
+  double amount;
   final DateTime date;
   final String time;
-  final String categoryId;
+  String? categoryId; // Make categoryId nullable
   final String type;
-  final String? note;
+  String? note;
   final bool importance;
 
   Transaction({
-    required this.id,
     required this.userId,
     required this.bankAccountId,
     required this.amount,
     required this.date,
     required this.time,
-    required this.categoryId,
+    this.categoryId, // Make categoryId optional
     required this.type,
     required this.importance,
     this.note,
@@ -47,7 +47,6 @@ class Transaction {
 
   static Transaction fromMap(Map<String, dynamic> data, String documentId) {
     return Transaction(
-      id: documentId,
       userId: data['userId'],
       bankAccountId: data['bankAccountId'],
       amount: double.parse(data['amount']),
@@ -57,6 +56,6 @@ class Transaction {
       type: data['type'],
       importance: data['importance'],
       note: data['note'],
-    );
+    )..id = documentId; // Assign the document ID after creation
   }
 }

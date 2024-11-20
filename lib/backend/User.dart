@@ -7,37 +7,35 @@
 
 class User {
 
-  final String id;
+  String? id; // Make id nullable to handle creation scenario
   final String userId;
   final String email;
-  final String encryptedPassword;
   final DateTime createdDate;
+  String? name; // Optional name field
 
   User({
-    required this.id,
     required this.userId,
     required this.email,
-    required this.encryptedPassword,
-    required this.createdDate
+    required this.createdDate,
+    this.name,
   });
 
-  Map<String, dynamic> toMap(){
-    return{
+  Map<String, dynamic> toMap() {
+    return {
+      'userId': userId, // Include userId in the map
       'email': email,
-      'encryptedPassword': encryptedPassword,
-      'createdDate': createdDate.toIso8601String(),
+      'createdDate': createdDate, // Store DateTime object directly
+      'name': name, // Include name in the map
     };
   }
 
-  static User fromMap(Map<String, dynamic> data, String documentId){
+  static User fromMap(Map<String, dynamic> data, String documentId) {
     return User(
-      id: documentId,
       userId: data['userId'],
       email: data['email'],
-      encryptedPassword: data['encryptedPassword'],
       createdDate: DateTime.parse(data['createdDate']),
-    );
+      name: data['name'],
+    )..id = documentId;
   }
-
-
 }
+

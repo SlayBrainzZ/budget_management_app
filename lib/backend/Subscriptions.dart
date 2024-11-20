@@ -7,7 +7,7 @@
  */
 
 class Subscription {
-  final String id;
+  String? id; // Make id nullable to handle creation scenario
   final String userId;
   final String name;
   final double amount;
@@ -16,7 +16,6 @@ class Subscription {
   final bool isReminderSent;
 
   Subscription({
-    required this.id,
     required this.userId,
     required this.name,
     required this.amount,
@@ -38,13 +37,13 @@ class Subscription {
 
   static Subscription fromMap(Map<String, dynamic> data, String documentId) {
     return Subscription(
-      id: documentId,
       userId: data['userId'],
       name: data['name'],
       amount: double.parse(data['amount']),
       renewalDate: DateTime.parse(data['renewalDate']),
       isRecurring: data['isRecurring'],
       isReminderSent: data['isReminderSent'],
-    );
+    )..id = documentId; // Assign the document ID after creation
+
   }
 }

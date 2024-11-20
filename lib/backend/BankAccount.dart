@@ -7,7 +7,7 @@
  */
 
 class BankAccount {
-  final String id;
+  String? id; // Make id nullable to handle creation scenario
   final String userId;
   final String accountName;
   final double balance;
@@ -16,7 +16,6 @@ class BankAccount {
   final bool exclude;
 
   BankAccount({
-    required this.id,
     required this.userId,
     required this.accountName,
     required this.balance,
@@ -38,13 +37,12 @@ class BankAccount {
 
   static BankAccount fromMap(Map<String, dynamic> data, String documentId) {
     return BankAccount(
-      id: documentId,
       userId: data['userId'],
       accountName: data['accountName'],
       lastUpdated: DateTime.parse(data['lastUpdated']),
       balance: double.parse(data['balance']),
       accountType: data['accountType'],
       exclude: data['exclude']
-    );
+    )..id = documentId; // Assign the document ID after creation
   }
 }
