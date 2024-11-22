@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dashboard.dart';
+import 'saving_plan.dart';
+import 'StatisticsPage.dart';
 
 /*
 void main() {
@@ -42,10 +44,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
   final List<Widget> _views = [
     Dashboard(), // Dashboard Widget
-    const Center(child: Text('Statistiken')),
+    StatisticsPage(),
    //AddTransactionPage(),
     const Center(child: Text('Transaktion')),
-    const Center(child: Text('Sparmaßnahmen')),
+    SavingPlan(),
     const Center(child: Text('Einstellungen')),
   ];
 
