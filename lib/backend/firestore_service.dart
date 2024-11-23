@@ -20,6 +20,7 @@ class FirestoreService {
   ///
   /// This function takes a `User` object as input and adds it to the `users` collection.
 
+  /// to be called only in the user registration process!
   Future<void> createUser(User user) async {
     try {
       firestore.DocumentReference docRef = await usersRef.add(user.toMap());
@@ -158,16 +159,19 @@ class FirestoreService {
   ///
   /// This function takes a `Category` object as input and adds it to the `categories` collection.
 
-  Future<void> createCategory(User user, Category category) async {
+  Future<void> createCategory(String documentId, Category category) async {
     try {
-      final userCategoriesRef = usersRef.doc(user.id).collection('Categories');
+      final userCategoriesRef = usersRef.doc(documentId).collection('Categories');
+      // Create the category and get its reference
       firestore.DocumentReference docRef = await userCategoriesRef.add(category.toMap());
       category.id = docRef.id;
+      // Update the document to ensure the `id` field is saved
       await docRef.set(category.toMap());
     } catch (e) {
       print("Error creating category: $e");
     }
   }
+
 
   /// Retrieves a list of default categories from Firestore.
   ///
@@ -183,9 +187,9 @@ class FirestoreService {
   /// This function takes a `categoryId` as input and retrieves the corresponding category document from the
   /// `categories` collection.
 
-  Future<Category?> getCategory(User user, String categoryId) async {
+  Future<Category?> getCategory(String documentId, String categoryId) async {
     try {
-      final userCategoriesRef = usersRef.doc(user.id).collection('Categories');
+      final userCategoriesRef = usersRef.doc(documentId).collection('Categories');
       final docSnapshot = await userCategoriesRef.doc(categoryId).get();
 
       if (docSnapshot.exists) {
@@ -200,35 +204,46 @@ class FirestoreService {
   }
 
 
+
   /// Retrieves all categories for a specific user.
   ///
   /// This function takes a `userId` as input and retrieves all category documents from the `categories`
   /// collection that belong to that user.
 
-  Future<List<Category>> getUserCategories(String userId) async {
+  Future<List<Category>> getUserCategories(String documentId) async {
     try {
-      final userCategoriesRef = usersRef.doc(userId).collection('Categories');
-      final querySnapshot = await userCategoriesRef.get();
-      return querySnapshot.docs.map((doc) => Category.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+      final userCategoriesRef = usersRef.doc(documentId).collection('Categories');
+      firestore.QuerySnapshot snapshot = await userCategoriesRef.get();
+
+      return snapshot.docs.map((doc) {
+        try {
+          return Category.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+        } catch (e) {
+          print("Error parsing category: $e");
+          return null; // Handle gracefully
+        }
+      }).whereType<Category>().toList(); // Remove nulls from the list
     } catch (e) {
       print("Error getting user categories: $e");
       return [];
     }
   }
 
+
   /// Updates an existing category in Firestore.
   ///
   /// This function takes a `Category` object as input and updates the corresponding category document in the
   /// `categories` collection.
 
-  Future<void> updateCategory(User user, Category category) async {
+  Future<void> updateCategory(String documentId, Category category) async {
     try {
-      final userCategoriesRef = usersRef.doc(user.id).collection('Categories');
+      final userCategoriesRef = usersRef.doc(documentId).collection('Categories');
       await userCategoriesRef.doc(category.id).update(category.toMap());
     } catch (e) {
       print("Error updating category: $e");
     }
   }
+
 
   /// Deletes a category from Firestore.
   ///
