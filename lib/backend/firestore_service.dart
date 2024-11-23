@@ -429,6 +429,7 @@ class FirestoreService {
   //  Summary and Utility Functions
   // =======================
 
+
   /// Calculates the total balance for a specific user based on their transactions.
   ///
   /// This function takes the user's `documentId` as input and calculates the sum of all
