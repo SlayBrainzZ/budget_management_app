@@ -94,9 +94,34 @@ class _CategoryScreenState extends State<CategoryScreen> {
     {'name': 'Gesundheit', 'icon': Icons.health_and_safety, 'color': Colors.red},
   ];
 
+
+
+
   List<String> customCategories = [];
   List<IconData> customIcons = [];
   List<Color> customColors = [];
+
+  // Getter für alle Kategorien
+  List<Map<String, dynamic>> get allCategories {
+    return [
+      ...defaultCategories,
+      ...customCategories.asMap().entries.map((entry) {
+        int index = entry.key;
+        return {
+          'name': entry.value,
+          'icon': customIcons[index],
+          'color': customColors[index],
+        };
+      }).toList(),
+    ];
+  }
+
+  // Getter für individuelle Werte
+  List<String> get categoryNames => allCategories.map((cat) => cat['name'] as String).toList();
+  List<IconData> get categoryIcons => allCategories.map((cat) => cat['icon'] as IconData).toList();
+  List<Color> get categoryColors => allCategories.map((cat) => cat['color'] as Color).toList();
+
+
 
   final List<IconData> availableIcons = [
     Icons.more_horiz,
