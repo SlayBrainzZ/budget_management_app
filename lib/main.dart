@@ -1,4 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:budget_management_app/backend/firestore_service.dart';
+import 'package:budget_management_app/backend/User.dart';
+import 'package:budget_management_app/auth.dart';
 import 'package:budget_management_app/widget_tree.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -20,12 +23,29 @@ void main() async {
     } else { // Android or iOS
       await Firebase.initializeApp();
     }
+
     runApp(const MyApp());
+
+    Auth().authStateChanges.listen((user) async {
+      if (user != null) {
+        print('User registered: ${user.email}');
+
+        // Now that a user is registered, let's create the User document in Firestore
+        FirestoreService().createUser(User(
+          userId: user.uid,
+          email: user.email!,
+          createdDate: DateTime.now(),
+        ));
+      }
+    });
+
   } catch (e) {
     print("Firebase initialization failed: $e");
     // Optionally, you can show a Snackbar or some UI to indicate the error.
   }
 }
+
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
