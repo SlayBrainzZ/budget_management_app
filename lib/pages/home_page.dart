@@ -5,29 +5,29 @@ import 'package:budget_management_app/auth.dart';
 class HomePage extends StatelessWidget{
   HomePage({super.key});
 
-  final User? user = Auth().currentUser;
+  final User? user = Auth().currentUser; // Fetches the current user if logged in
 
   Future<void> signOut() async {
-    await Auth().signOut();
+    await Auth().signOut(); // Calls signOut() method in Auth class to log the user out
   }
 
   Widget _title(){
-    return const Text('Authentication');
+    return const Text('Authentication'); // Displays title
   }
 
   Widget _userId(){
-    return Text(user?.email ?? 'User email');
+    return Text(user?.email ?? 'User email'); // Displays the user's email or placeholder if null
   }
 
   Widget _signOutButton(){
     return ElevatedButton(
-      onPressed: signOut,
+      onPressed: signOut, // Signs out the user when pressed
       child: const Text('Sign Out'),
     );
   }
 
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context){ // Builds the UI layout of the home screen using a Scaffold with centered content in a Column.
     return Scaffold(
       appBar: AppBar(
         title: _title(),

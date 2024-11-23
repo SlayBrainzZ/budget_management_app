@@ -18,8 +18,8 @@ class _LoginPageState extends State<LoginPage>{
   Future<void> signInWithEmailAndPassword() async{
     try {
       await Auth().signInWithEmailAndPassword(
-          email: _controllerEmail.text,
-          password: _controllerPassword.text,);
+        email: _controllerEmail.text,
+        password: _controllerPassword.text,);
     } on FirebaseAuthException catch (e) {
       setState(() {
         errorMessage = e.message;
@@ -30,8 +30,8 @@ class _LoginPageState extends State<LoginPage>{
   Future<void> createUserWithEmailAndPassword() async {
     try {
       await Auth().createUserWithEmailAndPassword(
-          email: _controllerEmail.text,
-          password: _controllerPassword.text,);
+        email: _controllerEmail.text,
+        password: _controllerPassword.text,);
     } on FirebaseAuthException catch (e) {
       setState(() {
         errorMessage = e.message;
@@ -58,19 +58,19 @@ class _LoginPageState extends State<LoginPage>{
 
   Widget _submitButton(){
     return ElevatedButton(
-        onPressed: isLogin ? signInWithEmailAndPassword : createUserWithEmailAndPassword,
-        child: Text(isLogin ? 'Login' : 'Register'),
+      onPressed: isLogin ? signInWithEmailAndPassword : createUserWithEmailAndPassword,
+      child: Text(isLogin ? 'Login' : 'Register'),
     );
   }
 
   Widget _loginOrRegisterButton(){
     return TextButton(
-        onPressed: (){
-          setState(() {
-            isLogin = !isLogin;
-          });
-        },
-        child: Text(isLogin ? 'Register instead' : 'Login instead'),
+      onPressed: (){
+        setState(() {
+          isLogin = !isLogin;
+        });
+      },
+      child: Text(isLogin ? 'Register instead' : 'Login instead'),
     );
   }
 
