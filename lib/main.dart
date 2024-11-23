@@ -1,20 +1,10 @@
-import 'package:budget_management_app/backend/user_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:budget_management_app/backend/firestore_service.dart';
 import 'package:budget_management_app/widget_tree.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:budget_management_app/backend/Category.dart' as testCat;
-import 'package:budget_management_app/backend/User.dart' as testUser;
-import 'package:budget_management_app/backend/Transaction.dart' as testTransaction;
-import 'package:budget_management_app/backend/Subscriptions.dart' as testSubscriptions;
-import 'package:budget_management_app/backend/BankAccount.dart' as testBankAccount;
-import 'package:provider/provider.dart';
-
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // Ensure bindings are initialized for Firwebase
-
+  WidgetsFlutterBinding.ensureInitialized(); // Ensure bindings are initialized for Firebase
 
   try {
     if (kIsWeb) { // Only for Web!
@@ -30,22 +20,12 @@ void main() async {
     } else { // Android or iOS
       await Firebase.initializeApp();
     }
-
-    FirestoreService firestoreService = FirestoreService();
-
-
-    runApp(
-      ChangeNotifierProvider(
-          create: (context) => UserProvider(),
-          child: const MyApp(),
-      ),
-    );
+    runApp(const MyApp());
   } catch (e) {
     print("Firebase initialization failed: $e");
     // Optionally, you can show a Snackbar or some UI to indicate the error.
   }
 }
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -63,4 +43,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
