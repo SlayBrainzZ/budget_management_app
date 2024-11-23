@@ -19,8 +19,8 @@ class FirestoreService {
   /// Creates a new user in Firestore.
   ///
   /// This function takes a `User` object as input and adds it to the `users` collection.
-
-  /// to be called only in the user registration process!
+  /// It also creates the necessary subcollections for the user. This function should
+  /// be called only during the user registration process.
   Future<void> createUser(User user) async {
     try {
       firestore.DocumentReference docRef = await usersRef.add(user.toMap());
@@ -37,12 +37,10 @@ class FirestoreService {
       print("Error creating user: $e");
     }
   }
-
-  /// Retrieves a user from Firestore by their user ID.
+  /// Retrieves a user from Firestore by their `userId`.
   ///
-  /// This function takes a `userId` as input and retrieves the corresponding user document from the
-  /// `users` collection.
-
+  /// This function takes a `userId` as input and retrieves the corresponding user document
+  /// from the `users` collection.
   Future<User?> getUser(String userId) async {
     firestore.QuerySnapshot snapshot = await usersRef.where('userId', isEqualTo: userId).get();
     if (snapshot.docs.isNotEmpty) {
@@ -50,21 +48,17 @@ class FirestoreService {
     }
     return null;
   }
-
   /// Updates an existing user in Firestore.
   ///
-  /// This function takes a `User` object as input and updates the corresponding user document in the
-  /// `users` collection.
-
+  /// This function takes a `User` object as input and updates the corresponding user document
+  /// in the `users` collection.
   Future<void> updateUser(User user) async {
     await usersRef.doc(user.id).update(user.toMap());
   }
-
   /// Deletes a user from Firestore.
   ///
-  /// This function takes a `userId` as input and deletes the corresponding user document from the
-  /// `users` collection.
-
+  /// This function takes a `userId` as input and deletes the corresponding user document
+  /// from the `users` collection.
   Future<void> deleteUser(String userId) async {
     await usersRef.doc(userId).delete();
   }
@@ -73,13 +67,13 @@ class FirestoreService {
   //  Bank Account Functions
   // =======================
 
-  /// Creates a new bank account in Firestore.
+  /// Creates a new bank account in Firestore for a specific user.
   ///
-  /// This function takes a `BankAccount` object as input and adds it to the `bankAccounts` collection.
-
-  Future<void> createBankAccount(User user, BankAccount account) async {
+  /// This function takes the user's `documentId` and a `BankAccount` object as input,
+  /// and adds the bank account to the user's `bankAccounts` subcollection.
+  Future<void> createBankAccount(String documentId, BankAccount account) async {
     try {
-      final userBankAccountsRef = usersRef.doc(user.id).collection('bankAccounts');
+      final userBankAccountsRef = usersRef.doc(documentId).collection('bankAccounts');
       firestore.DocumentReference docRef = await userBankAccountsRef.add(account.toMap());
       account.id = docRef.id;
       await docRef.set(account.toMap());
@@ -88,14 +82,13 @@ class FirestoreService {
     }
   }
 
-  /// Retrieves a bank account from Firestore by its account ID.
+  /// Retrieves a bank account from Firestore by its account ID and the user's `documentId`.
   ///
-  /// This function takes an `accountId` as input and retrieves the corresponding bank account document from the
-  /// `bankAccounts` collection.
-
-  Future<BankAccount?> getBankAccount(User user, String accountId) async {
+  /// This function takes the user's `documentId` and the `accountId` as input,
+  /// and retrieves the corresponding bank account document from the user's `bankAccounts` subcollection.
+  Future<BankAccount?> getBankAccount(String documentId, String accountId) async {
     try {
-      final userBankAccountsRef = usersRef.doc(user.id).collection('bankAccounts');
+      final userBankAccountsRef = usersRef.doc(documentId).collection('bankAccounts');
       firestore.DocumentSnapshot snapshot = await userBankAccountsRef.doc(accountId).get();
       if (snapshot.exists) {
         return BankAccount.fromMap(snapshot.data() as Map<String, dynamic>, snapshot.id);
@@ -107,14 +100,13 @@ class FirestoreService {
     }
   }
 
-  /// Retrieves all bank accounts for a specific user.
+  /// Retrieves all bank accounts for a specific user from Firestore.
   ///
-  /// This function takes a `userId` as input and retrieves all bank account documents from the `bankAccounts`
-  /// collection that belong to that user.
-
-  Future<List<BankAccount>> getUserBankAccounts(String userId) async {
+  /// This function takes the user's `documentId` as input and retrieves all bank account documents
+  /// from the user's `bankAccounts` subcollection.
+  Future<List<BankAccount>> getUserBankAccounts(String documentId) async {
     try {
-      final userBankAccountsRef = usersRef.doc(userId).collection('bankAccounts');
+      final userBankAccountsRef = usersRef.doc(documentId).collection('bankAccounts');
       firestore.QuerySnapshot snapshot = await userBankAccountsRef.get();
       return snapshot.docs.map((doc) => BankAccount.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
     } catch (e) {
@@ -123,28 +115,26 @@ class FirestoreService {
     }
   }
 
-  /// Updates an existing bank account in Firestore.
+  /// Updates an existing bank account in Firestore for a specific user.
   ///
-  /// This function takes a `BankAccount` object as input and updates the corresponding bank account document in the
-  /// `bankAccounts` collection.
-
-  Future<void> updateBankAccount(User user, BankAccount account) async {
+  /// This function takes the user's `documentId` and a `BankAccount` object as input,
+  /// and updates the corresponding bank account document in the user's `bankAccounts` subcollection.
+  Future<void> updateBankAccount(String documentId, BankAccount account) async {
     try {
-      final userBankAccountsRef = usersRef.doc(user.id).collection('bankAccounts');
+      final userBankAccountsRef = usersRef.doc(documentId).collection('bankAccounts');
       await userBankAccountsRef.doc(account.id).update(account.toMap());
     } catch (e) {
       print("Error updating bank account: $e");
     }
   }
 
-  /// Deletes a bank account from Firestore.
+  /// Deletes a bank account from Firestore for a specific user.
   ///
-  /// This function takes an `accountId` as input and deletes the corresponding bank account document from the
-  /// `bankAccounts` collection.
-
-  Future<void> deleteBankAccount(User user, String accountId) async {
+  /// This function takes the user's `documentId` and the `accountId` as input,
+  /// and deletes the corresponding bank account document from the user's `bankAccounts` subcollection.
+  Future<void> deleteBankAccount(String documentId, String accountId) async {
     try {
-      final userBankAccountsRef = usersRef.doc(user.id).collection('bankAccounts');
+      final userBankAccountsRef = usersRef.doc(documentId).collection('bankAccounts');
       await userBankAccountsRef.doc(accountId).delete();
     } catch (e) {
       print("Error deleting bank account: $e");
@@ -155,9 +145,10 @@ class FirestoreService {
   //  Category Functions
   // =======================
 
-  /// Creates a new category in Firestore.
+  /// Creates a new category in Firestore for a specific user.
   ///
-  /// This function takes a `Category` object as input and adds it to the `categories` collection.
+  /// This function takes the user's `documentId` and a `Category` object as input,
+  /// and adds the category to the user's `Categories` subcollection.
 
   Future<void> createCategory(String documentId, Category category) async {
     try {
@@ -172,20 +163,20 @@ class FirestoreService {
     }
   }
 
-
   /// Retrieves a list of default categories from Firestore.
   ///
-  /// This function retrieves all category documents from the `categories` collection that are marked as default.
+  /// This function retrieves all category documents with the field `isDefault` set to `true`
+  /// from all `Categories` subcollections across all users.
 
   Future<List<Category>> getDefaultCategories() async {
     firestore.QuerySnapshot snapshot = await _db.collectionGroup('Categories').where('isDefault', isEqualTo: true).get();
     return snapshot.docs.map((doc) => Category.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
   }
 
-  /// Retrieves a category from Firestore by its category ID.
+  /// Retrieves a specific category for a user from Firestore.
   ///
-  /// This function takes a `categoryId` as input and retrieves the corresponding category document from the
-  /// `categories` collection.
+  /// This function takes the user's `documentId` and the `categoryId` as input,
+  /// and retrieves the corresponding category document from the user's `Categories` subcollection.
 
   Future<Category?> getCategory(String documentId, String categoryId) async {
     try {
@@ -203,12 +194,10 @@ class FirestoreService {
     }
   }
 
-
-
-  /// Retrieves all categories for a specific user.
+  /// Retrieves all categories for a specific user from Firestore.
   ///
-  /// This function takes a `userId` as input and retrieves all category documents from the `categories`
-  /// collection that belong to that user.
+  /// This function takes the user's `documentId` as input and retrieves all category documents
+  /// from the user's `Categories` subcollection.
 
   Future<List<Category>> getUserCategories(String documentId) async {
     try {
@@ -229,11 +218,10 @@ class FirestoreService {
     }
   }
 
-
-  /// Updates an existing category in Firestore.
+  /// Updates an existing category in Firestore for a specific user.
   ///
-  /// This function takes a `Category` object as input and updates the corresponding category document in the
-  /// `categories` collection.
+  /// This function takes the user's `documentId` and a `Category` object as input,
+  /// and updates the corresponding category document in the user's `Categories` subcollection.
 
   Future<void> updateCategory(String documentId, Category category) async {
     try {
@@ -244,23 +232,22 @@ class FirestoreService {
     }
   }
 
-
-  /// Deletes a category from Firestore.
+  /// Deletes a category from Firestore for a specific user.
   ///
-  /// This function takes a `categoryId` as input and deletes the corresponding category document from the
-  /// `categories` collection. It also deletes all transactions associated with the category.
-
-  Future<void> deleteCategory(User user, String categoryId) async {
+  /// This function takes the user's `documentId` and the `categoryId` as input,
+  /// and deletes the corresponding category document from the user's `Categories` subcollection.
+  /// It also deletes all transactions associated with the category.
+  Future<void> deleteCategory(String documentId, String categoryId) async {
     try {
       // 1. Delete transactions belonging to the category (within the user's scope)
-      final userTransactionsRef = usersRef.doc(user.id).collection('Transactions');
+      final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
       final transactionsQuery = await userTransactionsRef.where('categoryId', isEqualTo: categoryId).get();
       for (var doc in transactionsQuery.docs) {
         await doc.reference.delete();
       }
 
       // 2. Delete the category
-      final userCategoriesRef = usersRef.doc(user.id).collection('Categories');
+      final userCategoriesRef = usersRef.doc(documentId).collection('Categories');
       await userCategoriesRef.doc(categoryId).delete();
     } catch (e) {
       print("Error deleting category: $e");
@@ -271,13 +258,13 @@ class FirestoreService {
   //  Transaction Functions
   // =======================
 
-  /// Creates a new transaction in Firestore.
+  /// Creates a new transaction in Firestore for a specific user.
   ///
-  /// This function takes a `Transaction` object as input and adds it to the `transactions` collection.
-
-  Future<void> createTransaction(User user, Transaction transaction) async {
+  /// This function takes the user's `documentId` and a `Transaction` object as input,
+  /// and adds the transaction to the user's `Transactions` subcollection.
+  Future<void> createTransaction(String documentId, Transaction transaction) async {
     try {
-      final userTransactionsRef = usersRef.doc(user.id).collection('Transactions');
+      final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
 
       // If categoryId is provided, validate category existence (you might want to optimize this)
       if (transaction.categoryId != null) {
@@ -297,12 +284,12 @@ class FirestoreService {
 
   /// Retrieves all transactions for a specific user, ordered by date (latest first).
   ///
-  /// This function takes a `userId` as input and retrieves all transaction documents from the `transactions` collection
-  /// that belong to that user. The results are ordered by date with the latest transaction appearing first.
-
-  Future<List<Transaction>> getUserTransactions(String userId) async {
+  /// This function takes the user's `documentId` as input and retrieves all transaction documents
+  /// from the user's `Transactions` subcollection. The results are ordered by date with the latest
+  /// transaction appearing first.
+  Future<List<Transaction>> getUserTransactions(String documentId) async {
     try {
-      final userTransactionsRef = usersRef.doc(userId).collection('Transactions');
+      final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
       firestore.QuerySnapshot snapshot = await userTransactionsRef
           .orderBy('date', descending: true)
           .get();
@@ -313,14 +300,13 @@ class FirestoreService {
     }
   }
 
-  /// Retrieves a transaction from Firestore by its transaction ID.
+  /// Retrieves a transaction from Firestore by its transaction ID and the user's `documentId`.
   ///
-  /// This function takes a `transactionId` as input and retrieves the corresponding transaction document from the
-  /// `transactions` collection.
-
-  Future<Transaction?> getTransaction(User user, String transactionId) async {
+  /// This function takes the user's `documentId` and the `transactionId` as input,
+  /// and retrieves the corresponding transaction document from the user's `Transactions` subcollection.
+  Future<Transaction?> getTransaction(String documentId, String transactionId) async {
     try {
-      final userTransactionsRef = usersRef.doc(user.id).collection('Transactions');
+      final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
       final docSnapshot = await userTransactionsRef.doc(transactionId).get();
 
       if (docSnapshot.exists) {
@@ -336,13 +322,12 @@ class FirestoreService {
 
   /// Retrieves all transactions for a specific user and category, ordered by date (latest first).
   ///
-  /// This function takes a `userId` and a `categoryId` as input and retrieves all transaction documents from the
-  /// `transactions` collection that belong to that user and belong to the specified category.
-  /// The results are ordered by date with the latest transaction appearing first.
-
-  Future<List<Transaction>> getTransactionsByCategory(String userId, String categoryId) async {
+  /// This function takes the user's `documentId` and a `categoryId` as input,
+  /// and retrieves all transaction documents from the user's `Transactions` subcollection that belong
+  /// to the specified category. The results are ordered by date with the latest transaction appearing first.
+  Future<List<Transaction>> getTransactionsByCategory(String documentId, String categoryId) async {
     try {
-      final userTransactionsRef = usersRef.doc(userId).collection('Transactions');
+      final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
       firestore.QuerySnapshot snapshot = await userTransactionsRef
           .where('categoryId', isEqualTo: categoryId)
           .orderBy('date', descending: true)
@@ -354,27 +339,26 @@ class FirestoreService {
     }
   }
 
-  /// Updates an existing transaction in Firestore.
+  /// Updates an existing transaction in Firestore for a specific user.
   ///
-  /// This function takes a `Transaction` object as input and updates the corresponding transaction document
-  /// in the `transactions` collection.
-
-  Future<void> updateTransaction(User user, Transaction transaction) async {
+  /// This function takes the user's `documentId` and a `Transaction` object as input,
+  /// and updates the corresponding transaction document in the user's `Transactions` subcollection.
+  Future<void> updateTransaction(String documentId, Transaction transaction) async {
     try {
-      final userTransactionsRef = usersRef.doc(user.id).collection('Transactions');
+      final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
       await userTransactionsRef.doc(transaction.id).update(transaction.toMap());
     } catch (e) {
       print("Error updating transaction: $e");
     }
   }
 
-  /// Deletes a transaction from Firestore.
+  /// Deletes a transaction from Firestore for a specific user.
   ///
-  /// This function takes a `transactionId` as input and deletes the corresponding transaction document from the `transactions` collection.
-
-  Future<void> deleteTransaction(User user, String transactionId) async {
+  /// This function takes the user's `documentId` and the `transactionId` as input,
+  /// and deletes the corresponding transaction document from the user's `Transactions` subcollection.
+  Future<void> deleteTransaction(String documentId, String transactionId) async {
     try {
-      final userTransactionsRef = usersRef.doc(user.id).collection('Transactions');
+      final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
       await userTransactionsRef.doc(transactionId).delete();
     } catch (e) {
       print("Error deleting transaction: $e");
@@ -385,13 +369,13 @@ class FirestoreService {
   //  Subscription Functions
   // =======================
 
-  /// Creates a new subscription in Firestore.
+  /// Creates a new subscription in Firestore for a specific user.
   ///
-  /// This function takes a `Subscription` object as input and adds it to the `subscriptions` collection.
-
-  Future<void> createSubscription(User user, Subscription subscription) async {
+  /// This function takes the user's `documentId` and a `Subscription` object as input,
+  /// and adds the subscription to the user's `Subscriptions` subcollection.
+  Future<void> createSubscription(String documentId, Subscription subscription) async {
     try {
-      final userSubscriptionsRef = usersRef.doc(user.id).collection('Subscriptions');
+      final userSubscriptionsRef = usersRef.doc(documentId).collection('Subscriptions');
       firestore.DocumentReference docRef = await userSubscriptionsRef.add(subscription.toMap());
       subscription.id = docRef.id;
       await docRef.set(subscription.toMap());
@@ -400,14 +384,13 @@ class FirestoreService {
     }
   }
 
-  /// Retrieves all subscriptions for a specific user.
+  /// Retrieves all subscriptions for a specific user from Firestore.
   ///
-  /// This function takes a `userId` as input and retrieves all subscription documents from the
-  /// `subscriptions` collection that belong to that user.
-
-  Future<List<Subscription>> getUserSubscriptions(String userId) async {
+  /// This function takes the user's `documentId` as input and retrieves all subscription documents
+  /// from the user's `Subscriptions` subcollection.
+  Future<List<Subscription>> getUserSubscriptions(String documentId) async {
     try {
-      final userSubscriptionsRef = usersRef.doc(userId).collection('Subscriptions');
+      final userSubscriptionsRef = usersRef.doc(documentId).collection('Subscriptions');
       firestore.QuerySnapshot snapshot = await userSubscriptionsRef.get();
       return snapshot.docs.map((doc) => Subscription.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
     } catch (e) {
@@ -416,28 +399,26 @@ class FirestoreService {
     }
   }
 
-  /// Updates an existing subscription in Firestore.
+  /// Updates an existing subscription in Firestore for a specific user.
   ///
-  /// This function takes a `Subscription` object as input and updates the corresponding subscription
-  /// document in the `subscriptions` collection.
-
-  Future<void> updateSubscription(User user, Subscription subscription) async {
+  /// This function takes the user's `documentId` and a `Subscription` object as input,
+  /// and updates the corresponding subscription document in the user's `Subscriptions` subcollection.
+  Future<void> updateSubscription(String documentId, Subscription subscription) async {
     try {
-      final userSubscriptionsRef = usersRef.doc(user.id).collection('Subscriptions');
+      final userSubscriptionsRef = usersRef.doc(documentId).collection('Subscriptions');
       await userSubscriptionsRef.doc(subscription.id).update(subscription.toMap());
     } catch (e) {
       print("Error updating subscription: $e");
     }
   }
 
-  /// Deletes a subscription from Firestore.
+  /// Deletes a subscription from Firestore for a specific user.
   ///
-  /// This function takes a `subscriptionId` as input and deletes the corresponding subscription
-  /// document from the `subscriptions` collection.
-
-  Future<void> deleteSubscription(User user, String subscriptionId) async {
+  /// This function takes the user's `documentId` and the `subscriptionId` as input,
+  /// and deletes the corresponding subscription document from the user's `Subscriptions` subcollection.
+  Future<void> deleteSubscription(String documentId, String subscriptionId) async {
     try {
-      final userSubscriptionsRef = usersRef.doc(user.id).collection('Subscriptions');
+      final userSubscriptionsRef = usersRef.doc(documentId).collection('Subscriptions');
       await userSubscriptionsRef.doc(subscriptionId).delete();
     } catch (e) {
       print("Error deleting subscription: $e");
@@ -450,10 +431,10 @@ class FirestoreService {
 
   /// Calculates the total balance for a specific user based on their transactions.
   ///
-  /// This function takes a `userId` as input and calculates the sum of all transaction amounts for that user.
-
-  Future<double> calculateTotalBalance(User user) async {
-    List<Transaction> transactions = await getUserTransactions(user.id!);
+  /// This function takes the user's `documentId` as input and calculates the sum of all
+  /// transaction amounts for that user.
+  Future<double> calculateTotalBalance(String documentId) async {
+    List<Transaction> transactions = await getUserTransactions(documentId);
     double totalBalance = 0.0;
     for (var transaction in transactions) {
       totalBalance += transaction.amount;
@@ -463,11 +444,10 @@ class FirestoreService {
 
   /// Calculates the total spending for a specific user and category.
   ///
-  /// This function takes a `userId` and a `categoryId` as input and calculates the sum of all expense amounts
-  /// for that user within the specified category.
-
-  Future<double> calculateCategorySpending(User user, String categoryId) async {
-    List<Transaction> categoryTransactions = await getTransactionsByCategory(user.id!, categoryId);
+  /// This function takes the user's `documentId` and a `categoryId` as input,
+  /// and calculates the sum of all expense amounts for that user within the specified category.
+  Future<double> calculateCategorySpending(String documentId, String categoryId) async {
+    List<Transaction> categoryTransactions = await getTransactionsByCategory(documentId, categoryId);
     double totalSpending = 0.0;
     for (var transaction in categoryTransactions) {
       if (transaction.amount < 0) {
@@ -477,15 +457,14 @@ class FirestoreService {
     return totalSpending;
   }
 
-  /// Gets transactions within a specific date range.
+  /// Gets transactions within a specific date range for a specific user.
   ///
-  /// This function takes a `userId`, a `startDate`, and an `endDate` as input and retrieves all
-  /// transaction documents from the `transactions` collection that belong to the specified user
-  /// and fall within the given date range.
-
-  Future<List<Transaction>> getTransactionsByDateRange(User user, DateTime startDate, DateTime endDate) async {
+  /// This function takes the user's `documentId`, a `startDate`, and an `endDate` as input,
+  /// and retrieves all transaction documents from the user's `Transactions` subcollection that fall
+  /// within the given date range.
+  Future<List<Transaction>> getTransactionsByDateRange(String documentId, DateTime startDate, DateTime endDate) async {
     try {
-      final userTransactionsRef = usersRef.doc(user.id).collection('Transactions');
+      final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
       firestore.QuerySnapshot snapshot = await userTransactionsRef
           .where('date', isGreaterThanOrEqualTo: startDate)
           .where('date', isLessThanOrEqualTo: endDate)
@@ -500,15 +479,14 @@ class FirestoreService {
 
   /// Calculates monthly spending for a given user.
   ///
-  /// This function takes a `userId` and a `year` as input and calculates the total spending
-  /// for each month of the given year.
-
-  Future<List<double>> calculateMonthlySpending(User user, int year) async {
+  /// This function takes the user's `documentId` and a `year` as input,
+  /// and calculates the total spending for each month of the given year.
+  Future<List<double>> calculateMonthlySpending(String documentId, int year) async {
     List<double> monthlySpending = List.filled(12, 0.0);
     for (int month = 1; month <= 12; month++) {
       DateTime startDate = DateTime(year, month, 1);
       DateTime endDate = DateTime(year, month, DateTime(year, month + 1, 0).day);
-      List<Transaction> monthTransactions = await getTransactionsByDateRange(user, startDate, endDate);
+      List<Transaction> monthTransactions = await getTransactionsByDateRange(documentId, startDate, endDate);
       for (var transaction in monthTransactions) {
         if (transaction.amount < 0) {
           monthlySpending[month - 1] += transaction.amount;
