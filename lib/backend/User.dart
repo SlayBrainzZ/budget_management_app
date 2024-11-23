@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 /**
  * This class represents a user in the application. It stores user information
  * such as ID, user ID, email, encrypted password, and creation date.
@@ -22,10 +24,10 @@ class User {
 
   Map<String, dynamic> toMap() {
     return {
-      'userId': userId, // Include userId in the map
+      'userId': userId,
       'email': email,
-      'createdDate': createdDate, // Store DateTime object directly
-      'name': name, // Include name in the map
+      'createdDate': createdDate,
+      'name': name,
     };
   }
 
@@ -33,7 +35,7 @@ class User {
     return User(
       userId: data['userId'],
       email: data['email'],
-      createdDate: DateTime.parse(data['createdDate']),
+      createdDate: (data['createdDate'] as Timestamp).toDate(), // Convert Timestamp to DateTime
       name: data['name'],
     )..id = documentId;
   }
