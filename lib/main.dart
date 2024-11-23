@@ -26,11 +26,10 @@ void main() async {
 
     runApp(const MyApp());
 
+    /// Save new user under Users collection in firestore
     Auth().authStateChanges.listen((user) async {
       if (user != null) {
-        print('User registered: ${user.email}');
-
-        // Now that a user is registered, let's create the User document in Firestore
+        // create the User document in Firestore
         FirestoreService().createUser(User(
           userId: user.uid,
           email: user.email!,
