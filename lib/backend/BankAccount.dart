@@ -9,29 +9,32 @@
 class BankAccount {
   String? id; // Make id nullable to handle creation scenario
   final String userId;
-  final String accountName;
-  final double balance;
-  final DateTime lastUpdated;
+  String? accountName;
+  double? balance;
+  DateTime? lastUpdated;
   final String accountType;
-  final bool exclude;
+  bool exclude;
+  String? importFilePath;
 
   BankAccount({
     required this.userId,
-    required this.accountName,
-    required this.balance,
-    required this.lastUpdated,
+    this.accountName,
+    this.balance,
+    this.lastUpdated,
     required this.accountType,
-    required this.exclude
+    this.exclude = false,
+    this.importFilePath,
   });
 
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
       'accountName': accountName,
-      'balance': balance.toString(),
-      'lastUpdated': lastUpdated.toIso8601String(),
+      'balance': balance?.toString(),
+      'lastUpdated': lastUpdated?.toIso8601String(),
       'accountType': accountType,
-      'exclude' : exclude
+      'exclude' : exclude,
+      'importFilePath': importFilePath,
     };
   }
 
@@ -39,10 +42,11 @@ class BankAccount {
     return BankAccount(
       userId: data['userId'],
       accountName: data['accountName'],
-      lastUpdated: DateTime.parse(data['lastUpdated']),
-      balance: double.parse(data['balance']),
+      lastUpdated: data['lastUpdated'] != null ? DateTime.parse(data['lastUpdated']) : null,
+      balance: data['balance'] != null ? double.parse(data['balance']) : null,
       accountType: data['accountType'],
-      exclude: data['exclude']
+      exclude: data['exclude'] ?? false,
+      importFilePath: data['importFilePath'],
     )..id = documentId; // Assign the document ID after creation
   }
 }
