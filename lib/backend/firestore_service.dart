@@ -148,9 +148,9 @@ class FirestoreService {
   /// Creates a new category in Firestore for a specific user.
   ///
   /// This function takes the user's `documentId` and a `Category` object as input,
-  /// and adds the category to the user's `Categories` subcollection.
-
-  Future<void> createCategory(String documentId, Category category) async {
+  /// adds the category to the user's `Categories` subcollection, and returns the
+  /// document ID of the newly created category.
+  Future<String> createCategory(String documentId, Category category) async {
     try {
       final userCategoriesRef = usersRef.doc(documentId).collection('Categories');
       // Create the category and get its reference
@@ -158,8 +158,10 @@ class FirestoreService {
       category.id = docRef.id;
       // Update the document to ensure the `id` field is saved
       await docRef.set(category.toMap());
+      return docRef.id; // Return the document ID
     } catch (e) {
       print("Error creating category: $e");
+      rethrow; // Rethrow to propagate the error
     }
   }
 
