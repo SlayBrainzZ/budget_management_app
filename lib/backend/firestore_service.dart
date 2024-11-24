@@ -260,27 +260,56 @@ class FirestoreService {
 
   /// Creates a new transaction in Firestore for a specific user.
   ///
-  /// This function takes the user's `documentId` and a `Transaction` object as input,
-  /// and adds the transaction to the user's `Transactions` subcollection.
-  Future<void> createTransaction(String documentId, Transaction transaction) async {
+  /// This function takes the user's `documentId`, a `Transaction` object, and an optional `categoryId` as input.
+  /// If `categoryId` is provided, the transaction is added as a subcollection of the specified category.
+  /// Otherwise, the transaction is added as a normal transaction to the user's `Transactions` subcollection.
+  Future<void> createTransaction(String documentId, Transaction transaction, {String? categoryId}) async {
     try {
       final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
 
-      // If categoryId is provided, validate category existence (you might want to optimize this)
-      if (transaction.categoryId != null) {
-        final categorySnapshot = await userTransactionsRef.doc(transaction.categoryId).get();
+      if (categoryId != null) {
+        // Ensure categoryId is valid and exists (optional, based on your needs)
+        final categoryRef = userTransactionsRef.doc(categoryId);
+        final categorySnapshot = await categoryRef.get();
         if (!categorySnapshot.exists) {
           throw Exception('Category not found!');
         }
-      }
 
-      firestore.DocumentReference docRef = await userTransactionsRef.add(transaction.toMap());
-      transaction.id = docRef.id;
-      await docRef.set(transaction.toMap());
+        // Create transaction as a subcollection under the category
+        final categoryTransactionsRef = categoryRef.collection('Transactions');
+        firestore.DocumentReference docRef = await categoryTransactionsRef.add(transaction.toMap());
+        transaction.id = docRef.id;
+        await docRef.set(transaction.toMap());
+      } else {
+        // Create transaction as a normal transaction for the user
+        firestore.DocumentReference docRef = await userTransactionsRef.add(transaction.toMap());
+        transaction.id = docRef.id;
+        await docRef.set(transaction.toMap());
+      }
     } catch (e) {
       print("Error creating transaction: $e");
     }
   }
+
+  ///TEST
+  ///update: Test successfully done. This function does exactly what it's named.
+  Future<void> createTransactionUnderCategory(String userId, Transaction transaction, String categoryId) async {
+    try {
+      final categoryTransactionsRef = usersRef
+          .doc(userId)
+          .collection('Categories')
+          .doc(categoryId)
+          .collection('Transactions');
+
+      firestore.DocumentReference docRef = await categoryTransactionsRef.add(transaction.toMap());
+      transaction.id = docRef.id;
+      await docRef.set(transaction.toMap());
+    } catch (e) {
+      print("Error creating transaction under category: $e");
+    }
+  }
+  ///TEST
+
 
   /// Retrieves all transactions for a specific user, ordered by date (latest first).
   ///
@@ -299,6 +328,24 @@ class FirestoreService {
       return [];
     }
   }
+
+  ///TEST
+  Future<List<Transaction>> getCategoryTransactions(String userId, String categoryId) async {
+    try {
+      final categoryTransactionsRef = usersRef.doc(userId).collection('Categories').doc(categoryId).collection('Transactions');
+      final snapshot = await categoryTransactionsRef.get();
+
+      // Map each document to a Transaction object, passing the document ID
+      return snapshot.docs.map((doc) {
+        return Transaction.fromMap(doc.data(), doc.id); // Pass doc.id as documentId
+      }).toList();
+    } catch (e) {
+      print("Error retrieving transactions for category: $e");
+      return [];
+    }
+  }
+
+  ///TEST
 
   /// Retrieves a transaction from Firestore by its transaction ID and the user's `documentId`.
   ///
