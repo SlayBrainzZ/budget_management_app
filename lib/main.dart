@@ -1,11 +1,14 @@
+import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:budget_management_app/backend/firestore_service.dart';
 import 'package:budget_management_app/backend/User.dart' as testUser;
 import 'package:budget_management_app/backend/Category.dart' as testCat;
+import 'package:budget_management_app/backend/Transaction.dart' as testTrans;
 import 'package:budget_management_app/auth.dart';
 import 'package:budget_management_app/widget_tree.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'dart:math'; // For random selection
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Ensure bindings are initialized for Firebase
@@ -29,49 +32,64 @@ void main() async {
 
     runApp(const MyApp());
 
-    // Perform CRUD operations
-    await performCrudOperations();
+    // Perform CRUD operations (combined test)
+    await performCombinedTest();
 
   } catch (e) {
     print("Firebase initialization failed: $e");
   }
 }
 
-// Perform CRUD operations on Firestore
-Future<void> performCrudOperations() async {
+// Perform Combined Test: Creating user, category, transaction, and fetching them
+Future<void> performCombinedTest() async {
   try {
-    String testUserId = 'EpM9fLEBKLQqNkPQ4A3Hw1PjMnD2';
+    // Step 1: Listen for auth state changes and create user document
+    Auth().authStateChanges.listen((user) async {
+      if (user != null) {
+        print('User registered: ${user.email}');
 
-    // Retrieve categories for the test user
-    List<testCat.Category> categories = await FirestoreService().getUserCategories(testUserId);
+        // Now that a user is registered, let's create the User document in Firestore
+        await FirestoreService().createUser(testUser.User(
+          userId: user.uid,
+          email: user.email!,
+          createdDate: DateTime.now(),
+        ));
 
-    if (categories.isNotEmpty) {
-      print('Retrieved categories:');
-      for (var category in categories) {
-        print(category.toMap());
+        // Step 2: Retrieve the user's categories
+        List<testCat.Category> categories = await FirestoreService().getUserCategories(user.uid);
+        if (categories.isEmpty) {
+          print('No categories found for user');
+          return;
+        }
+
+        // Step 3: Choose a random category
+        Random random = Random();
+        testCat.Category randomCategory = categories[random.nextInt(categories.length)];
+
+        print('Random category selected: ${randomCategory.name}');
+
+        // Step 4: Create a transaction under the selected category
+        testTrans.Transaction newTransaction = testTrans.Transaction(
+          userId: user.uid,
+          amount: 50.0,
+          date: DateTime.now(),
+          categoryId: randomCategory.id, // Link transaction to the random category
+          type: 'Expense',
+          importance: true,
+        );
+        await FirestoreService().createTransactionUnderCategory(user.uid, newTransaction, randomCategory.id!);
+
+        // Step 5: Retrieve and print all transactions for the selected category
+        List<testTrans.Transaction> transactions = await FirestoreService().getCategoryTransactions(user.uid, randomCategory.id!);
+        print('Transactions for category ${randomCategory.name}:');
+        for (var transaction in transactions) {
+          print(transaction.toMap());
+        }
       }
+    });
 
-      // Update the first category as an example
-      testCat.Category categoryToUpdate = categories[1];
-      categoryToUpdate.name = 'Updated Nike'; // Update name
-      categoryToUpdate.budgetLimit = 2000000; // Update budget limit
-
-      // Call the Firestore update function
-      await FirestoreService().updateCategory(testUserId, categoryToUpdate);
-
-      // Re-fetch categories to verify the update
-      List<testCat.Category> updatedCategories =
-      await FirestoreService().getUserCategories(testUserId);
-
-      print('Updated categories:');
-      for (var updatedCategory in updatedCategories) {
-        print(updatedCategory.toMap());
-      }
-    } else {
-      print('No categories found for this user.');
-    }
   } catch (e) {
-    print("Error performing CRUD operations: $e");
+    print("Error performing combined test: $e");
   }
 }
 
