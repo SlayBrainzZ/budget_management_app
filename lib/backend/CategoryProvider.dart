@@ -26,7 +26,7 @@ class CategoryProvider extends ChangeNotifier {
   }
 
   Future<void> deleteCategory(String userId, String categoryId) async {
-    await FirestoreService().deleteCategory(userId as User, categoryId);
+    await FirestoreService().deleteCategory(userId as String, categoryId);
     await fetchCategories(userId); // Refresh categories
   }
 }
