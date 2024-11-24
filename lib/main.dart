@@ -8,7 +8,6 @@ import 'package:budget_management_app/backend/Transaction.dart' as testTrans;
 import 'package:budget_management_app/auth.dart';
 import 'package:budget_management_app/widget_tree.dart';
 import 'package:flutter/foundation.dart';
-import 'dart:math'; // For random selection
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Ensure bindings are initialized for Firebase
@@ -40,7 +39,7 @@ void main() async {
   }
 }
 
-// Perform Combined Test: Creating user, category, transaction, and fetching them
+// Perform Combined Test: Register a user, create a category, transaction, and display them
 Future<void> performCombinedTest() async {
   try {
     // Step 1: Listen for auth state changes and create user document
@@ -48,46 +47,56 @@ Future<void> performCombinedTest() async {
       if (user != null) {
         print('User registered: ${user.email}');
 
-        // Now that a user is registered, let's create the User document in Firestore
+        // Create the User document in Firestore
         await FirestoreService().createUser(testUser.User(
           userId: user.uid,
           email: user.email!,
           createdDate: DateTime.now(),
         ));
 
-        // Step 2: Retrieve the user's categories
-        List<testCat.Category> categories = await FirestoreService().getUserCategories(user.uid);
-        if (categories.isEmpty) {
-          print('No categories found for user');
-          return;
-        }
+        // Step 2: Create a category for the user
+        testCat.Category newCategory = testCat.Category(
+          userId: user.uid,
+          name: "Groceries",
+          budgetLimit: 500.0,
+        );
+        String categoryId = await FirestoreService().createCategory(user.uid, newCategory);
+        newCategory.id = categoryId; // Assign the ID to the category object
 
-        // Step 3: Choose a random category
-        Random random = Random();
-        testCat.Category randomCategory = categories[random.nextInt(categories.length)];
+        print('Category created: ${newCategory.name} (ID: ${newCategory.id})');
 
-        print('Random category selected: ${randomCategory.name}');
-
-        // Step 4: Create a transaction under the selected category
+        // Step 3: Create a transaction under the created category
         testTrans.Transaction newTransaction = testTrans.Transaction(
           userId: user.uid,
-          amount: 50.0,
+          amount: 100.0,
           date: DateTime.now(),
-          categoryId: randomCategory.id, // Link transaction to the random category
+          categoryId: newCategory.id,
           type: 'Expense',
-          importance: true,
+          importance: false,
         );
-        await FirestoreService().createTransactionUnderCategory(user.uid, newTransaction, randomCategory.id!);
+        await FirestoreService().createTransactionUnderCategory(
+          user.uid,
+          newTransaction,
+          newCategory.id!,
+        );
 
-        // Step 5: Retrieve and print all transactions for the selected category
-        List<testTrans.Transaction> transactions = await FirestoreService().getCategoryTransactions(user.uid, randomCategory.id!);
-        print('Transactions for category ${randomCategory.name}:');
+        print('Transaction created under category ${newCategory.name}');
+
+        // Step 4: Retrieve and print the created category
+        List<testCat.Category> categories = await FirestoreService().getUserCategories(user.uid);
+        print('Categories for user ${user.email}:');
+        for (var category in categories) {
+          print(category.toMap());
+        }
+
+        // Step 5: Retrieve and print transactions under the created category
+        List<testTrans.Transaction> transactions = await FirestoreService().getCategoryTransactions(user.uid, newCategory.id!);
+        print('Transactions for category ${newCategory.name}:');
         for (var transaction in transactions) {
           print(transaction.toMap());
         }
       }
     });
-
   } catch (e) {
     print("Error performing combined test: $e");
   }
