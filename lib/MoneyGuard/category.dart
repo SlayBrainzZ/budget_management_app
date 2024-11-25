@@ -130,12 +130,18 @@ class _CategoryScreenState extends State<CategoryScreen> {
     final userId = "test_user_id"; // Dynamisch durch echte Benutzer-ID ersetzen
 
     // Initialisieren: Standardkategorien speichern
-    FirestoreService().createDefaultCategories(userId).then((_) {
+    FirestoreService().createDefaultCategories(userId);/*.then((_) {
       // Kategorien laden
       setState(() {
         userCategories = FirestoreService().getUserCategories(userId);
       });
-    });
+    });*/
+    if (mounted) {
+      setState(() {
+        userCategories = FirestoreService().getUserCategories(userId);
+      });
+    }
+
   }
 
 
@@ -152,7 +158,6 @@ class _CategoryScreenState extends State<CategoryScreen> {
   }
 
   /// Liste der Kategorien anzeigen
-  /// Liste der Kategorien anzeigen
   Widget _buildCategoryList() {
     return FutureBuilder<List<Category>>(
       future: userCategories,
@@ -162,6 +167,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
         } else if (snapshot.hasError) {
           return Center(child: Text('Fehler beim Laden der Kategorien.'));
         } else {
+          // Alle Kategorien kombinieren (Standard und benutzerdefiniert)
           final combinedCategories = snapshot.data ?? [];
 
           return ListView.builder(
@@ -169,21 +175,21 @@ class _CategoryScreenState extends State<CategoryScreen> {
             itemBuilder: (context, index) {
               final category = combinedCategories[index];
 
-              // Überprüfen, ob es sich um eine Standardkategorie handelt (userId == "system")
+              // Überprüfen, ob es sich um eine Standardkategorie handelt
               final isDefault = category.userId == "system";
-              print("Kategorie: ${category.name}, isDefault: $isDefault"); // Debugging-Zeile
 
               return ListTile(
                 leading: Icon(category.icon, color: category.color),
                 title: Text(category.name),
                 subtitle: Text('Budget: €${category.budgetLimit?.toStringAsFixed(2)}'),
                 trailing: isDefault
-                    ? null // Keine Mülltonne für Standardkategorien
+                    ? null // Keine Löschmöglichkeit für Standardkategorien
                     : IconButton(
                   icon: Icon(Icons.delete, color: Colors.red),
                   onPressed: () => _confirmDeleteCategory(category),
                 ),
-                onTap: isDefault ? () => _editCategoryBudget(category) : null,
+                // Klick auf die Kategorie öffnet den Dialog zum Bearbeiten des Budgets
+                onTap: () => _editCategoryBudget(category),
               );
             },
           );
@@ -191,6 +197,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
       },
     );
   }
+
 
 
 
