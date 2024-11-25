@@ -4,6 +4,7 @@ import 'package:budget_management_app/backend/Transaction.dart';
 import 'package:budget_management_app/backend/Category.dart';
 import 'package:budget_management_app/backend/BankAccount.dart';
 import 'package:budget_management_app/backend/Subscriptions.dart';
+import '../MoneyGuard/category.dart';
 
 
 class FirestoreService {
@@ -150,6 +151,7 @@ class FirestoreService {
   /// This function takes the user's `documentId` and a `Category` object as input,
   /// adds the category to the user's `Categories` subcollection, and returns the
   /// document ID of the newly created category.
+
   Future<String> createCategory(String documentId, Category category) async {
     try {
       final userCategoriesRef = usersRef.doc(documentId).collection('Categories');
@@ -164,6 +166,9 @@ class FirestoreService {
       rethrow; // Rethrow to propagate the error
     }
   }
+
+
+
 
   /// Retrieves a list of default categories from Firestore.
   ///
@@ -234,6 +239,42 @@ class FirestoreService {
     }
   }
 
+
+  Future<void> createDefaultCategories(String userId, {Map<String, double>? budgetLimits}) async {
+    final userCategoriesRef = usersRef.doc(userId).collection('Categories');
+
+    for (var category in defaultCategories) {
+      final categoryName = category['name'];
+      final categoryMap = {
+        'userId': userId,
+        'name': categoryName,
+        'budgetLimit': budgetLimits?[categoryName]?.toString() ?? category['budgetLimit'].toString(),
+        'icon': category['icon'].codePoint,
+        'color': category['color'].value,
+        'isDefault': true,
+      };
+
+      // Check if the category already exists.
+      final existingCategoryQuery = await userCategoriesRef.where('name', isEqualTo: categoryName).get();
+      if (existingCategoryQuery.docs.isEmpty) {
+        // Create the category if it does not exist.
+        await userCategoriesRef.add(categoryMap);
+      }
+    }
+  }
+
+  Future<void> updateCategoryBudgetLimit(String userId, String categoryId, double newLimit) async {
+    // Hole die Kategorie
+    Category? category = await getCategory(userId, categoryId);
+
+    if (category != null) {
+      // Aktualisiere das Budgetlimit
+      category.budgetLimit = newLimit;
+      await updateCategory(userId, category);
+    } else {
+      print("Kategorie nicht gefunden.");
+    }
+  }
   /// Deletes a category from Firestore for a specific user.
   ///
   /// This function takes the user's `documentId` and the `categoryId` as input,
@@ -255,6 +296,8 @@ class FirestoreService {
       print("Error deleting category: $e");
     }
   }
+
+
 
   // =======================
   //  Transaction Functions

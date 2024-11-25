@@ -7,27 +7,67 @@ import 'package:flutter/material.dart';
  *
  * @author Ahmad
  */
-
-
 class Category {
-  String? id; // Make id nullable to handle creation scenario
-  String userId; // Add userId to track who created the category
+  String? id;
+  String userId;
   String name;
-  double budgetLimit;
+  double? budgetLimit;
   IconData? icon;
   Color? color;
+  bool isDefault;  // New field for default category identification
 
   Category({
-    required this.userId, // Make userId required in the constructor
+    required this.userId,
     required this.name,
-    required this.budgetLimit,
-     this.icon,
-     this.color,
+    this.budgetLimit,
+    this.icon,
+    this.color,
+    this.isDefault = false,  // Default is false for user-defined categories
   });
 
   Map<String, dynamic> toMap() {
     return {
-      'userId': userId, // Include userId in the map
+      'userId': userId,
+      'name': name,
+      'budgetLimit': budgetLimit.toString(),
+      'icon': icon?.codePoint,
+      'color': color?.value,
+      'isDefault': isDefault, // Save isDefault field
+    };
+  }
+
+  static Category fromMap(Map<String, dynamic> data, String documentId) {
+    return Category(
+      userId: data['userId'],
+      name: data['name'],
+      budgetLimit: double.tryParse(data['budgetLimit']) ?? 0.0,
+      icon: data['icon'] != null ? IconData(data['icon'], fontFamily: 'MaterialIcons') : null,
+      color: data['color'] != null ? Color(data['color']) : null,
+      isDefault: data['isDefault'] ?? false,  // Parse isDefault from Firestore
+    )..id = documentId;
+  }
+}
+
+/*
+class Category {
+  String? id; // Make id nullable to handle creation scenario
+  String userId; // Add userId to track who created the category
+  String name;
+  double? budgetLimit;
+  IconData? icon;
+  Color? color;
+
+  Category({
+    required this.userId,
+    required this.name,
+    this.budgetLimit,
+    this.icon,
+    this.color,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'userId': userId,
       'name': name,
       'budgetLimit': budgetLimit.toString(),
       'icon': icon?.codePoint,
@@ -36,12 +76,21 @@ class Category {
   }
 
   static Category fromMap(Map<String, dynamic> data, String documentId) {
-    return Category(
-      userId: data['userId'],
-      name: data['name'],
-      budgetLimit: double.parse(data['budgetLimit']),
-      icon: data['icon'] != null ? IconData(data['icon'], fontFamily: 'MaterialIcons') : null, // Handle null icon
-      color: data['color'] != null ? Color(data['color']) : null, // Handle null color
-    )..id = documentId; // Assign the document ID after creation
+    try {
+      return Category(
+        userId: data['userId'],
+        name: data['name'],
+        budgetLimit: double.tryParse(data['budgetLimit']) ?? 0.0,  // Handle parse error gracefully
+        icon: data['icon'] != null
+            ? IconData(data['icon'], fontFamily: 'MaterialIcons')
+            : null,
+        color: data['color'] != null ? Color(data['color']) : null,
+      )..id = documentId;
+    } catch (e) {
+      print("Error while deserializing Category: $e");
+      rethrow;
+    }
   }
-}
+}*/
+
+
