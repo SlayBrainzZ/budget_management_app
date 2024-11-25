@@ -159,6 +159,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
     String newCategoryName = '';
     IconData selectedIcon = availableIcons[0];
     Color selectedColor = availableColors[0];
+    bool enableBudget = false; // Schalter für Budget
+    String budgetAmount = '';
 
     showDialog(
       context: context,
@@ -226,6 +228,32 @@ class _CategoryScreenState extends State<CategoryScreen> {
                       ),
                     ],
                   ),
+                  SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Text('Budgetlimit:'),
+                      Spacer(),
+                      Switch(
+                        value: enableBudget,
+                        onChanged: (value) {
+                          setDialogState(() {
+                            enableBudget = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  if (enableBudget)
+                    TextField(
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'Betrag (€)',
+                        prefixText: '€ ',
+                      ),
+                      onChanged: (value) {
+                        budgetAmount = value;
+                      },
+                    ),
                   SizedBox(height: 20),
                   Icon(selectedIcon, color: selectedColor, size: 48),
                 ],
@@ -244,6 +272,10 @@ class _CategoryScreenState extends State<CategoryScreen> {
                         customCategories.add(newCategoryName);
                         customIcons.add(selectedIcon);
                         customColors.add(selectedColor);
+                        if (enableBudget && budgetAmount.isNotEmpty) {
+                          // Kategorie mit Budget speichern
+                          print('Budget für $newCategoryName: €$budgetAmount');
+                        }
                       });
                     }
                     Navigator.of(context).pop();
@@ -293,12 +325,22 @@ class _CategoryScreenState extends State<CategoryScreen> {
     return Expanded(
       child: ListView(
         children: [
+          // Default-Kategorien
           ...defaultCategories.map((category) {
             return ListTile(
               leading: Icon(category['icon'], color: category['color']),
               title: Text(category['name']),
+              onTap: () {
+                // Öffnet den Dialog zur Bearbeitung des Budgets
+                _editCategoryBudget(
+                  category['name'],
+                  category['icon'],
+                  category['color'],
+                );
+              },
             );
           }).toList(),
+          // Benutzerdefinierte Kategorien
           ...customCategories.asMap().entries.map((entry) {
             int index = entry.key;
             String category = entry.value;
@@ -312,10 +354,88 @@ class _CategoryScreenState extends State<CategoryScreen> {
                   _confirmDeleteCategory(index);
                 },
               ),
+              onTap: () {
+                // Öffnet den Dialog zur Bearbeitung des Budgets
+                _editCategoryBudget(
+                  category,
+                  customIcons[index],
+                  customColors[index],
+                );
+              },
             );
           }).toList(),
         ],
       ),
+    );
+  }
+
+
+  void _editCategoryBudget(String categoryName, IconData icon, Color color) {
+    bool enableBudget = false; // Zustand des Schalters
+    String budgetAmount = '';
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text('Budget für "$categoryName" festlegen'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Text('Budgetlimit:'),
+                      Spacer(),
+                      Switch(
+                        value: enableBudget,
+                        onChanged: (value) {
+                          setDialogState(() {
+                            enableBudget = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  if (enableBudget)
+                    TextField(
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'Betrag (€)',
+                        prefixText: '€ ',
+                      ),
+                      onChanged: (value) {
+                        budgetAmount = value;
+                      },
+                    ),
+                  SizedBox(height: 20),
+                  Icon(icon, color: color, size: 48),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('Abbrechen'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (enableBudget && budgetAmount.isNotEmpty) {
+                      print('Budget für $categoryName festgelegt: €$budgetAmount');
+                    } else {
+                      print('Kein Budget für $categoryName festgelegt.');
+                    }
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('Speichern'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
