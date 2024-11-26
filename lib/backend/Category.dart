@@ -22,7 +22,7 @@ class Category {
     this.budgetLimit,
     this.icon,
     this.color,
-    this.isDefault = false,  // Default is false for user-defined categories
+    this.isDefault = true,  // Default is false for user-defined categories
   });
 
   Map<String, dynamic> toMap() {

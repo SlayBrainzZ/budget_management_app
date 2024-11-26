@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'dashboard.dart';
 import 'saving_plan.dart';
 import 'StatisticsPage.dart';
+import 'transaction.dart';
+import 'package:flutter_localizations/flutter_localizations.dart'; // Dieser Import ist notwendig
+
 
 /*
 void main() {
@@ -10,7 +13,7 @@ void main() {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key}); //Konstruktor für MyApp. super.key hilft Flutter, Widgets effizient zu erstellen und zu identifizieren.
-
+//Ein Widget, das keinen internen Zustand hat
   @override
   Widget build(BuildContext context) {
     return MaterialApp(   //MaterialApp ist ein Widget, das die grundlegenden Funktionen einer Flutter-App wie Navigation und Thema (Farben, Textstile) enthält.
@@ -20,7 +23,15 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'MoneyGuard'),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('de', 'DE'), // Deutsche Lokalisierung
+      ],
+      home: const MyHomePage(title: 'MoneyGuard'),   //Setzt die Startseite der App auf MyHomePage
     );
   }
 }
@@ -45,8 +56,7 @@ class _MyHomePageState extends State<MyHomePage> {
   final List<Widget> _views = [
     Dashboard(), // Dashboard Widget
     StatisticsPage(),
-   //AddTransactionPage(),
-    const Center(child: Text('Transaktion')),
+    AddTransactionPage(),
     SavingPlan(),
     const Center(child: Text('Einstellungen')),
   ];
