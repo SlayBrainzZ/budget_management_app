@@ -1,33 +1,69 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'package:budget_management_app/backend/firestore_service.dart';
+import 'package:budget_management_app/backend/Category.dart';
+
+final List<Map<String, dynamic>> defaultCategories = [
+  {'name': 'Einnahmen', 'icon': Icons.attach_money, 'color': Colors.green, 'budgetLimit': 0.0},
+  {'name': 'Unterhaltung', 'icon': Icons.movie, 'color': Colors.blue, 'budgetLimit': 0.0},
+  {'name': 'Lebensmittel', 'icon': Icons.restaurant, 'color': Colors.orange, 'budgetLimit': 0.0},
+  {'name': 'Haushalt', 'icon': Icons.home, 'color': Colors.teal, 'budgetLimit': 0.0},
+  {'name': 'Wohnen', 'icon': Icons.apartment, 'color': Colors.indigo, 'budgetLimit': 0.0},
+  {'name': 'Transport', 'icon': Icons.directions_car, 'color': Colors.purple, 'budgetLimit': 0.0},
+  {'name': 'Kleidung', 'icon': Icons.shopping_bag, 'color': Colors.pink, 'budgetLimit': 0.0},
+  {'name': 'Bildung', 'icon': Icons.school, 'color': Colors.amber, 'budgetLimit': 0.0},
+  {'name': 'Finanzen', 'icon': Icons.account_balance, 'color': Colors.lightGreen, 'budgetLimit': 0.0},
+  {'name': 'Gesundheit', 'icon': Icons.health_and_safety, 'color': Colors.red, 'budgetLimit': 0.0},
+];
+
+/*
+final List<Map<String, dynamic>> defaultCategories = [
+  {'userId': 'system','name': 'Einnahmen', 'icon': Icons.attach_money, 'color': Colors.green, 'budgetLimit': 0.0},
+  {'userId': 'system','name': 'Unterhaltung', 'icon': Icons.movie, 'color': Colors.blue, 'budgetLimit': 0.0},
+  {'userId': 'system','name': 'Lebensmittel', 'icon': Icons.restaurant, 'color': Colors.orange, 'budgetLimit': 0.0},
+  {'userId': 'system','name': 'Haushalt', 'icon': Icons.home, 'color': Colors.teal, 'budgetLimit': 0.0},
+  {'userId': 'system','name': 'Wohnen', 'icon': Icons.apartment, 'color': Colors.indigo, 'budgetLimit': 0.0},
+  {'userId': 'system','name': 'Transport', 'icon': Icons.directions_car, 'color': Colors.purple, 'budgetLimit': 0.0},
+  {'userId': 'system','name': 'Kleidung', 'icon': Icons.shopping_bag, 'color': Colors.pink, 'budgetLimit': 0.0},
+  {'userId': 'system','name': 'Bildung', 'icon': Icons.school, 'color': Colors.amber, 'budgetLimit': 0.0},
+  {'userId': 'system','name': 'Finanzen', 'icon': Icons.account_balance, 'color': Colors.lightGreen, 'budgetLimit': 0.0},
+  {'userId': 'system','name': 'Gesundheit', 'icon': Icons.health_and_safety, 'color': Colors.red, 'budgetLimit': 0.0},
+];
+*/
+
+final List<IconData> availableIcons = [
+  Icons.more_horiz,
+  Icons.restaurant,
+  Icons.home,
+  Icons.directions_car,
+  Icons.shopping_cart,
+  Icons.health_and_safety,
+  Icons.attach_money,
+  Icons.safety_check,
+  Icons.shopping_bag,
+  Icons.savings,
+  Icons.school,
+  Icons.sports_basketball,
+  Icons.work,
+  Icons.pets,
+];
+
+final List<Color> availableColors = [
+  Colors.blueGrey,
+  Colors.red,
+  Colors.blue,
+  Colors.green,
+  Colors.orange,
+  Colors.purple,
+  Colors.teal,
+  Colors.yellow,
+  Colors.cyan,
+  Colors.indigo,
+  Colors.pink,
+  Colors.brown,
+];
 
 class CategoryButton extends StatelessWidget {
-  final List<IconData> icons = [
-    Icons.restaurant,
-    Icons.home,
-    Icons.directions_car,
-    Icons.apartment,
-    Icons.attach_money,
-    Icons.shopping_cart,
-    Icons.school,
-    Icons.sports_basketball,
-    Icons.work,
-    Icons.pets,
-  ];
-
-  final List<Color> colors = [
-    Colors.red,
-    Colors.blue,
-    Colors.green,
-    Colors.orange,
-    Colors.purple,
-    Colors.teal,
-    Colors.yellow,
-    Colors.cyan,
-    Colors.indigo,
-    Colors.pink,
-  ];
-
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -54,16 +90,16 @@ class CategoryButton extends StatelessWidget {
           ),
           child: Stack(
             alignment: Alignment.center,
-            children: List.generate(icons.length, (index) {
-              final angle = (2 * pi * index) / icons.length;
+            children: List.generate(defaultCategories.length, (index) {
+              final angle = (2 * pi * index) / defaultCategories.length;
               final double radius = 80;
 
               return Positioned(
                 left: radius * cos(angle) + (250 / 2) - 28 / 2,
                 top: radius * sin(angle) + (250 / 2) - 28 / 2,
                 child: Icon(
-                  icons[index],
-                  color: colors[index],
+                  defaultCategories[index]['icon'] as IconData,
+                  color: defaultCategories[index]['color'] as Color,
                   size: 28,
                 ),
               );
@@ -74,91 +110,107 @@ class CategoryButton extends StatelessWidget {
     );
   }
 }
-
 class CategoryScreen extends StatefulWidget {
   @override
   _CategoryScreenState createState() => _CategoryScreenState();
 }
 
 class _CategoryScreenState extends State<CategoryScreen> {
-  final List<Map<String, dynamic>> defaultCategories = [
-    {'name': 'Einnahmen', 'icon': Icons.attach_money, 'color': Colors.green},
-    {'name': 'Unterhaltung', 'icon': Icons.movie, 'color': Colors.blue},
-    {'name': 'Lebensmittel', 'icon': Icons.restaurant, 'color': Colors.orange},
-    {'name': 'Haushalt', 'icon': Icons.home, 'color': Colors.teal},
-    {'name': 'Wohnen', 'icon': Icons.apartment, 'color': Colors.indigo},
-    {'name': 'Transport', 'icon': Icons.directions_car, 'color': Colors.purple},
-    {'name': 'Kleidung', 'icon': Icons.shopping_bag, 'color': Colors.pink},
-    {'name': 'Bildung', 'icon': Icons.school, 'color': Colors.amber},
-    {'name': 'Finanzen', 'icon': Icons.account_balance, 'color': Colors.lightGreen},
-    {'name': 'Gesundheit', 'icon': Icons.health_and_safety, 'color': Colors.red},
-  ];
+  late Future<List<Category>> userCategories;
+/*
+  @override
+  void initState() {
+    super.initState();
+    final userId = "test_user_id"; // Dynamische Benutzer-ID ersetzen
+    userCategories = FirestoreService().getUserCategories(userId);
+  }*/
+  @override
+  void initState() {
+    super.initState();
+    final userId = "test_user_id"; // Dynamisch durch echte Benutzer-ID ersetzen
 
+    // Initialisieren: Standardkategorien speichern
+    FirestoreService().createDefaultCategories(userId);/*.then((_) {
+      // Kategorien laden
+      setState(() {
+        userCategories = FirestoreService().getUserCategories(userId);
+      });
+    });*/
+    if (mounted) {
+      setState(() {
+        userCategories = FirestoreService().getUserCategories(userId);
+      });
+    }
 
-
-
-  List<String> customCategories = [];
-  List<IconData> customIcons = [];
-  List<Color> customColors = [];
-
-  // Getter für alle Kategorien
-  List<Map<String, dynamic>> get allCategories {
-    return [
-      ...defaultCategories,
-      ...customCategories.asMap().entries.map((entry) {
-        int index = entry.key;
-        return {
-          'name': entry.value,
-          'icon': customIcons[index],
-          'color': customColors[index],
-        };
-      }).toList(),
-    ];
   }
 
-  // Getter für individuelle Werte
-  List<String> get categoryNames => allCategories.map((cat) => cat['name'] as String).toList();
-  List<IconData> get categoryIcons => allCategories.map((cat) => cat['icon'] as IconData).toList();
-  List<Color> get categoryColors => allCategories.map((cat) => cat['color'] as Color).toList();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Kategorien")),
+      body: _buildCategoryList(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _addCategory,
+        child: Icon(Icons.add),
+      ),
+    );
+  }
+
+  /// Liste der Kategorien anzeigen
+  Widget _buildCategoryList() {
+    return FutureBuilder<List<Category>>(
+      future: userCategories,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Fehler beim Laden der Kategorien.'));
+        } else {
+          // Alle Kategorien kombinieren (Standard und benutzerdefiniert)
+          final combinedCategories = snapshot.data ?? [];
+
+          return ListView.builder(
+            itemCount: combinedCategories.length,
+            itemBuilder: (context, index) {
+              final category = combinedCategories[index];
+
+              // Überprüfen, ob es sich um eine Standardkategorie handelt
+              final isDefault = category.userId == "system";
+
+              return ListTile(
+                leading: Icon(category.icon, color: category.color),
+                title: Text(category.name),
+                subtitle: Text('Budget: €${category.budgetLimit?.toStringAsFixed(2)}'),
+                trailing: isDefault
+                    ? null // Keine Löschmöglichkeit für Standardkategorien
+                    : IconButton(
+                  icon: Icon(Icons.delete, color: Colors.red),
+                  onPressed: () => _confirmDeleteCategory(category),
+                ),
+                // Klick auf die Kategorie öffnet den Dialog zum Bearbeiten des Budgets
+                onTap: () => _editCategoryBudget(category),
+              );
+            },
+          );
+        }
+      },
+    );
+  }
 
 
 
-  final List<IconData> availableIcons = [
-    Icons.more_horiz,
-    Icons.restaurant,
-    Icons.home,
-    Icons.directions_car,
-    Icons.shopping_cart,
-    Icons.health_and_safety,
-    Icons.attach_money,
-    Icons.safety_check,
-    Icons.shopping_bag,
-    Icons.savings,
-    Icons.school,
-    Icons.sports_basketball,
-    Icons.work,
-    Icons.pets
-  ];
 
-  final List<Color> availableColors = [
-    Colors.blueGrey,
-    Colors.red,
-    Colors.blue,
-    Colors.green,
-    Colors.orange,
-    Colors.purple,
-    Colors.teal,
-    Colors.yellow,
-    Colors.cyan,
-    Colors.indigo,
-    Colors.pink,
-    Colors.brown,
-  ];
 
+
+
+  /// Kategorie hinzufügen
   void _addCategory() {
     String newCategoryName = '';
-    IconData selectedIcon = availableIcons[0];
-    Color selectedColor = availableColors[0];
+    IconData selectedIcon = availableIcons.first;
+    Color selectedColor = availableColors.first;
+    double? budgetAmount;
+    bool hasBudget = false;
 
     showDialog(
       context: context,
@@ -179,7 +231,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                   SizedBox(height: 10),
                   Row(
                     children: [
-                      Text("Icon:"),
+                      Text('Icon:'),
                       SizedBox(width: 10),
                       DropdownButton<IconData>(
                         value: selectedIcon,
@@ -199,10 +251,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
                       ),
                     ],
                   ),
-                  SizedBox(height: 10),
                   Row(
                     children: [
-                      Text("Farbe:"),
+                      Text('Farbe:'),
                       SizedBox(width: 10),
                       DropdownButton<Color>(
                         value: selectedColor,
@@ -216,34 +267,54 @@ class _CategoryScreenState extends State<CategoryScreen> {
                         items: availableColors.map((color) {
                           return DropdownMenuItem(
                             value: color,
-                            child: Container(
-                              width: 24,
-                              height: 24,
-                              color: color,
-                            ),
+                            child: Container(width: 24, height: 24, color: color),
                           );
                         }).toList(),
                       ),
                     ],
                   ),
-                  SizedBox(height: 20),
-                  Icon(selectedIcon, color: selectedColor, size: 48),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Budget hinzufügen'),
+                      Switch(
+                        value: hasBudget,
+                        onChanged: (value) {
+                          setDialogState(() {
+                            hasBudget = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  if (hasBudget)
+                    TextField(
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(labelText: 'Budget (€)'),
+                      onChanged: (value) {
+                        budgetAmount = double.tryParse(value) ?? 0.0;
+                      },
+                    ),
                 ],
               ),
               actions: [
                 TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
+                  onPressed: () => Navigator.of(context).pop(),
                   child: Text('Abbrechen'),
                 ),
                 TextButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (newCategoryName.isNotEmpty) {
+                      final newCategory = Category(
+                        userId: "test_user_id",
+                        name: newCategoryName,
+                        budgetLimit: hasBudget ? budgetAmount : 0.0,
+                        icon: selectedIcon,
+                        color: selectedColor,
+                      );
+                      await FirestoreService().createCategory("test_user_id", newCategory);
                       setState(() {
-                        customCategories.add(newCategoryName);
-                        customIcons.add(selectedIcon);
-                        customColors.add(selectedColor);
+                        userCategories = FirestoreService().getUserCategories("test_user_id");
                       });
                     }
                     Navigator.of(context).pop();
@@ -258,26 +329,80 @@ class _CategoryScreenState extends State<CategoryScreen> {
     );
   }
 
-  void _confirmDeleteCategory(int index) {
+  /// Kategorie-Budget bearbeiten
+  // Bearbeiten des Budgets für eine Kategorie
+  void _editCategoryBudget(Category category) {
+    double budgetAmount = category.budgetLimit ?? 0.0;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text('Budget bearbeiten: ${category.name}'),
+              content: TextField(
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(labelText: 'Budget (€)'),
+                onChanged: (value) {
+                  budgetAmount = double.tryParse(value) ?? 0.0;
+                },
+                controller: TextEditingController(text: budgetAmount.toStringAsFixed(2)),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text('Abbrechen'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    // Budgetlimit aktualisieren
+                    category.budgetLimit = budgetAmount;
+
+                    if (category.userId != "system") {
+                      // Benutzerdefinierte Kategorien in Firestore aktualisieren
+                      await FirestoreService().updateCategory("test_user_id", category);
+                    } else {
+                      // Standardkategorien: Budgetlimit aktualisieren
+                      await FirestoreService().updateCategoryBudgetLimit("test_user_id", category.id!, budgetAmount);
+                    }
+
+                    setState(() {
+                      userCategories = FirestoreService().getUserCategories("test_user_id");
+                    });
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('Speichern'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+
+
+
+  /// Benutzerdefinierte Kategorie löschen
+  void _confirmDeleteCategory(Category category) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Kategorie löschen?'),
-          content: Text('Möchten Sie diese Kategorie wirklich löschen?'),
+          title: Text('Kategorie löschen'),
+          content: Text('Möchten Sie die Kategorie "${category.name}" wirklich löschen?'),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: () => Navigator.of(context).pop(),
               child: Text('Abbrechen'),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
+                //await FirestoreService().deleteCategory("test_user_id", category);
                 setState(() {
-                  customCategories.removeAt(index);
-                  customIcons.removeAt(index);
-                  customColors.removeAt(index);
+                  //userCategories = FirestoreService().getUserCategories("test_user_id");
                 });
                 Navigator.of(context).pop();
               },
@@ -286,54 +411,6 @@ class _CategoryScreenState extends State<CategoryScreen> {
           ],
         );
       },
-    );
-  }
-
-  Widget _buildCategoryList() {
-    return Expanded(
-      child: ListView(
-        children: [
-          ...defaultCategories.map((category) {
-            return ListTile(
-              leading: Icon(category['icon'], color: category['color']),
-              title: Text(category['name']),
-            );
-          }).toList(),
-          ...customCategories.asMap().entries.map((entry) {
-            int index = entry.key;
-            String category = entry.value;
-
-            return ListTile(
-              leading: Icon(customIcons[index], color: customColors[index]),
-              title: Text(category),
-              trailing: IconButton(
-                icon: Icon(Icons.delete, color: Colors.red),
-                onPressed: () {
-                  _confirmDeleteCategory(index);
-                },
-              ),
-            );
-          }).toList(),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Kategorien')),
-      body: Column(
-        children: [
-          _buildCategoryList(),
-          SizedBox(height: 70),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addCategory,
-        child: Icon(Icons.add),
-        tooltip: 'Kategorie hinzufügen',
-      ),
     );
   }
 }

@@ -10,6 +10,7 @@ class CategoryProvider extends ChangeNotifier {
   List<Category> get categories => _categories;
   bool get isLoading => _isLoading;
 
+
   Future<void> fetchCategories(String userId) async {
     _isLoading = true;
     notifyListeners();
