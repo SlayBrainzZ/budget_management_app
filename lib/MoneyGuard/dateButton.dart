@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-
-/*
-void main() {
-  runApp(MaterialApp(
-    home: DateButton(),
-  ));
-}*/
+import 'package:budget_management_app/backend/firestore_service.dart';
+import 'package:budget_management_app/backend/Transaction.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:budget_management_app/backend/Category.dart';
 
 class DateButton extends StatelessWidget {
   @override
@@ -86,6 +83,7 @@ class DateButton extends StatelessWidget {
   }
 }
 
+
 class DateButtonScreen extends StatefulWidget {
   @override
   _DateButtonScreenState createState() => _DateButtonScreenState();
@@ -93,18 +91,23 @@ class DateButtonScreen extends StatefulWidget {
 
 class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  List<Transaction> dailyTransactions = [];
+  bool isLoading = true;
 
-  List<String> categories = ['Kategorie 1', 'Kategorie 2', 'Kategorie 3'];
-  List<String> accounts = ['Konto 1', 'Konto 2', 'Konto 3'];
+  // Dropdown-Werte
   List<String> selectedCategories = [];
   List<String> selectedAccounts = [];
+
+  // Beispiel-Daten für die Dropdown-Listen
+  List<String> categories = [];//['Einkaufen', 'Miete', 'Freizeit', 'Essen'];
+  List<String> accounts = ['Konto 1', 'Konto 2', 'Konto 3'];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    selectedCategories = ['Alle']; // Standardauswahl
-    selectedAccounts = ['Alle'];
+    _fetchTransactions();
+    _fetchCategories();
   }
 
   @override
@@ -113,39 +116,171 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
     super.dispose();
   }
 
-  void _showMultiSelectDialog({
-    required List<String> options,
-    required List<String> selectedValues,
-    required ValueChanged<List<String>> onConfirm,
-    required String title,
-  }) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        List<String> tempSelectedValues = List.from(selectedValues);
+  Future<void> _fetchTransactions() async {
+    setState(() {
+      isLoading = true;
+    });
 
-        return StatefulBuilder(
-          builder: (context, setState) {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        throw Exception('Kein Benutzer angemeldet.');
+      }
+
+      final firestoreService = FirestoreService();
+      final userId = currentUser.uid;
+
+      final userTransactions = await firestoreService.getUserTransactions(userId);
+
+      // Lade Kategorie-Daten für jede Transaktion
+      for (var transaction in userTransactions) {
+        if (transaction.categoryId != null) {
+          final category = await firestoreService.getCategory(userId, transaction.categoryId!);
+          transaction.categoryData = category; // Ergänze Kategorie-Daten zur Transaktion
+        }
+      }
+
+      setState(() {
+        dailyTransactions = userTransactions;
+      });
+    } catch (e) {
+      print('Fehler beim Abrufen der Transaktionen: $e');
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _fetchCategories() async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        throw Exception('Kein Benutzer angemeldet.');
+      }
+
+      final firestoreService = FirestoreService();
+      final userId = currentUser.uid;
+
+      // Hole Kategorien aus Firestore
+      final userCategories = await firestoreService.getUserCategories(userId);
+
+      setState(() {
+        categories = userCategories.map((category) => category.name).toList();
+      });
+    } catch (e) {
+      print('Fehler beim Abrufen der Kategorien: $e');
+    }
+  }
+
+
+
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Einnahmen und Ausgaben'),
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(120.0), // Platz für Dropdowns
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildMultiSelectDropdown(
+                      title: "Kategorie wählen",
+                      items: categories,
+                      selectedItems: selectedCategories,
+                      onConfirm: (selected) {
+                        setState(() {
+                          selectedCategories = selected;
+                        });
+                      },
+                    ),
+                    _buildMultiSelectDropdown(
+                      title: "Konto wählen",
+                      items: accounts,
+                      selectedItems: selectedAccounts,
+                      onConfirm: (selected) {
+                        setState(() {
+                          selectedAccounts = selected;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              TabBar(
+                controller: _tabController,
+                tabs: const [
+                  Tab(text: 'Täglich'),
+                  Tab(text: 'Monatlich'),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      body: isLoading
+          ? Center(child: CircularProgressIndicator())
+          : TabBarView(
+        controller: _tabController,
+        children: [
+          _buildDailyTransactionList(),
+          _buildEmptyMonthlyView(),
+        ],
+      ),
+    );
+  }
+
+
+  Widget _buildMultiSelectDropdown({
+    required String title,
+    required List<String> items,
+    required List<String> selectedItems,
+    required Function(List<String>) onConfirm,
+  }) {
+    return InkWell(
+      onTap: () async {
+        final List<String>? result = await showDialog<List<String>>(
+          context: context,
+          builder: (context) {
+            List<String> tempSelected = List.from(selectedItems);
+            final String allOption = 'Alle'; // Option "Alle"
+
             return AlertDialog(
               title: Text(title),
               content: SingleChildScrollView(
                 child: Column(
-                  children: options.map((option) {
+                  children: [allOption, ...items].map((item) {
+                    final isSelected = tempSelected.contains(item);
+
                     return CheckboxListTile(
-                      title: Text(option),
-                      value: tempSelectedValues.contains(option),
-                      onChanged: (bool? checked) {
+                      value: isSelected,
+                      title: Text(item),
+                      onChanged: (isChecked) {
                         setState(() {
-                          if (checked == true) {
-                            if (option == 'Alle') {
-                              tempSelectedValues.clear();
-                              tempSelectedValues.add('Alle');
+                          if (item == allOption) {
+                            // Wenn "Alle" gewählt wird, wähle alles oder setze zurück
+                            if (isChecked == true) {
+                              tempSelected
+                                ..clear()
+                                ..addAll([allOption, ...items]);
                             } else {
-                              tempSelectedValues.remove('Alle');
-                              tempSelectedValues.add(option);
+                              tempSelected.clear();
                             }
                           } else {
-                            tempSelectedValues.remove(option);
+                            // Individuelle Items hinzufügen/entfernen
+                            if (isChecked == true) {
+                              tempSelected.add(item);
+                              tempSelected.remove(allOption); // Entferne "Alle", wenn etwas anderes ausgewählt ist
+                            } else {
+                              tempSelected.remove(item);
+                            }
                           }
                         });
                       },
@@ -155,172 +290,137 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
               ),
               actions: [
                 TextButton(
-                  child: Text('Abbrechen'),
+                  child: Text("Abbrechen"),
                   onPressed: () {
-                    Navigator.of(context).pop();
+                    Navigator.pop(context, null);
                   },
                 ),
-                TextButton(
-                  child: Text('Bestätigen'),
+                ElevatedButton(
+                  child: Text("Bestätigen"),
                   onPressed: () {
-                    onConfirm(tempSelectedValues);
-                    Navigator.of(context).pop();
+                    Navigator.pop(context, tempSelected);
                   },
                 ),
               ],
             );
           },
         );
-      },
-    );
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Einnahmen und Ausgaben'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Täglich'),
-            Tab(text: 'Monatlich'),
+        if (result != null) {
+          onConfirm(result);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              selectedItems.isEmpty ? title : selectedItems.join(', '),
+              style: TextStyle(color: Colors.black),
+              overflow: TextOverflow.ellipsis,
+            ),
+            Icon(Icons.arrow_drop_down, color: Colors.grey),
           ],
         ),
       ),
-      body: Column(
-        children: [
-          // Filterleiste
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      _showMultiSelectDialog(
-                        options: ['Alle', ...categories],
-                        selectedValues: selectedCategories,
-                        onConfirm: (values) {
-                          setState(() {
-                            selectedCategories = values.isEmpty ? ['Alle'] : values;
-                          });
-                        },
-                        title: 'Kategorien auswählen',
-                      );
-                    },
-                    style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      side: BorderSide(color: Colors.grey),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          selectedCategories.contains('Alle')
-                              ? 'Alle Kategorien'
-                              : selectedCategories.join(', '),
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: Colors.black),
-                        ),
-                        Icon(Icons.arrow_drop_down, color: Colors.black),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      _showMultiSelectDialog(
-                        options: ['Alle', ...accounts],
-                        selectedValues: selectedAccounts,
-                        onConfirm: (values) {
-                          setState(() {
-                            selectedAccounts = values.isEmpty ? ['Alle'] : values;
-                          });
-                        },
-                        title: 'Konten auswählen',
-                      );
-                    },
-                    style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      side: BorderSide(color: Colors.grey),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          selectedAccounts.contains('Alle')
-                              ? 'Alle Konten'
-                              : selectedAccounts.join(', '),
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: Colors.black),
-                        ),
-                        Icon(Icons.arrow_drop_down, color: Colors.black),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Einnahmen-/Ausgaben-Info
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildInfoCard('Einnahmen', '0 €', Colors.blue),
-                _buildInfoCard('Ausgaben', '0 €', Colors.red),
-                _buildInfoCard('Gesamt', '0 €', Colors.black),
-              ],
-            ),
-          ),
-          const Divider(),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildListView('Tägliche Daten'),
-                _buildListView('Monatliche Daten'),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 
-  Widget _buildInfoCard(String title, String value, Color color) {
-    return Column(
-      children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          value,
-          style: TextStyle(fontSize: 18, color: color, fontWeight: FontWeight.bold),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildListView(String type) {
+  Widget _buildDailyTransactionList() {
+    if (dailyTransactions.isEmpty) {
+      return Center(
+        child: Text(
+          'Keine Transaktionen verfügbar.',
+          style: TextStyle(fontSize: 16, color: Colors.grey),
+        ),
+      );
+    }
+
     return ListView.builder(
-      itemCount: 10,
+      itemCount: dailyTransactions.length,
       itemBuilder: (context, index) {
+        final transaction = dailyTransactions[index];
+        final category = transaction.categoryData;
+
         return ListTile(
-          title: Text('$type Eintrag ${index + 1}'),
-          subtitle: Text('Details zu $type Eintrag ${index + 1}'),
+          leading: _buildLeadingIcon(transaction.type), // Neuer Kreis mit Pfeil
+          title: Row(
+            children: [
+              if (category != null) ...[
+                Icon(
+                  category.icon ?? Icons.category,
+                  color: category.color ?? Colors.grey, // Farbe des Kategorie-Icons
+                  size: 24,
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    category.name,
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ] else
+                Text(
+                  'Keine Kategorie',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+                ),
+            ],
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(transaction.note ?? 'Keine Notiz'),
+              Text(
+                'Datum: ${transaction.date.toLocal().toIso8601String()}',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+          trailing: Text(
+            '${transaction.amount.toStringAsFixed(2)} €',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: transaction.type == 'Einnahme' ? Colors.green : Colors.red,
+            ),
+          ),
         );
       },
     );
   }
+
+
+  Widget _buildLeadingIcon(String type) {
+    return Container(
+      width: 25,
+      height: 25,
+      decoration: BoxDecoration(
+        color: type == 'Einnahme' ? Colors.green : Colors.red, // Kreisfarbe
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        type == 'Einnahme' ? Icons.arrow_upward : Icons.arrow_downward, // Pfeil
+        color: Colors.white, // Weißer Pfeil
+        size: 20,
+      ),
+    );
+  }
+
+
+  Widget _buildEmptyMonthlyView() {
+    return Center(
+      child: Text(
+        'Keine Daten für die monatliche Ansicht.',
+        style: TextStyle(fontSize: 16, color: Colors.grey),
+      ),
+    );
+  }
 }
+
