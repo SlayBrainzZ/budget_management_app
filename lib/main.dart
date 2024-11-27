@@ -13,7 +13,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Ensure bindings are initialized for Firebase
 
   try {
-    if (kIsWeb) { // For Web
+    // Firebase-Initialisierung
+    if (kIsWeb) {
+      // Für Web
       await Firebase.initializeApp(
         options: const FirebaseOptions(
           apiKey: "AIzaSyBRElGRhjY1HjJqe7Zt-PKLn1YRy9IEkXs",
@@ -25,20 +27,37 @@ void main() async {
           measurementId: "G-LKZ75WL9T7",
         ),
       );
-    } else { // For Mobile (Android, iOS)
+    } else {
+      // Für Mobile (Android, iOS)
       await Firebase.initializeApp();
     }
 
+    // Authentifizierungsüberwachung starten
+    Auth().authStateChanges.listen((user) async {
+      if (user != null) {
+        debugPrint('User registered: ${user.email}');
+
+        try {
+          // Erstelle das Benutzerdokument in Firestore
+          await FirestoreService().createUser(testUser.User(
+            userId: user.uid,
+            email: user.email!,
+            createdDate: DateTime.now(),
+          ));
+        } catch (e) {
+          debugPrint("Error creating user in Firestore: $e");
+        }
+      }
+    });
+
+    // Starte die App
     runApp(const MyApp());
 
-    // Perform CRUD operations (combined test)
-    await performCombinedTest();
-
   } catch (e) {
-    print("Firebase initialization failed: $e");
+    debugPrint("Firebase initialization failed: $e");
   }
 }
-
+/*
 // Perform Combined Test: Register a user, create a category, transaction, and display them
 Future<void> performCombinedTest() async {
   try {
@@ -100,7 +119,7 @@ Future<void> performCombinedTest() async {
   } catch (e) {
     print("Error performing combined test: $e");
   }
-}
+}*/
 
 // Main application widget
 class MyApp extends StatelessWidget {
