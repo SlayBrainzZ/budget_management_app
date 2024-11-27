@@ -99,7 +99,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
   List<String> selectedAccounts = [];
 
   // Beispiel-Daten für die Dropdown-Listen
-  List<String> categories = ['Einkaufen', 'Miete', 'Freizeit', 'Essen'];
+  List<String> categories = [];//['Einkaufen', 'Miete', 'Freizeit', 'Essen'];
   List<String> accounts = ['Konto 1', 'Konto 2', 'Konto 3'];
 
   @override
@@ -107,6 +107,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _fetchTransactions();
+    _fetchCategories();
   }
 
   @override
@@ -150,6 +151,28 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
       });
     }
   }
+
+  Future<void> _fetchCategories() async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        throw Exception('Kein Benutzer angemeldet.');
+      }
+
+      final firestoreService = FirestoreService();
+      final userId = currentUser.uid;
+
+      // Hole Kategorien aus Firestore
+      final userCategories = await firestoreService.getUserCategories(userId);
+
+      setState(() {
+        categories = userCategories.map((category) => category.name).toList();
+      });
+    } catch (e) {
+      print('Fehler beim Abrufen der Kategorien: $e');
+    }
+  }
+
 
 
 

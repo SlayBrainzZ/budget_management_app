@@ -149,12 +149,20 @@ class _AddTransactionPageState extends State<AddTransactionPage>
           DropdownButtonFormField<String>(
             value: _selectedCategory,
             decoration: const InputDecoration(labelText: 'Kategorie auswählen'),
-            items: categories
-                .map((category) => DropdownMenuItem(
-              value: category.id,
-              child: Text(category.name),
-            ))
-                .toList(),
+            items: categories.map((category) {
+              return DropdownMenuItem(
+                value: category.id,
+                child: Row(
+                  children: [
+                    if (category.icon != null) ...[
+                      Icon(category.icon, color: category.color ?? Colors.black),
+                      const SizedBox(width: 10),
+                    ],
+                    Text(category.name),
+                  ],
+                ),
+              );
+            }).toList(),
             onChanged: (value) => setState(() => _selectedCategory = value),
           ),
           const SizedBox(height: 16),
