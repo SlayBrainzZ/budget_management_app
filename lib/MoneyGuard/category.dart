@@ -1,7 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:budget_management_app/backend/firestore_service.dart';
 import 'package:budget_management_app/backend/Category.dart';
+import 'package:budget_management_app/backend/User.dart';
+
 
 final List<Map<String, dynamic>> defaultCategories = [
   {'name': 'Einnahmen', 'icon': Icons.attach_money, 'color': Colors.green, 'budgetLimit': 0.0},
@@ -16,20 +19,6 @@ final List<Map<String, dynamic>> defaultCategories = [
   {'name': 'Gesundheit', 'icon': Icons.health_and_safety, 'color': Colors.red, 'budgetLimit': 0.0},
 ];
 
-/*
-final List<Map<String, dynamic>> defaultCategories = [
-  {'userId': 'system','name': 'Einnahmen', 'icon': Icons.attach_money, 'color': Colors.green, 'budgetLimit': 0.0},
-  {'userId': 'system','name': 'Unterhaltung', 'icon': Icons.movie, 'color': Colors.blue, 'budgetLimit': 0.0},
-  {'userId': 'system','name': 'Lebensmittel', 'icon': Icons.restaurant, 'color': Colors.orange, 'budgetLimit': 0.0},
-  {'userId': 'system','name': 'Haushalt', 'icon': Icons.home, 'color': Colors.teal, 'budgetLimit': 0.0},
-  {'userId': 'system','name': 'Wohnen', 'icon': Icons.apartment, 'color': Colors.indigo, 'budgetLimit': 0.0},
-  {'userId': 'system','name': 'Transport', 'icon': Icons.directions_car, 'color': Colors.purple, 'budgetLimit': 0.0},
-  {'userId': 'system','name': 'Kleidung', 'icon': Icons.shopping_bag, 'color': Colors.pink, 'budgetLimit': 0.0},
-  {'userId': 'system','name': 'Bildung', 'icon': Icons.school, 'color': Colors.amber, 'budgetLimit': 0.0},
-  {'userId': 'system','name': 'Finanzen', 'icon': Icons.account_balance, 'color': Colors.lightGreen, 'budgetLimit': 0.0},
-  {'userId': 'system','name': 'Gesundheit', 'icon': Icons.health_and_safety, 'color': Colors.red, 'budgetLimit': 0.0},
-];
-*/
 
 final List<IconData> availableIcons = [
   Icons.more_horiz,
@@ -117,33 +106,23 @@ class CategoryScreen extends StatefulWidget {
 
 class _CategoryScreenState extends State<CategoryScreen> {
   late Future<List<Category>> userCategories;
-/*
-  @override
-  void initState() {
-    super.initState();
-    final userId = "test_user_id"; // Dynamische Benutzer-ID ersetzen
-    userCategories = FirestoreService().getUserCategories(userId);
-  }*/
-  @override
-  void initState() {
-    super.initState();
-    final userId = "test_user_id"; // Dynamisch durch echte Benutzer-ID ersetzen
 
-    // Initialisieren: Standardkategorien speichern
-    FirestoreService().createDefaultCategories(userId);/*.then((_) {
-      // Kategorien laden
+  @override
+  void initState() {
+    super.initState();
+
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      final userId = user.uid;  // Hier die UID verwenden
       setState(() {
         userCategories = FirestoreService().getUserCategories(userId);
       });
-    });*/
-    if (mounted) {
-      setState(() {
-        userCategories = FirestoreService().getUserCategories(userId);
-      });
+    } else {
+      // Falls kein Benutzer angemeldet ist, handle diesen Fall
+      print("Kein Benutzer angemeldet.");
     }
-
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -167,28 +146,21 @@ class _CategoryScreenState extends State<CategoryScreen> {
         } else if (snapshot.hasError) {
           return Center(child: Text('Fehler beim Laden der Kategorien.'));
         } else {
-          // Alle Kategorien kombinieren (Standard und benutzerdefiniert)
-          final combinedCategories = snapshot.data ?? [];
+          final categories = snapshot.data ?? [];
 
           return ListView.builder(
-            itemCount: combinedCategories.length,
+            itemCount: categories.length,
             itemBuilder: (context, index) {
-              final category = combinedCategories[index];
-
-              // Überprüfen, ob es sich um eine Standardkategorie handelt
-              final isDefault = category.userId == "system";
+              final category = categories[index];
 
               return ListTile(
                 leading: Icon(category.icon, color: category.color),
                 title: Text(category.name),
                 subtitle: Text('Budget: €${category.budgetLimit?.toStringAsFixed(2)}'),
-                trailing: isDefault
-                    ? null // Keine Löschmöglichkeit für Standardkategorien
-                    : IconButton(
+                trailing: IconButton(
                   icon: Icon(Icons.delete, color: Colors.red),
                   onPressed: () => _confirmDeleteCategory(category),
                 ),
-                // Klick auf die Kategorie öffnet den Dialog zum Bearbeiten des Budgets
                 onTap: () => _editCategoryBudget(category),
               );
             },
@@ -198,15 +170,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
     );
   }
 
-
-
-
-
-
-
-  /// Kategorie hinzufügen
   void _addCategory() {
-    String newCategoryName = '';
+    final nameController = TextEditingController();
     IconData selectedIcon = availableIcons.first;
     Color selectedColor = availableColors.first;
     double? budgetAmount;
@@ -219,83 +184,83 @@ class _CategoryScreenState extends State<CategoryScreen> {
           builder: (context, setDialogState) {
             return AlertDialog(
               title: Text('Neue Kategorie hinzufügen'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    decoration: InputDecoration(labelText: 'Kategoriename'),
-                    onChanged: (value) {
-                      newCategoryName = value;
-                    },
-                  ),
-                  SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Text('Icon:'),
-                      SizedBox(width: 10),
-                      DropdownButton<IconData>(
-                        value: selectedIcon,
-                        onChanged: (IconData? newIcon) {
-                          if (newIcon != null) {
-                            setDialogState(() {
-                              selectedIcon = newIcon;
-                            });
-                          }
-                        },
-                        items: availableIcons.map((icon) {
-                          return DropdownMenuItem(
-                            value: icon,
-                            child: Icon(icon),
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Text('Farbe:'),
-                      SizedBox(width: 10),
-                      DropdownButton<Color>(
-                        value: selectedColor,
-                        onChanged: (Color? newColor) {
-                          if (newColor != null) {
-                            setDialogState(() {
-                              selectedColor = newColor;
-                            });
-                          }
-                        },
-                        items: availableColors.map((color) {
-                          return DropdownMenuItem(
-                            value: color,
-                            child: Container(width: 24, height: 24, color: color),
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Budget hinzufügen'),
-                      Switch(
-                        value: hasBudget,
-                        onChanged: (value) {
-                          setDialogState(() {
-                            hasBudget = value;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                  if (hasBudget)
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     TextField(
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(labelText: 'Budget (€)'),
-                      onChanged: (value) {
-                        budgetAmount = double.tryParse(value) ?? 0.0;
-                      },
+                      controller: nameController,
+                      decoration: InputDecoration(labelText: 'Kategoriename'),
                     ),
-                ],
+                    SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Text('Icon:'),
+                        SizedBox(width: 10),
+                        DropdownButton<IconData>(
+                          value: selectedIcon,
+                          onChanged: (IconData? newIcon) {
+                            if (newIcon != null) {
+                              setDialogState(() {
+                                selectedIcon = newIcon;
+                              });
+                            }
+                          },
+                          items: availableIcons.map((icon) {
+                            return DropdownMenuItem(
+                              value: icon,
+                              child: Icon(icon),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Text('Farbe:'),
+                        SizedBox(width: 10),
+                        DropdownButton<Color>(
+                          value: selectedColor,
+                          onChanged: (Color? newColor) {
+                            if (newColor != null) {
+                              setDialogState(() {
+                                selectedColor = newColor;
+                              });
+                            }
+                          },
+                          items: availableColors.map((color) {
+                            return DropdownMenuItem(
+                              value: color,
+                              child: Container(width: 24, height: 24, color: color),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Budget hinzufügen'),
+                        Switch(
+                          value: hasBudget,
+                          onChanged: (value) {
+                            setDialogState(() {
+                              hasBudget = value;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    if (hasBudget)
+                      TextField(
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(labelText: 'Budget (€)'),
+                        onChanged: (value) {
+                          budgetAmount = double.tryParse(value);
+                        },
+                      ),
+                  ],
+                ),
               ),
               actions: [
                 TextButton(
@@ -304,20 +269,52 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 ),
                 TextButton(
                   onPressed: () async {
-                    if (newCategoryName.isNotEmpty) {
-                      final newCategory = Category(
-                        userId: "test_user_id",
-                        name: newCategoryName,
-                        budgetLimit: hasBudget ? budgetAmount : 0.0,
-                        icon: selectedIcon,
-                        color: selectedColor,
+                    final newCategoryName = nameController.text.trim();
+                    if (newCategoryName.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Bitte einen gültigen Kategorienamen eingeben')),
                       );
-                      await FirestoreService().createCategory("test_user_id", newCategory);
-                      setState(() {
-                        userCategories = FirestoreService().getUserCategories("test_user_id");
-                      });
+                      return;
                     }
-                    Navigator.of(context).pop();
+
+                    if (budgetAmount == null) {
+                      budgetAmount = 0.0;
+                    }
+
+                    // Hole die Benutzer-ID
+                    final user = FirebaseAuth.instance.currentUser;
+
+                    if (user == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Kein Benutzer angemeldet.')),
+                      );
+                      return;
+                    }
+
+                    final userId = user.uid;
+
+                    // Neue Kategorie erstellen
+                    Category newCategory = Category(
+                      userId: userId,
+                      name: newCategoryName,
+                      budgetLimit: hasBudget ? budgetAmount : 0.0,
+                      icon: selectedIcon,
+                      color: selectedColor,
+                    );
+
+                    try {
+                      await FirestoreService().createCategory(userId, newCategory);
+
+                      setState(() {
+                        userCategories = FirestoreService().getUserCategories(userId);
+                      });
+
+                      Navigator.of(context).pop();
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Fehler beim Speichern der Kategorie: $e')),
+                      );
+                    }
                   },
                   child: Text('Hinzufügen'),
                 ),
@@ -329,8 +326,10 @@ class _CategoryScreenState extends State<CategoryScreen> {
     );
   }
 
+
+
+
   /// Kategorie-Budget bearbeiten
-  // Bearbeiten des Budgets für eine Kategorie
   void _editCategoryBudget(Category category) {
     double budgetAmount = category.budgetLimit ?? 0.0;
 
@@ -356,19 +355,29 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 ),
                 TextButton(
                   onPressed: () async {
+                    final user = FirebaseAuth.instance.currentUser;
+
+                    if (user == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Kein Benutzer angemeldet.')),
+                      );
+                      return;
+                    }
+
                     // Budgetlimit aktualisieren
                     category.budgetLimit = budgetAmount;
 
                     if (category.userId != "system") {
                       // Benutzerdefinierte Kategorien in Firestore aktualisieren
-                      await FirestoreService().updateCategory("test_user_id", category);
+                      await FirestoreService().updateCategory(user.uid, category);
                     } else {
                       // Standardkategorien: Budgetlimit aktualisieren
-                      await FirestoreService().updateCategoryBudgetLimit("test_user_id", category.id!, budgetAmount);
+                      await FirestoreService()
+                          .updateCategoryBudgetLimit(user.uid, category.id!, budgetAmount);
                     }
 
                     setState(() {
-                      userCategories = FirestoreService().getUserCategories("test_user_id");
+                      userCategories = FirestoreService().getUserCategories(user.uid);
                     });
                     Navigator.of(context).pop();
                   },
@@ -385,7 +394,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
 
 
-  /// Benutzerdefinierte Kategorie löschen
+
   void _confirmDeleteCategory(Category category) {
     showDialog(
       context: context,
@@ -400,9 +409,19 @@ class _CategoryScreenState extends State<CategoryScreen> {
             ),
             TextButton(
               onPressed: () async {
-                //await FirestoreService().deleteCategory("test_user_id", category);
+                final user = FirebaseAuth.instance.currentUser;
+
+                if (user == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Kein Benutzer angemeldet.')),
+                  );
+                  return;
+                }
+
+                //await FirestoreService().deleteCategory(user.uid, category);
+
                 setState(() {
-                  //userCategories = FirestoreService().getUserCategories("test_user_id");
+                  userCategories = FirestoreService().getUserCategories(user.uid);
                 });
                 Navigator.of(context).pop();
               },

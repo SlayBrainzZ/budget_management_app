@@ -32,7 +32,7 @@ void main() async {
     runApp(const MyApp());
 
     // Perform CRUD operations (combined test)
-    //await performCombinedTest();
+    await performCombinedTest();
 
   } catch (e) {
     print("Firebase initialization failed: $e");
@@ -40,7 +40,7 @@ void main() async {
 }
 
 // Perform Combined Test: Register a user, create a category, transaction, and display them
-/* Future<void> performCombinedTest() async {
+ Future<void> performCombinedTest() async {
   try {
     // Step 1: Listen for auth state changes and create user document
     Auth().authStateChanges.listen((user) async {
@@ -100,7 +100,7 @@ void main() async {
   } catch (e) {
     print("Error performing combined test: $e");
   }
-} */
+}
 
 // Main application widget
 class MyApp extends StatelessWidget {
