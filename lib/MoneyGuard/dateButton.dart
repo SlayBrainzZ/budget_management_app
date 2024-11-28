@@ -95,11 +95,11 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
   bool isLoading = true;
 
   // Dropdown-Werte
-  List<String> selectedCategories = [];
+  List<Category> selectedCategories = []; // Vollständige Category-Objekte
   List<String> selectedAccounts = [];
 
-  // Beispiel-Daten für die Dropdown-Listen
-  List<String> categories = [];//['Einkaufen', 'Miete', 'Freizeit', 'Essen'];
+  // Kategorien und Konten
+  List<Category> categories = [];
   List<String> accounts = ['Konto 1', 'Konto 2', 'Konto 3'];
 
   @override
@@ -130,18 +130,32 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
       final firestoreService = FirestoreService();
       final userId = currentUser.uid;
 
-      final userTransactions = await firestoreService.getUserTransactions(userId);
+      List<Transaction> transactions;
+      if (selectedCategories.isEmpty || selectedCategories.length == categories.length) {
+        // "Alle" ist gewählt, lade alle Transaktionen
+        transactions = await firestoreService.getUserTransactions(userId);
+      } else {
+        // Lade Transaktionen für spezifische Kategorien
+        transactions = [];
+        for (final category in selectedCategories) {
+          final filteredTransactions = await firestoreService.getTransactionsByCategory(
+            userId,
+            category.id!,
+          );
+          transactions.addAll(filteredTransactions);
+        }
+      }
 
       // Lade Kategorie-Daten für jede Transaktion
-      for (var transaction in userTransactions) {
+      for (var transaction in transactions) {
         if (transaction.categoryId != null) {
           final category = await firestoreService.getCategory(userId, transaction.categoryId!);
-          transaction.categoryData = category; // Ergänze Kategorie-Daten zur Transaktion
+          transaction.categoryData = category;
         }
       }
 
       setState(() {
-        dailyTransactions = userTransactions;
+        dailyTransactions = transactions;
       });
     } catch (e) {
       print('Fehler beim Abrufen der Transaktionen: $e');
@@ -151,6 +165,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
       });
     }
   }
+
 
   Future<void> _fetchCategories() async {
     try {
@@ -162,19 +177,18 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
       final firestoreService = FirestoreService();
       final userId = currentUser.uid;
 
-      // Hole Kategorien aus Firestore
       final userCategories = await firestoreService.getUserCategories(userId);
 
       setState(() {
-        categories = userCategories.map((category) => category.name).toList();
+        categories = userCategories; // Vollständige Kategorie-Objekte speichern
+        selectedCategories = List.from(userCategories); // Standardmäßig alle wählen
       });
+
+      _fetchTransactions(); // Lade Transaktionen basierend auf allen Kategorien
     } catch (e) {
       print('Fehler beim Abrufen der Kategorien: $e');
     }
   }
-
-
-
 
 
   @override
@@ -237,77 +251,106 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
     );
   }
 
-
-  Widget _buildMultiSelectDropdown({
+  Widget _buildMultiSelectDropdown<T>({
     required String title,
-    required List<String> items,
-    required List<String> selectedItems,
-    required Function(List<String>) onConfirm,
+    required List<T> items,
+    required List<T> selectedItems,
+    required Function(List<T>) onConfirm,
   }) {
     return InkWell(
       onTap: () async {
-        final List<String>? result = await showDialog<List<String>>(
+        final List<T>? result = await showDialog<List<T>>(
           context: context,
           builder: (context) {
-            List<String> tempSelected = List.from(selectedItems);
-            final String allOption = 'Alle'; // Option "Alle"
+            List<T> tempSelected = List.from(selectedItems);
+            final bool isCategory = items is List<Category>;
 
-            return AlertDialog(
-              title: Text(title),
-              content: SingleChildScrollView(
-                child: Column(
-                  children: [allOption, ...items].map((item) {
-                    final isSelected = tempSelected.contains(item);
+            return StatefulBuilder(
+              builder: (context, setState) {
+                final bool isAllSelected = tempSelected.length == items.length;
 
-                    return CheckboxListTile(
-                      value: isSelected,
-                      title: Text(item),
-                      onChanged: (isChecked) {
-                        setState(() {
-                          if (item == allOption) {
-                            // Wenn "Alle" gewählt wird, wähle alles oder setze zurück
-                            if (isChecked == true) {
-                              tempSelected
-                                ..clear()
-                                ..addAll([allOption, ...items]);
-                            } else {
-                              tempSelected.clear();
-                            }
-                          } else {
-                            // Individuelle Items hinzufügen/entfernen
-                            if (isChecked == true) {
-                              tempSelected.add(item);
-                              tempSelected.remove(allOption); // Entferne "Alle", wenn etwas anderes ausgewählt ist
-                            } else {
-                              tempSelected.remove(item);
-                            }
-                          }
-                        });
+                void toggleAllSelection(bool isSelected) {
+                  setState(() {
+                    if (isSelected) {
+                      tempSelected = List.from(items); // Alle auswählen
+                    } else {
+                      tempSelected.clear(); // Alle abwählen
+                    }
+                  });
+                }
+
+                return AlertDialog(
+                  title: Text(title),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        CheckboxListTile(
+                          value: isAllSelected,
+                          title: Text("Alle"),
+                          onChanged: (isChecked) {
+                            toggleAllSelection(isChecked == true);
+                          },
+                        ),
+                        ...items.map((item) {
+                          final bool isSelected = tempSelected.contains(item);
+
+                          return CheckboxListTile(
+                            value: isSelected,
+                            title: Row(
+                              children: [
+                                if (isCategory)
+                                  Icon(
+                                    (item as Category).icon ?? Icons.category,
+                                    color: item.color ?? Colors.grey,
+                                  ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    isCategory
+                                        ? (item as Category).name
+                                        : item.toString(),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            onChanged: (isChecked) {
+                              setState(() {
+                                if (isChecked == true) {
+                                  tempSelected.add(item);
+                                } else {
+                                  tempSelected.remove(item);
+                                }
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      child: const Text("Abbrechen"),
+                      onPressed: () {
+                        Navigator.pop(context, null);
                       },
-                    );
-                  }).toList(),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  child: Text("Abbrechen"),
-                  onPressed: () {
-                    Navigator.pop(context, null);
-                  },
-                ),
-                ElevatedButton(
-                  child: Text("Bestätigen"),
-                  onPressed: () {
-                    Navigator.pop(context, tempSelected);
-                  },
-                ),
-              ],
+                    ),
+                    ElevatedButton(
+                      child: const Text("Bestätigen"),
+                      onPressed: () {
+                        Navigator.pop(context, tempSelected);
+                      },
+                    ),
+                  ],
+                );
+              },
             );
           },
         );
 
         if (result != null) {
           onConfirm(result);
+          _fetchTransactions(); // Aktualisiere Transaktionen basierend auf Auswahl
         }
       },
       child: Container(
@@ -320,11 +363,17 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              selectedItems.isEmpty ? title : selectedItems.join(', '),
-              style: TextStyle(color: Colors.black),
+              selectedItems.isEmpty
+                  ? title
+                  : (selectedItems.length == items.length
+                  ? 'Alle' // Zeige "Alle" an, wenn alle Kategorien ausgewählt sind
+                  : selectedItems
+                  .map((e) => e is Category ? e.name : e.toString())
+                  .join(', ')),
+              style: const TextStyle(color: Colors.black),
               overflow: TextOverflow.ellipsis,
             ),
-            Icon(Icons.arrow_drop_down, color: Colors.grey),
+            const Icon(Icons.arrow_drop_down, color: Colors.grey),
           ],
         ),
       ),
@@ -332,10 +381,12 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
   }
 
 
+
+
   Widget _buildDailyTransactionList() {
     if (dailyTransactions.isEmpty) {
       return Center(
-        child: Text(
+        child: const Text(
           'Keine Transaktionen verfügbar.',
           style: TextStyle(fontSize: 16, color: Colors.grey),
         ),
@@ -349,25 +400,25 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
         final category = transaction.categoryData;
 
         return ListTile(
-          leading: _buildLeadingIcon(transaction.type), // Neuer Kreis mit Pfeil
+          leading: _buildLeadingIcon(transaction.type),
           title: Row(
             children: [
               if (category != null) ...[
                 Icon(
                   category.icon ?? Icons.category,
-                  color: category.color ?? Colors.grey, // Farbe des Kategorie-Icons
+                  color: category.color ?? Colors.grey,
                   size: 24,
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     category.name,
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ] else
-                Text(
+                const Text(
                   'Keine Kategorie',
                   style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
                 ),
@@ -379,7 +430,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
               Text(transaction.note ?? 'Keine Notiz'),
               Text(
                 'Datum: ${transaction.date.toLocal().toIso8601String()}',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],
           ),
@@ -396,27 +447,25 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
     );
   }
 
-
   Widget _buildLeadingIcon(String type) {
     return Container(
       width: 25,
       height: 25,
       decoration: BoxDecoration(
-        color: type == 'Einnahme' ? Colors.green : Colors.red, // Kreisfarbe
+        color: type == 'Einnahme' ? Colors.green : Colors.red,
         shape: BoxShape.circle,
       ),
       child: Icon(
-        type == 'Einnahme' ? Icons.arrow_upward : Icons.arrow_downward, // Pfeil
-        color: Colors.white, // Weißer Pfeil
+        type == 'Einnahme' ? Icons.arrow_upward : Icons.arrow_downward,
+        color: Colors.white,
         size: 20,
       ),
     );
   }
 
-
   Widget _buildEmptyMonthlyView() {
     return Center(
-      child: Text(
+      child: const Text(
         'Keine Daten für die monatliche Ansicht.',
         style: TextStyle(fontSize: 16, color: Colors.grey),
       ),
