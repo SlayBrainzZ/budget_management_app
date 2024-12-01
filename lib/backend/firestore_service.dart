@@ -5,6 +5,7 @@ import 'package:budget_management_app/backend/Category.dart';
 import 'package:budget_management_app/backend/BankAccount.dart';
 import 'package:budget_management_app/backend/Subscriptions.dart';
 import '../MoneyGuard/category.dart';
+import 'package:flutter/material.dart';
 
 
 class FirestoreService {
@@ -27,6 +28,8 @@ class FirestoreService {
       firestore.DocumentReference docRef = await usersRef.add(user.toMap());
       user.id = docRef.id;
       await docRef.set(user.toMap());
+
+      //await FirestoreService().createDefaultCategories(user.id!);
 
       // Create subcollections for the user
       await docRef.collection('Categories').add({});
@@ -174,11 +177,14 @@ class FirestoreService {
   ///
   /// This function retrieves all category documents with the field `isDefault` set to `true`
   /// from all `Categories` subcollections across all users.
-
+/*
   Future<List<Category>> getDefaultCategories() async {
     firestore.QuerySnapshot snapshot = await _db.collectionGroup('Categories').where('isDefault', isEqualTo: true).get();
     return snapshot.docs.map((doc) => Category.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
-  }
+  }*/
+
+
+
 
   /// Retrieves a specific category for a user from Firestore.
   ///
@@ -243,25 +249,55 @@ class FirestoreService {
   Future<void> createDefaultCategories(String userId, {Map<String, double>? budgetLimits}) async {
     final userCategoriesRef = usersRef.doc(userId).collection('Categories');
 
+    final List<Map<String, dynamic>> defaultCategories = [
+      {'name': 'Einnahmen', 'icon': Icons.attach_money.codePoint, 'color': Colors.green.value, 'budgetLimit': 0.0},
+      {'name': 'Unterhaltung', 'icon': Icons.movie.codePoint, 'color': Colors.blue.value, 'budgetLimit': 0.0},
+      {'name': 'Lebensmittel', 'icon': Icons.restaurant.codePoint, 'color': Colors.orange.value, 'budgetLimit': 0.0},
+      {'name': 'Haushalt', 'icon': Icons.home.codePoint, 'color': Colors.teal.value, 'budgetLimit': 0.0},
+      {'name': 'Wohnen', 'icon': Icons.apartment.codePoint, 'color': Colors.indigo.value, 'budgetLimit': 0.0},
+      {'name': 'Transport', 'icon': Icons.directions_car.codePoint, 'color': Colors.purple.value, 'budgetLimit': 0.0},
+      {'name': 'Kleidung', 'icon': Icons.shopping_bag.codePoint, 'color': Colors.pink.value, 'budgetLimit': 0.0},
+      {'name': 'Bildung', 'icon': Icons.school.codePoint, 'color': Colors.amber.value, 'budgetLimit': 0.0},
+      {'name': 'Finanzen', 'icon': Icons.account_balance.codePoint, 'color': Colors.lightGreen.value, 'budgetLimit': 0.0},
+      {'name': 'Gesundheit', 'icon': Icons.health_and_safety.codePoint, 'color': Colors.red.value, 'budgetLimit': 0.0},
+    ];
+
     for (var category in defaultCategories) {
       final categoryName = category['name'];
       final categoryMap = {
         'userId': userId,
         'name': categoryName,
         'budgetLimit': budgetLimits?[categoryName]?.toString() ?? category['budgetLimit'].toString(),
-        'icon': category['icon'].codePoint,
-        'color': category['color'].value,
+        'icon': category['icon'],
+        'color': category['color'],
         'isDefault': true,
       };
 
-      // Check if the category already exists.
+      // Überprüfen, ob die Kategorie bereits existiert
       final existingCategoryQuery = await userCategoriesRef.where('name', isEqualTo: categoryName).get();
       if (existingCategoryQuery.docs.isEmpty) {
-        // Create the category if it does not exist.
+        // Erstelle die Kategorie, wenn sie nicht existiert
         await userCategoriesRef.add(categoryMap);
       }
     }
   }
+
+  Future<List<Category>> getDefaultCategories(String userId) async {
+    try {
+      final userCategoriesRef = usersRef.doc(userId).collection('Categories');
+      final querySnapshot = await userCategoriesRef.where('isDefault', isEqualTo: true).get();
+
+      return querySnapshot.docs.map((doc) {
+        return Category.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+      }).toList();
+    } catch (e) {
+      print("Error getting default categories: $e");
+      return [];
+    }
+  }
+
+
+
 
   Future<void> updateCategoryBudgetLimit(String userId, String categoryId, double newLimit) async {
     // Hole die Kategorie

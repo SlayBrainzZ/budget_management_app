@@ -418,12 +418,18 @@ class _CategoryScreenState extends State<CategoryScreen> {
                   return;
                 }
 
-                //await FirestoreService().deleteCategory(user.uid, category);
+                try {
+                  await FirestoreService().deleteCategory(user.uid, category.id!);
 
-                setState(() {
-                  userCategories = FirestoreService().getUserCategories(user.uid);
-                });
-                Navigator.of(context).pop();
+                  setState(() {
+                    userCategories = FirestoreService().getUserCategories(user.uid);
+                  });
+                  Navigator.of(context).pop();
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Fehler beim Löschen der Kategorie: $e')),
+                  );
+                }
               },
               child: Text('Löschen'),
             ),
@@ -432,4 +438,5 @@ class _CategoryScreenState extends State<CategoryScreen> {
       },
     );
   }
+
 }
