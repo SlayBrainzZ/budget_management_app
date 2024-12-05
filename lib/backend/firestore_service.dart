@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
 import 'package:budget_management_app/backend/User.dart';
 import 'package:budget_management_app/backend/Transaction.dart';
