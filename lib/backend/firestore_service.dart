@@ -29,7 +29,6 @@ class FirestoreService {
       user.id = docRef.id;
       await docRef.set(user.toMap());
 
-      //await FirestoreService().createDefaultCategories(user.id!);
 
       // Create subcollections for the user
       await docRef.collection('Categories').add({});
@@ -161,6 +160,8 @@ class FirestoreService {
       // Create the category and get its reference
       firestore.DocumentReference docRef = await userCategoriesRef.add(category.toMap());
       category.id = docRef.id;
+      category.isDefault = false;
+
       // Update the document to ensure the `id` field is saved
       await docRef.set(category.toMap());
       return docRef.id; // Return the document ID
@@ -246,39 +247,73 @@ class FirestoreService {
   }
 
 
-  Future<void> createDefaultCategories(String userId, {Map<String, double>? budgetLimits}) async {
-    final userCategoriesRef = usersRef.doc(userId).collection('Categories');
-
+  Future<void> createDefaultCategories(String userId) async {
     final List<Map<String, dynamic>> defaultCategories = [
-      {'name': 'Einnahmen', 'icon': Icons.attach_money.codePoint, 'color': Colors.green.value, 'budgetLimit': 0.0},
-      {'name': 'Unterhaltung', 'icon': Icons.movie.codePoint, 'color': Colors.blue.value, 'budgetLimit': 0.0},
-      {'name': 'Lebensmittel', 'icon': Icons.restaurant.codePoint, 'color': Colors.orange.value, 'budgetLimit': 0.0},
-      {'name': 'Haushalt', 'icon': Icons.home.codePoint, 'color': Colors.teal.value, 'budgetLimit': 0.0},
-      {'name': 'Wohnen', 'icon': Icons.apartment.codePoint, 'color': Colors.indigo.value, 'budgetLimit': 0.0},
-      {'name': 'Transport', 'icon': Icons.directions_car.codePoint, 'color': Colors.purple.value, 'budgetLimit': 0.0},
-      {'name': 'Kleidung', 'icon': Icons.shopping_bag.codePoint, 'color': Colors.pink.value, 'budgetLimit': 0.0},
-      {'name': 'Bildung', 'icon': Icons.school.codePoint, 'color': Colors.amber.value, 'budgetLimit': 0.0},
-      {'name': 'Finanzen', 'icon': Icons.account_balance.codePoint, 'color': Colors.lightGreen.value, 'budgetLimit': 0.0},
-      {'name': 'Gesundheit', 'icon': Icons.health_and_safety.codePoint, 'color': Colors.red.value, 'budgetLimit': 0.0},
+      {'name': 'Einnahmen', 'icon': Icons.attach_money, 'color': Colors.green, 'budgetLimit': 0.0},
+      {'name': 'Unterhaltung', 'icon': Icons.movie, 'color': Colors.blue, 'budgetLimit': 0.0},
+      {'name': 'Lebensmittel', 'icon': Icons.restaurant, 'color': Colors.orange, 'budgetLimit': 0.0},
+      {'name': 'Haushalt', 'icon': Icons.home, 'color': Colors.teal, 'budgetLimit': 0.0},
+      {'name': 'Wohnen', 'icon': Icons.apartment, 'color': Colors.indigo, 'budgetLimit': 0.0},
+      {'name': 'Transport', 'icon': Icons.directions_car, 'color': Colors.purple, 'budgetLimit': 0.0},
+      {'name': 'Kleidung', 'icon': Icons.shopping_bag, 'color': Colors.pink, 'budgetLimit': 0.0},
+      {'name': 'Bildung', 'icon': Icons.school, 'color': Colors.amber, 'budgetLimit': 0.0},
+      {'name': 'Finanzen', 'icon': Icons.account_balance, 'color': Colors.lightGreen, 'budgetLimit': 0.0},
+      {'name': 'Gesundheit', 'icon': Icons.health_and_safety, 'color': Colors.red, 'budgetLimit': 0.0},
     ];
+    try {
+      final userCategoriesRef = usersRef.doc(userId).collection('Categories');
 
-    for (var category in defaultCategories) {
-      final categoryName = category['name'];
-      final categoryMap = {
-        'userId': userId,
-        'name': categoryName,
-        'budgetLimit': budgetLimits?[categoryName]?.toString() ?? category['budgetLimit'].toString(),
-        'icon': category['icon'],
-        'color': category['color'],
-        'isDefault': true,
-      };
+      for (final categoryData in defaultCategories) {
+        Category category = Category(
+          userId: userId,
+          name: categoryData['name'],
+          budgetLimit: categoryData['budgetLimit'],
+          icon: categoryData['icon'],
+          color: categoryData['color'],
+          isDefault: true, // Kennzeichnet, dass es sich um eine Default-Kategorie handelt
+        );
 
-      // Überprüfen, ob die Kategorie bereits existiert
-      final existingCategoryQuery = await userCategoriesRef.where('name', isEqualTo: categoryName).get();
-      if (existingCategoryQuery.docs.isEmpty) {
-        // Erstelle die Kategorie, wenn sie nicht existiert
-        await userCategoriesRef.add(categoryMap);
+        // Überprüfen, ob die Kategorie schon existiert
+        final query = await userCategoriesRef
+            .where('name', isEqualTo: category.name)
+            .where('isDefault', isEqualTo: true)
+            .get();
+
+        if (query.docs.isEmpty) {
+          await userCategoriesRef.add(category.toMap());
+        }
       }
+    } catch (e) {
+      print("Fehler beim Erstellen der Standardkategorien: $e");
+    }
+  }
+
+  Future<List<Category>> getSortedUserCategories(String documentId) async {
+    try {
+      final userCategoriesRef = usersRef.doc(documentId).collection('Categories');
+      firestore.QuerySnapshot snapshot = await userCategoriesRef.get();
+
+      // Kategorien auslesen und sortieren
+      final categories = snapshot.docs.map((doc) {
+        try {
+          return Category.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+        } catch (e) {
+          print("Error parsing category: $e");
+          return null; // Handle gracefully
+        }
+      }).whereType<Category>().toList();
+
+      // Default-Kategorien zuerst sortieren
+      categories.sort((a, b) {
+        if (a.isDefault && !b.isDefault) return -1; // Default vor benutzerdefiniert
+        if (!a.isDefault && b.isDefault) return 1;
+        return 0; // Wenn beide gleich sind, Reihenfolge beibehalten
+      });
+
+      return categories;
+    } catch (e) {
+      print("Error getting user categories: $e");
+      return [];
     }
   }
 
@@ -298,7 +333,7 @@ class FirestoreService {
 
 
 
-
+/*
   Future<void> updateCategoryBudgetLimit(String userId, String categoryId, double newLimit) async {
     // Hole die Kategorie
     Category? category = await getCategory(userId, categoryId);
@@ -309,6 +344,14 @@ class FirestoreService {
       await updateCategory(userId, category);
     } else {
       print("Kategorie nicht gefunden.");
+    }
+  }*/
+  Future<void> updateCategoryBudgetLimit(String userId, String categoryId, double budgetLimit) async {
+    try {
+      final userCategoriesRef = usersRef.doc(userId).collection('Categories');
+      await userCategoriesRef.doc(categoryId).update({'budgetLimit': budgetLimit.toString()});
+    } catch (e) {
+      print("Fehler beim Aktualisieren des Budgetlimits: $e");
     }
   }
   /// Deletes a category from Firestore for a specific user.
