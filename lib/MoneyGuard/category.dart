@@ -20,6 +20,7 @@ final List<Map<String, dynamic>> defaultCategories = [
 ];
 
 
+
 final List<IconData> availableIcons = [
   Icons.more_horiz,
   Icons.restaurant,
@@ -116,7 +117,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
     if (user != null) {
       final userId = user.uid;  // Hier die UID verwenden
       setState(() {
-        userCategories = FirestoreService().getUserCategories(userId);
+        FirestoreService().createDefaultCategories(userId);
+        userCategories = FirestoreService().getSortedUserCategories(userId);
       });
     } else {
       // Falls kein Benutzer angemeldet ist, handle diesen Fall
@@ -138,38 +140,63 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
   /// Liste der Kategorien anzeigen
   Widget _buildCategoryList() {
-    return FutureBuilder<List<Category>>(
-      future: userCategories,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Fehler beim Laden der Kategorien.'));
-        } else {
-          final categories = snapshot.data ?? [];
+    final double fabHeight = 56.0; // Standardhöhe des FloatingActionButton
+    final double fabPadding = 16.0; // Abstand zwischen Liste und FAB
 
-          return ListView.builder(
-            itemCount: categories.length,
-            itemBuilder: (context, index) {
-              final category = categories[index];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double maxHeight = constraints.maxHeight - fabHeight - fabPadding;
 
-              return ListTile(
-                leading: Icon(category.icon, color: category.color),
-                title: Text(category.name),
-                subtitle: Text('Budget: €${category.budgetLimit?.toStringAsFixed(2)}'),
-                trailing: IconButton(
-                  icon: Icon(Icons.delete, color: Colors.red),
-                  onPressed: () => _confirmDeleteCategory(category),
+        return FutureBuilder<List<Category>>(
+          future: userCategories,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text('Fehler beim Laden der Kategorien.'));
+            } else {
+              var categories = snapshot.data ?? [];
+
+              // Standardkategorien zuerst sortieren
+              categories.sort((a, b) {
+                if (a.isDefault && !b.isDefault) return -1;
+                if (!a.isDefault && b.isDefault) return 1;
+                return 0;
+              });
+
+              // Beschränke die Liste auf den Platz oberhalb des FAB
+              return ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: maxHeight),
+                child: ListView.builder(
+                  itemCount: categories.length,
+                  itemBuilder: (context, index) {
+                    final category = categories[index];
+
+                    return ListTile(
+                      leading: Icon(category.icon, color: category.color),
+                      title: Text(category.name),
+                      subtitle: Text('Budget: €${category.budgetLimit?.toStringAsFixed(2)}'),
+                      trailing: category.isDefault
+                          ? null // Keine Mülltonne für Standardkategorien
+                          : IconButton(
+                        icon: Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => _confirmDeleteCategory(category),
+                      ),
+                      onTap: () => _editCategoryBudget(category),
+                    );
+                  },
                 ),
-                onTap: () => _editCategoryBudget(category),
               );
-            },
-          );
-        }
+            }
+          },
+        );
       },
     );
   }
 
+
+
+//
   void _addCategory() {
     final nameController = TextEditingController();
     IconData selectedIcon = availableIcons.first;
@@ -306,7 +333,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                       await FirestoreService().createCategory(userId, newCategory);
 
                       setState(() {
-                        userCategories = FirestoreService().getUserCategories(userId);
+                        userCategories = FirestoreService().getSortedUserCategories(userId);
                       });
 
                       Navigator.of(context).pop();
@@ -377,7 +404,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                     }
 
                     setState(() {
-                      userCategories = FirestoreService().getUserCategories(user.uid);
+                      userCategories = FirestoreService().getSortedUserCategories(user.uid);
                     });
                     Navigator.of(context).pop();
                   },
@@ -418,12 +445,18 @@ class _CategoryScreenState extends State<CategoryScreen> {
                   return;
                 }
 
-                //await FirestoreService().deleteCategory(user.uid, category);
+                try {
+                  await FirestoreService().deleteCategory(user.uid, category.id!);
 
-                setState(() {
-                  userCategories = FirestoreService().getUserCategories(user.uid);
-                });
-                Navigator.of(context).pop();
+                  setState(() {
+                    userCategories = FirestoreService().getSortedUserCategories(user.uid);
+                  });
+                  Navigator.of(context).pop();
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Fehler beim Löschen der Kategorie: $e')),
+                  );
+                }
               },
               child: Text('Löschen'),
             ),
@@ -432,4 +465,5 @@ class _CategoryScreenState extends State<CategoryScreen> {
       },
     );
   }
+
 }
