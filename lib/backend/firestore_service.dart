@@ -157,6 +157,16 @@ class FirestoreService {
   Future<String> createCategory(String documentId, Category category) async {
     try {
       final userCategoriesRef = usersRef.doc(documentId).collection('Categories');
+
+      // Überprüfen, ob eine Kategorie mit demselben Namen existiert
+      final querySnapshot = await userCategoriesRef
+          .where('name', isEqualTo: category.name)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        // Wenn eine Kategorie mit demselben Namen gefunden wird, abbrechen
+        throw Exception("Eine Kategorie mit diesem Namen existiert bereits.");
+      }
       // Create the category and get its reference
       firestore.DocumentReference docRef = await userCategoriesRef.add(category.toMap());
       category.id = docRef.id;
