@@ -288,6 +288,7 @@ class FirestoreService {
     }
   }
 
+  //sortiert default nach oben und userdefined nach unten
   Future<List<Category>> getSortedUserCategories(String documentId) async {
     try {
       final userCategoriesRef = usersRef.doc(documentId).collection('Categories');

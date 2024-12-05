@@ -196,7 +196,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
 
 
-
+//
   void _addCategory() {
     final nameController = TextEditingController();
     IconData selectedIcon = availableIcons.first;
