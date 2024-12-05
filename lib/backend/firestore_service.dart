@@ -1,10 +1,20 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
 import 'package:budget_management_app/backend/User.dart';
 import 'package:budget_management_app/backend/Transaction.dart';
 import 'package:budget_management_app/backend/Category.dart';
 import 'package:budget_management_app/backend/BankAccount.dart';
 import 'package:budget_management_app/backend/Subscriptions.dart';
+import 'package:flutter/foundation.dart' as csv;
 import '../MoneyGuard/category.dart';
+import 'dart:io';
+import 'dart:convert';
+import 'package:csv/csv.dart';
+import 'dart:html' as html;
+import 'ImportedTransaction.dart';
+import 'web_file_reader.dart' if (dart.library.html) 'stub_file_reader.dart';
+
 
 
 class FirestoreService {
@@ -67,6 +77,135 @@ class FirestoreService {
   // =======================
   //  Bank Account Functions
   // =======================
+
+  /// ==============
+  /// CSV OPERATIONS
+  /// ==============
+
+  Future<List<Map<String, dynamic>>> pickAndReadCsvWeb() async {
+    final html.FileUploadInputElement uploadInput = html.FileUploadInputElement();
+    uploadInput.accept = '.csv';  // Ensure only CSV files can be selected
+    uploadInput.click();
+
+    final completer = Completer<List<Map<String, dynamic>>>();
+
+    uploadInput.onChange.listen((e) {
+      final files = uploadInput.files;
+      if (files == null || files.isEmpty) {
+        completer.complete([]);  // No file selected
+        return;
+      }
+
+      final file = files[0];
+      final reader = html.FileReader();
+
+      reader.onLoadEnd.listen((e) {
+        final fileContent = reader.result as String;
+
+        // Parse the CSV content
+        final rows = const CsvToListConverter().convert(fileContent);
+
+        if (rows.isEmpty || rows.length <= 1) {
+          completer.complete([]);  // No valid data in the file
+          return;
+        }
+
+        // Remove the first row (headers) and process the rest of the data
+        final headers = (rows.removeAt(0) as List<dynamic>).cast<String>();
+
+        if (headers.isEmpty) {
+          completer.complete([]);  // No headers found
+          return;
+        }
+
+        // Map the rows into a list of transactions
+        final transactions = rows.map((row) {
+          final transaction = <String, dynamic>{};
+
+          // Ensure each row matches the header length
+          if (row.length == headers.length) {
+            for (int i = 0; i < headers.length; i++) {
+              transaction[headers[i]] = row[i];
+            }
+          }
+          return transaction;
+        }).toList();
+
+        // Complete the process with the transactions
+        completer.complete(transactions);
+      });
+
+      reader.readAsText(file);
+    });
+
+    return completer.future;
+  }
+
+// Function to convert CSV data into ImportedTransactions
+  List<ImportedTransaction> convertCsvDataToImportedTransactions(
+      List<Map<String, dynamic>> csvData, String userId) {
+    return csvData.map((row) {
+      double outflow = 0.0;
+      double inflow = 0.0;
+      double amount = 0.0;
+
+      // Safely convert outflow and inflow, ensuring they are parsed as doubles
+      if (row['Ausgang'] != null) {
+        outflow = double.tryParse(row['Ausgang'].toString()) ?? 0.0;
+      }
+      if (row['Eingang'] != null) {
+        inflow = double.tryParse(row['Eingang'].toString()) ?? 0.0;
+      }
+
+      // Calculate total amount
+      amount = outflow + inflow;
+
+      // Safely parse the date (ensure it's a string and convert it)
+      DateTime date = DateTime.tryParse(row['Buchungstag']?.toString() ?? '') ?? DateTime.now();
+
+      return ImportedTransaction(
+        userId: userId,
+        amount: amount,
+        date: date,
+        payerOrRecipient: row['Auftraggeber/Empfänger']?.toString() ?? '',
+        description: row['Buchungstext']?.toString() ?? '',
+        outflow: outflow,
+        inflow: inflow,
+      );
+    }).toList();
+  }
+
+// Function to import CSV transactions into Firestore
+  Future<void> importCsvTransactions(String userId) async {
+    try {
+      print("Select a CSV file for import...");
+      List<Map<String, dynamic>> csvData = await pickAndReadCsvWeb();
+
+      if (csvData.isEmpty) {
+        print("No data found in the CSV file.");
+        return;
+      }
+
+      List<ImportedTransaction> transactions =
+      convertCsvDataToImportedTransactions(csvData, userId);
+
+      print("Saving transactions to Firestore...");
+      FirestoreService firestoreService = FirestoreService();
+
+      for (var transaction in transactions) {
+        await firestoreService.createImportedTransaction(userId, transaction);
+        print("Saved transaction: ${transaction.toMap()}");
+      }
+
+      print("All transactions imported successfully!");
+    } catch (e) {
+      print("Error importing transactions: $e");
+    }
+  }
+
+  /// ==============
+  /// CSV OPERATIONS (END)
+  /// ==============
 
   /// Creates a new bank account in Firestore for a specific user.
   ///
@@ -335,6 +474,22 @@ class FirestoreService {
       print("Error creating transaction: $e");
     }
   }
+
+  /// Function to create an imported transaction
+  Future<void> createImportedTransaction(String userId, ImportedTransaction transaction) async {
+    try {
+      final userImportedTransactionsRef = usersRef.doc(userId).collection('ImportedTransactions');
+
+      // Create imported transaction as a normal transaction for the user
+      firestore.DocumentReference docRef = await userImportedTransactionsRef.add(transaction.toMap());
+      transaction.id = docRef.id; // Assign the generated ID to the transaction object
+      await docRef.set(transaction.toMap()); // Set the document's data
+
+    } catch (e) {
+      print("Error creating imported transaction: $e");
+    }
+  }
+
 
   ///TEST
   ///update: Test successfully done. This function does exactly what it's named.
