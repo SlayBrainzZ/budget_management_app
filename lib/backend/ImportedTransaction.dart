@@ -1,4 +1,5 @@
 class ImportedTransaction {
+  
   String? id;
   final String userId;
   double amount;
