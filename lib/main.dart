@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:csv/csv.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,15 +9,20 @@ import 'package:budget_management_app/backend/Category.dart' as testCat;
 import 'package:budget_management_app/backend/Transaction.dart' as testTrans;
 import 'package:budget_management_app/auth.dart';
 import 'package:budget_management_app/widget_tree.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart'; // For kIsWeb
+import 'dart:io'; // For File handling on mobile/desktop
+import 'dart:html' as html;
+import 'backend/ImportedTransaction.dart'; // For File handling on web
+
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Ensure bindings are initialized for Firebase
 
   try {
-    // Firebase-Initialisierung
+    // Firebase initialization
     if (kIsWeb) {
-      // Für Web
+      // For Web
       await Firebase.initializeApp(
         options: const FirebaseOptions(
           apiKey: "AIzaSyBRElGRhjY1HjJqe7Zt-PKLn1YRy9IEkXs",
@@ -28,38 +35,36 @@ void main() async {
         ),
       );
     } else {
-      // Für Mobile (Android, iOS)
+      // For Mobile (Android, iOS)
       await Firebase.initializeApp();
     }
 
-    // Authentifizierungsüberwachung starten
+
+
+    // Listen to auth state changes
     Auth().authStateChanges.listen((user) async {
       if (user != null) {
-        debugPrint('User registered: ${user.email}');
+        print("User logged in: ${user.email}");
 
-        try {
-          // Erstelle das Benutzerdokument in Firestore
-          await FirestoreService().createUser(testUser.User(
-            userId: user.uid,
-            email: user.email!,
-            createdDate: DateTime.now(),
-          ));
-        } catch (e) {
-          debugPrint("Error creating user in Firestore: $e");
-        }
+        // Now proceed with CSV import after login
+        await FirestoreService().importCsvTransactions(user.uid); // Pass the logged-in user's ID
+      } else {
+        print("No user logged in. Please log in.");
       }
     });
 
-    // Starte die App
+    // Start the app
     runApp(const MyApp());
-
   } catch (e) {
     debugPrint("Firebase initialization failed: $e");
   }
 }
+
+
+
 /*
 // Perform Combined Test: Register a user, create a category, transaction, and display them
-Future<void> performCombinedTest() async {
+ Future<void> performCombinedTest() async {
   try {
     // Step 1: Listen for auth state changes and create user document
     Auth().authStateChanges.listen((user) async {

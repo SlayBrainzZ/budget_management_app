@@ -484,4 +484,3 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
     );
   }
 }
-
