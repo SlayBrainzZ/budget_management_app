@@ -1,3 +1,4 @@
+import 'package:budget_management_app/MoneyGuard/transaction.dart';
 import 'package:flutter/material.dart';
 import 'package:budget_management_app/backend/firestore_service.dart';
 import 'package:budget_management_app/backend/Transaction.dart';
@@ -443,6 +444,16 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
               color: transaction.type == 'Einnahme' ? Colors.green : Colors.red,
             ),
           ),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AddTransactionPage(transaction: transaction),
+              ),
+            ).then((_) {
+              _fetchTransactions(); // Aktualisiere die Liste nach Rückkehr
+            });
+          },
         );
       },
     );

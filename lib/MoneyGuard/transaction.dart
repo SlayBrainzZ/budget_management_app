@@ -8,7 +8,9 @@ import 'package:budget_management_app/backend/Category.dart';
 import 'package:budget_management_app/backend/firestore_service.dart';
 
 class AddTransactionPage extends StatefulWidget {
-  const AddTransactionPage({super.key});
+  final Transaction? transaction; // Optional: übergebene Transaktion
+
+  const AddTransactionPage({Key? key, this.transaction}) : super(key: key);
 
   @override
   _AddTransactionPageState createState() => _AddTransactionPageState();
@@ -18,7 +20,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _isUrgent = false;
-  String? _userId; // Dynamisch geladene Benutzer-ID
+  String? _userId;
   String? _selectedAccount;
   String? _selectedCategory;
   DateTime _selectedDate = DateTime.now();
@@ -27,16 +29,25 @@ class _AddTransactionPageState extends State<AddTransactionPage>
   final TextEditingController _amountController = TextEditingController();
 
   final List<String> accounts = ['Konto 1', 'Konto 2', 'Konto 3'];
-  List<Category> categories = []; // Dynamisch geladene Kategorien
-
-  // FirestoreService-Instanz
+  List<Category> categories = [];
   final FirestoreService _firestoreService = FirestoreService();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadUserAndCategories(); // Benutzer und Kategorien laden
+    _loadUserAndCategories();
+
+    // Felder mit Daten der übergebenen Transaktion vorbelegen
+    if (widget.transaction != null) {
+      final transaction = widget.transaction!;
+      _selectedDate = transaction.date;
+      _noteController.text = transaction.note ?? '';
+      _amountController.text = transaction.amount.toStringAsFixed(2);
+      _selectedCategory = transaction.categoryId;
+      _isUrgent = transaction.importance;
+      //_selectedAccount = transaction.account;
+    }
   }
 
   Future<void> _loadUserAndCategories() async {
