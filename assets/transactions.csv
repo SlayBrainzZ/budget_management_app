@@ -1,0 +1,31 @@
+Buchungstag,Auftraggeber/Empfänger,Buchungstext Ausgang,Ausgang,Eingang
+2024-10-01,John Doe,Salary Payment,0.0,1500.00
+2024-10-02,SuperMart,Groceries,-120.00,0.0
+2024-10-03,Amazon,Purchase Online,-60.00,0.0
+2024-10-04,Starbucks,Coffee,-5.00,0.0
+2024-10-05,Monthly Rent,Apartment Rent,-800.00,0.0
+2024-10-06,Uber,Transportation,-25.00,0.0
+2024-10-07,Friend,Gift,-50.00,0.0
+2024-10-08,Movie Theater,Movies,-30.00,0.0
+2024-10-09,Online Store,Book Purchase,-15.00,0.0
+2024-10-10,John Doe,Salary Payment,0.0,1500.00
+2024-10-11,Electric Company,Electricity Bill,-80.00,0.0
+2024-10-12,Health Insurance,Monthly Premium,-200.00,0.0
+2024-10-13,Cinema,Movie Tickets,-25.00,0.0
+2024-10-14,Friend,Gift,-60.00,0.0
+2024-10-15,SuperMart,Groceries,-120.00,0.0
+2024-10-16,Netflix,Subscription,-15.00,0.0
+2024-10-17,Gas Station,Fuel,-40.00,0.0
+2024-10-18,Coffee Shop,Coffee,-5.00,0.0
+2024-10-19,Amazon,Purchase Online,-90.00,0.0
+2024-10-20,Netflix,Subscription,-15.00,0.0
+2024-10-21,SuperMart,Groceries,-130.00,0.0
+2024-10-22,Friend,Gift,-30.00,0.0
+2024-10-23,Transportation,Uber,-20.00,0.0
+2024-10-24,Restaurant,Dinner,-45.00,0.0
+2024-10-25,Electric Company,Electricity Bill,-80.00,0.0
+2024-10-26,SuperMart,Groceries,-90.00,0.0
+2024-10-27,Amazon,Purchase Online,-120.00,0.0
+2024-10-28,Starbucks,Coffee,-10.00,0.0
+2024-10-29,Cinema,Movie Tickets,-25.00,0.0
+2024-10-30,Health Insurance,Monthly Premium,-200.00,0.0
