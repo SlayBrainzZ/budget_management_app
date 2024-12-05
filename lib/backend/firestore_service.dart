@@ -6,6 +6,7 @@ import 'package:budget_management_app/backend/Category.dart';
 import 'package:budget_management_app/backend/BankAccount.dart';
 import 'package:budget_management_app/backend/Subscriptions.dart';
 import 'package:flutter/foundation.dart' as csv;
+import 'package:flutter/material.dart';
 import '../MoneyGuard/category.dart';
 import 'dart:io';
 import 'dart:convert';
@@ -293,9 +294,21 @@ class FirestoreService {
   Future<String> createCategory(String documentId, Category category) async {
     try {
       final userCategoriesRef = usersRef.doc(documentId).collection('Categories');
+
+      // Überprüfen, ob eine Kategorie mit demselben Namen existiert
+      final querySnapshot = await userCategoriesRef
+          .where('name', isEqualTo: category.name)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        // Wenn eine Kategorie mit demselben Namen gefunden wird, abbrechen
+        throw Exception("Eine Kategorie mit diesem Namen existiert bereits.");
+      }
       // Create the category and get its reference
       firestore.DocumentReference docRef = await userCategoriesRef.add(category.toMap());
       category.id = docRef.id;
+      category.isDefault = false;
+
       // Update the document to ensure the `id` field is saved
       await docRef.set(category.toMap());
       return docRef.id; // Return the document ID
@@ -312,11 +325,14 @@ class FirestoreService {
   ///
   /// This function retrieves all category documents with the field `isDefault` set to `true`
   /// from all `Categories` subcollections across all users.
-
+/*
   Future<List<Category>> getDefaultCategories() async {
     firestore.QuerySnapshot snapshot = await _db.collectionGroup('Categories').where('isDefault', isEqualTo: true).get();
     return snapshot.docs.map((doc) => Category.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
-  }
+  }*/
+
+
+
 
   /// Retrieves a specific category for a user from Firestore.
   ///
@@ -378,29 +394,94 @@ class FirestoreService {
   }
 
 
-  Future<void> createDefaultCategories(String userId, {Map<String, double>? budgetLimits}) async {
-    final userCategoriesRef = usersRef.doc(userId).collection('Categories');
+  Future<void> createDefaultCategories(String userId) async {
+    final List<Map<String, dynamic>> defaultCategories = [
+      {'name': 'Einnahmen', 'icon': Icons.attach_money, 'color': Colors.green, 'budgetLimit': 0.0},
+      {'name': 'Unterhaltung', 'icon': Icons.movie, 'color': Colors.blue, 'budgetLimit': 0.0},
+      {'name': 'Lebensmittel', 'icon': Icons.restaurant, 'color': Colors.orange, 'budgetLimit': 0.0},
+      {'name': 'Haushalt', 'icon': Icons.home, 'color': Colors.teal, 'budgetLimit': 0.0},
+      {'name': 'Wohnen', 'icon': Icons.apartment, 'color': Colors.indigo, 'budgetLimit': 0.0},
+      {'name': 'Transport', 'icon': Icons.directions_car, 'color': Colors.purple, 'budgetLimit': 0.0},
+      {'name': 'Kleidung', 'icon': Icons.shopping_bag, 'color': Colors.pink, 'budgetLimit': 0.0},
+      {'name': 'Bildung', 'icon': Icons.school, 'color': Colors.amber, 'budgetLimit': 0.0},
+      {'name': 'Finanzen', 'icon': Icons.account_balance, 'color': Colors.lightGreen, 'budgetLimit': 0.0},
+      {'name': 'Gesundheit', 'icon': Icons.health_and_safety, 'color': Colors.red, 'budgetLimit': 0.0},
+    ];
+    try {
+      final userCategoriesRef = usersRef.doc(userId).collection('Categories');
 
-    for (var category in defaultCategories) {
-      final categoryName = category['name'];
-      final categoryMap = {
-        'userId': userId,
-        'name': categoryName,
-        'budgetLimit': budgetLimits?[categoryName]?.toString() ?? category['budgetLimit'].toString(),
-        'icon': category['icon'].codePoint,
-        'color': category['color'].value,
-        'isDefault': true,
-      };
+      for (final categoryData in defaultCategories) {
+        Category category = Category(
+          userId: userId,
+          name: categoryData['name'],
+          budgetLimit: categoryData['budgetLimit'],
+          icon: categoryData['icon'],
+          color: categoryData['color'],
+          isDefault: true, // Kennzeichnet, dass es sich um eine Default-Kategorie handelt
+        );
 
-      // Check if the category already exists.
-      final existingCategoryQuery = await userCategoriesRef.where('name', isEqualTo: categoryName).get();
-      if (existingCategoryQuery.docs.isEmpty) {
-        // Create the category if it does not exist.
-        await userCategoriesRef.add(categoryMap);
+        // Überprüfen, ob die Kategorie schon existiert
+        final query = await userCategoriesRef
+            .where('name', isEqualTo: category.name)
+            .where('isDefault', isEqualTo: true)
+            .get();
+
+        if (query.docs.isEmpty) {
+          await userCategoriesRef.add(category.toMap());
+        }
       }
+    } catch (e) {
+      print("Fehler beim Erstellen der Standardkategorien: $e");
     }
   }
 
+  //sortiert default nach oben und userdefined nach unten
+  Future<List<Category>> getSortedUserCategories(String documentId) async {
+    try {
+      final userCategoriesRef = usersRef.doc(documentId).collection('Categories');
+      firestore.QuerySnapshot snapshot = await userCategoriesRef.get();
+
+      // Kategorien auslesen und sortieren
+      final categories = snapshot.docs.map((doc) {
+        try {
+          return Category.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+        } catch (e) {
+          print("Error parsing category: $e");
+          return null; // Handle gracefully
+        }
+      }).whereType<Category>().toList();
+
+      // Default-Kategorien zuerst sortieren
+      categories.sort((a, b) {
+        if (a.isDefault && !b.isDefault) return -1; // Default vor benutzerdefiniert
+        if (!a.isDefault && b.isDefault) return 1;
+        return 0; // Wenn beide gleich sind, Reihenfolge beibehalten
+      });
+
+      return categories;
+    } catch (e) {
+      print("Error getting user categories: $e");
+      return [];
+    }
+  }
+
+  Future<List<Category>> getDefaultCategories(String userId) async {
+    try {
+      final userCategoriesRef = usersRef.doc(userId).collection('Categories');
+      final querySnapshot = await userCategoriesRef.where('isDefault', isEqualTo: true).get();
+
+      return querySnapshot.docs.map((doc) {
+        return Category.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+      }).toList();
+    } catch (e) {
+      print("Error getting default categories: $e");
+      return [];
+    }
+  }
+
+
+
+/*
   Future<void> updateCategoryBudgetLimit(String userId, String categoryId, double newLimit) async {
     // Hole die Kategorie
     Category? category = await getCategory(userId, categoryId);
@@ -411,6 +492,14 @@ class FirestoreService {
       await updateCategory(userId, category);
     } else {
       print("Kategorie nicht gefunden.");
+    }
+  }*/
+  Future<void> updateCategoryBudgetLimit(String userId, String categoryId, double budgetLimit) async {
+    try {
+      final userCategoriesRef = usersRef.doc(userId).collection('Categories');
+      await userCategoriesRef.doc(categoryId).update({'budgetLimit': budgetLimit.toString()});
+    } catch (e) {
+      print("Fehler beim Aktualisieren des Budgetlimits: $e");
     }
   }
   /// Deletes a category from Firestore for a specific user.
