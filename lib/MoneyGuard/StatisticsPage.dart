@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'category.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:budget_management_app/backend/Category.dart';
+import 'package:budget_management_app/backend/firestore_service.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class StatisticsPage extends StatefulWidget {
   @override
@@ -7,111 +10,257 @@ class StatisticsPage extends StatefulWidget {
 }
 
 class _StatisticsPageState extends State<StatisticsPage> {
-
-  // Variable für die Dropdown-Auswahl (Gesamtbetrag, Einnahmen, Ausgaben)
   String selectedAmountType = 'Gesamtbetrag';
-  // Variable für den Zeitraum (Monat, Woche, Jahr)
   String selectedTimePeriod = 'Monat';
 
-  // List of categories to display stats (placeholder for categories)
-  final List<String> categories = [
-    'Einnahmen', 'Unterhaltung', 'Lebensmittel', 'Haushalt', 'Wohnen',
-    'Transport', 'Kleidung', 'Bildung', 'Finanzen', 'Gesundheit'
-  ];
+  List<Category> categories = [];
+  final ScrollController _scrollController = ScrollController();  // Der ScrollController
+
+  final FirestoreService _firestoreService = FirestoreService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        List<Category> userCategories = await _firestoreService.getUserCategories(user.uid);
+        setState(() {
+          categories = userCategories;
+        });
+      } catch (e) {
+        print('Fehler beim Abrufen der Kategorien: $e');
+      }
+    }
+  }
+
+  // Placeholder für Diagramm-Daten
+  final gridData = FlGridData(
+    show: true,
+    getDrawingHorizontalLine: (value) {
+      return FlLine(
+        color: const Color(0xff37434d),
+        strokeWidth: 0.5,
+      );
+    },
+    getDrawingVerticalLine: (value) {
+      return FlLine(
+        color: const Color(0xff37434d),
+        strokeWidth: 0.5,
+      );
+    },
+  );
+
+  final borderData = FlBorderData(
+    show: true,
+    border: Border.all(
+      color: const Color(0xff37434d),
+      width: 1,
+    ),
+  );
+
+  // Drei Linien für das Haupt-Diagramm
+  LineChartBarData get lineChartBarData1 => LineChartBarData(
+    isCurved: true,
+    color: Colors.green,
+    barWidth: 8,
+    isStrokeCapRound: true,
+    dotData: const FlDotData(show: false),
+    belowBarData: BarAreaData(show: false),
+    spots: [
+      FlSpot(1, 1),
+      FlSpot(2, 2),
+      FlSpot(3, 1.5),
+      FlSpot(4, 3),
+      FlSpot(5, 2.8),
+      FlSpot(6, 3.5),
+      FlSpot(7, 4),
+    ],
+  );
+
+  LineChartBarData get lineChartBarData2 => LineChartBarData(
+    isCurved: true,
+    color: Colors.blue,
+    barWidth: 8,
+    isStrokeCapRound: true,
+    dotData: const FlDotData(show: false),
+    belowBarData: BarAreaData(show: false),
+    spots: [
+      FlSpot(1, 1),
+      FlSpot(2, 2.5),
+      FlSpot(3, 2),
+      FlSpot(4, 3.5),
+      FlSpot(5, 3),
+      FlSpot(6, 3.8),
+      FlSpot(7, 4.5),
+    ],
+  );
+
+  LineChartBarData get lineChartBarData3 => LineChartBarData(
+    isCurved: true,
+    color: Colors.orange,
+    barWidth: 8,
+    isStrokeCapRound: true,
+    dotData: const FlDotData(show: false),
+    belowBarData: BarAreaData(show: false),
+    spots: [
+      FlSpot(1, 1.2),
+      FlSpot(2, 1.8),
+      FlSpot(3, 2.3),
+      FlSpot(4, 2.8),
+      FlSpot(5, 3.2),
+      FlSpot(6, 4.1),
+      FlSpot(7, 4.3),
+    ],
+  );
+
+  // Daten für das Haupt-Diagramm mit drei Linien
+  LineChartData get chartData => LineChartData(
+    lineBarsData: [
+      lineChartBarData1,
+      lineChartBarData2,
+      lineChartBarData3,
+    ],
+    gridData: gridData,
+    borderData: borderData,
+    titlesData: FlTitlesData(
+
+    ),
+  );
+
+  // Daten für die Kategoriediagramme mit nur einer Linie
+  LineChartData categoryChartData(Category category) {
+    LineChartBarData categoryLineData = LineChartBarData(
+      isCurved: true,
+      color: Colors.blue,
+      barWidth: 8,
+      isStrokeCapRound: true,
+      dotData: const FlDotData(show: false),
+      belowBarData: BarAreaData(show: false),
+      spots: [
+        FlSpot(1, 1.2),
+        FlSpot(2, 1.8),
+        FlSpot(3, 2.3),
+        FlSpot(4, 2.8),
+        FlSpot(5, 3.2),
+        FlSpot(6, 4.1),
+        FlSpot(7, 4.3),
+      ],
+    );
+
+    return LineChartData(
+      lineBarsData: [categoryLineData],
+      gridData: gridData,
+      borderData: borderData,
+      titlesData: FlTitlesData(
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Oben Dropdowns für Gesamtübersicht
-            Row(
-              children: [
-                // Dropdown für den Betrag (Gesamt, Einnahmen, Ausgaben)
-                DropdownButton<String>(
-                  value: selectedAmountType,
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      selectedAmountType = newValue!;
-                    });
-                  },
-                  items: <String>['Gesamtbetrag', 'Einnahmen', 'Ausgaben']
-                      .map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(width: 20),
-                // Dropdown für den Zeitraum (Monat, Woche, Jahr)
-                Text(
-                  'im Zeitraum:     ',
-                  style: TextStyle(fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const SizedBox(width: 20),
+                  Text(
+                    'Gesamtübersicht im Zeitraum:  ',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
                   ),
-                ),
-                DropdownButton<String>(
-                  value: selectedTimePeriod,
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      selectedTimePeriod = newValue!;
-                    });
-                  },
-                  items: <String>['Monat', 'Woche', 'Jahr']
-                      .map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Gesamtübersicht (hier könnte später ein Plot eingebaut werden)
-            Container(
-              width: double.infinity,  // Damit der Container die volle Breite einnimmt
-              height: 350,             // Höhe für den Plot-Bereich (Platzhalter)
-              decoration: BoxDecoration(
-                color: Colors.white,    // Weißer Hintergrund
-                borderRadius: BorderRadius.circular(10),  // Abgerundete Ecken (optional)
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12, // Optionaler Schatten für den Container
-                    blurRadius: 6,
-                    offset: Offset(0, 2), // Position des Schattens
+                  DropdownButton<String>(
+                    value: selectedTimePeriod,
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        selectedTimePeriod = newValue!;
+                      });
+                    },
+                    items: <String>['Monat', 'Woche', 'Jahr']
+                        .map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
                   ),
                 ],
               ),
-              child: Center(
-                child: Text(
-                  'Gesamtübersicht - Platz für Main Plot',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+
+              const SizedBox(height: 20),
+
+              // Haupt-Diagramm mit drei Linien
+              Container(
+                width: double.infinity,
+                height: 300,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: LineChart(chartData), // Diagramm hier eingefügt
+              ),
+              const SizedBox(height: 40),
+              Row(
+                children: [
+                  const SizedBox(width: 20),
+                  Text(
+                    'Kategorieübersicht im Zeitraum:  ',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+                  ),
+                  DropdownButton<String>(
+                    value: selectedTimePeriod,
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        selectedTimePeriod = newValue!;
+                      });
+                    },
+                    items: <String>['Monat', 'Woche', 'Jahr']
+                        .map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+              categories.isEmpty
+                  ? Center(child: CircularProgressIndicator())
+                  : Scrollbar(
+                controller: _scrollController,
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: categories.map((category) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        child: CategoryStatWidget(
+                          category: category,
+                          chartData: categoryChartData(category),
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 40),
-
-            // Kategoriedetails (Hier können wir später auf Kategorien swipen oder scrollen)
-            Expanded(
-              child: ListView.builder(
-                itemCount: categories.length,
-                itemBuilder: (context, index) {
-                  return CategoryStatWidget(category: categories[index]);
-                },
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -119,50 +268,46 @@ class _StatisticsPageState extends State<StatisticsPage> {
 }
 
 class CategoryStatWidget extends StatelessWidget {
-  final String category;
+  final Category category;
+  final LineChartData chartData;
 
-  CategoryStatWidget({required this.category});
+  CategoryStatWidget({required this.category, required this.chartData});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10.0),
-      child: Container(
-        padding: const EdgeInsets.all(12.0),
-        decoration: BoxDecoration(
-          color: Colors.white, // Weißer Hintergrund für Kategorien
-          borderRadius: BorderRadius.circular(8),  // Abgerundete Ecken
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black12, // Schattierung (subtiler Schatten)
-              blurRadius: 8,          // Weicher Schatten
-              offset: Offset(0, 4),   // Position des Schattens
+    return Container(
+      padding: const EdgeInsets.all(12.0),
+      width: 400,  // Breite des CategoryStatWidgets, damit es horizontal scrollt
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            category.name,
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black),
+          ),
+          const SizedBox(height: 20),
+          // Kategoriediagramm mit einer Linie
+          Container(
+            height: 150,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Kategoriename
-            Text(
-              category,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: Colors.black,
-              ),
-            ),
-            const SizedBox(height: 30),
-            // Platzhalter für den Plot pro Kategorie
-            Placeholder(
-              fallbackHeight: 150,
-              color: Colors.teal[100]!,
-              child: Center(child: Text('$category - Platz für Plot')),
-            ),
-          ],
-        ),
+            child: LineChart(chartData), // Diagramm hier eingefügt
+          ),
+        ],
       ),
     );
   }
 }
-

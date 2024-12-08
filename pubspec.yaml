@@ -49,6 +49,8 @@ dependencies:
   path_provider: ^2.1.0
   open_file: ^3.3.2
   web: ^1.1.0
+  fl_chart: ^0.69.2
+
 
 dev_dependencies:
   flutter_test:
