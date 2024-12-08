@@ -107,7 +107,7 @@ class CategoryScreen extends StatefulWidget {
 
 class _CategoryScreenState extends State<CategoryScreen> {
   late Future<List<Category>> userCategories;
-
+/*
   @override
   void initState() {
     super.initState();
@@ -124,7 +124,25 @@ class _CategoryScreenState extends State<CategoryScreen> {
       // Falls kein Benutzer angemeldet ist, handle diesen Fall
       print("Kein Benutzer angemeldet.");
     }
+  }*/
+  @override
+  void initState() {
+    super.initState();
+
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      final userId = user.uid;
+
+      // Erstellen und Laden der Kategorien
+      userCategories = FirestoreService().createDefaultCategories(userId).then((_) {
+        return FirestoreService().getSortedUserCategories(userId);
+      });
+    } else {
+      print("Kein Benutzer angemeldet.");
+    }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -196,7 +214,6 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
 
 
-//
   void _addCategory() {
     final nameController = TextEditingController();
     IconData selectedIcon = availableIcons.first;
