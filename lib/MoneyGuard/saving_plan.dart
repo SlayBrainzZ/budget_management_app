@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:budget_management_app/backend/Category.dart';
+import 'package:budget_management_app/backend/Transaction.dart';
 import 'package:budget_management_app/backend/firestore_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 
@@ -17,26 +18,109 @@ class _SavingPlanState extends State<SavingPlan> {
   String? _userId;
 
   double totalIncome = 0.0;
+  List<Transaction> monthlyTransactionCategoryAll = [];
+  List<double> remainingBudget = []; // Liste, um verbleibende Budgets für jede Kategorie zu speichern
 
   // Methode zum Laden der Kategorien und Benutzerinformationen
   Future<void> _loadUserAndCategories() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      try {
-        // Kategorien für den Benutzer aus Firestore abrufen
-        List<Category> userCategories = await _firestoreService.getUserCategories(user.uid);
-        setState(() {
-          _userId = user.uid;
-          categories = userCategories;
+    if (user == null) return;
 
-          // Berechne totalIncome als Summe der Limits der Kategorien
-          totalIncome = categories.fold(0.0, (sum, category) => sum + category.budgetLimit!);
-        });
-      } catch (e) {
-        print('Fehler beim Abrufen der Kategorien: $e');
+    setState(() {
+      categories = [];
+      remainingBudget = [];
+    });
+
+    try {
+      List<Category> userCategories = await _firestoreService.getUserCategories(user.uid);
+
+      DateTime now = DateTime.now();
+      DateTime startOfMonth = DateTime.utc(now.year, now.month, 1);
+      DateTime endOfMonth = DateTime.utc(now.year, now.month + 1, 0);
+
+      List<Future<double>> transactionFutures = [];
+      for (final userCategory in userCategories) {
+        transactionFutures.add(
+          _firestoreService.getTransactionsByDateRangeAndCategory(
+            user.uid,
+            userCategory.id!,
+            startOfMonth,
+            endOfMonth,
+          ).then((transactions) async {
+            // Summiere die Beträge und stelle sicher, dass jeder Betrag ein finaler 'double' ist
+            double sum = 0.0;
+            for (final transaction in transactions) {
+              final amount = transaction.amount is int
+                  ? (transaction.amount as int).toDouble()
+                  : transaction.amount ?? 0.0;
+              sum += amount;
+            }
+            return sum;
+          }),
+        );
       }
+
+      List<double> spentAmounts = await Future.wait(transactionFutures);
+
+      setState(() {
+        _userId = user.uid;
+        categories = userCategories;
+        remainingBudget = List.generate(
+          userCategories.length,
+              (index) => (userCategories[index].budgetLimit ?? 0) - spentAmounts[index],
+        );
+        totalIncome = categories.fold(
+          0.0,
+              (sum, category) => sum + (category.budgetLimit ?? 0),
+        );
+      });
+    } catch (e) {
+      print('Fehler beim Laden der Kategorien: ${e.toString()}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Fehler beim Laden der Daten")),
+      );
     }
+
   }
+
+
+
+
+
+
+
+// Berechne die Daten für das Balkendiagramm
+  List<BarChartGroupData> _buildCategoryData() {
+    List<BarChartGroupData> barGroups = [];
+
+    for (var i = 0; i < categories.length; i++) {
+      var category = categories[i];
+
+      // Sicherstellen, dass category.budgetLimit und totalIncome gültig sind
+      double percentage = 0;
+      if (totalIncome > 0 && category.budgetLimit != null) {
+        percentage = (category.budgetLimit! / totalIncome) * 100;
+      }
+
+      barGroups.add(
+        BarChartGroupData(
+          x: i,
+          barRods: [
+            BarChartRodData(
+              toY: percentage, // Nur wenn gültig berechnet
+              color: category.color ?? Colors.blue, // Default-Farbe, falls null
+              width: 30,
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return barGroups;
+  }
+
+
 
   @override
   void initState() {
@@ -44,25 +128,6 @@ class _SavingPlanState extends State<SavingPlan> {
     _loadUserAndCategories();
   }
 
-  // Berechne die Daten für das Balkendiagramm
-  List<BarChartGroupData> _buildCategoryData() {
-    List<BarChartGroupData> barGroups = [];
-    for (var i = 0; i < categories.length; i++) {
-      var category = categories[i];
-      double percentage = (category.budgetLimit! / totalIncome) * 100; // Prozentualer Anteil
-      barGroups.add(
-        BarChartGroupData(x: i, barRods: [
-          BarChartRodData(
-            toY: percentage,  // Skalierung auf Prozent
-            color: category.color, // Farbe der Kategorie
-            width: 30,  // Breitere Balken (anpassbar)
-            borderRadius: BorderRadius.circular(8),  // Ecken abrunden
-          ),
-        ]),
-      );
-    }
-    return barGroups;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -152,7 +217,7 @@ class _SavingPlanState extends State<SavingPlan> {
                       ),
                       bottomTitles: AxisTitles(
                         sideTitles: SideTitles(
-                          showTitles: true,  // Kategorienamen unter dem Balken anzeigen
+                          showTitles: false,  // Kategorienamen unter dem Balken anzeigen
                           getTitlesWidget: (double value, TitleMeta meta) {
                             int index = value.toInt();
                             if (index < categories.length) {
@@ -197,10 +262,16 @@ class _SavingPlanState extends State<SavingPlan> {
             delegate: SliverChildBuilderDelegate(
                   (context, index) {
                 final category = categories[index];
-                final double remaining = category.budgetLimit! - 0;
-                final bool isOverBudget = remaining < 0;
-                final Color balanceColor =
-                isOverBudget ? Colors.red : Colors.green;
+                final remaining = remainingBudget[index];
+                final spentPercent = 1 - (remaining / (category.budgetLimit ?? 1)).clamp(0.0, 1.0);
+
+                // Bedingte Nachricht je nach Budgetstatus
+                String statusMessage = remaining < 0
+                    ? "Limit überschritten!"
+                    : remaining / (category.budgetLimit ?? 1) < 0.05
+                    ? "Achtung, Limit bald überschritten!"
+                    : "Super!";
+
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
@@ -221,63 +292,56 @@ class _SavingPlanState extends State<SavingPlan> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            // Icon und Kategoriename links
-                            Row(
-                              children: [
-                                Icon(
-                                  category.icon,
-                                  color: category.color,
-                                  size: 31.0, // Größeres Icon
+                            // Icon und Kategoriename auf der linken Seite
+                            Icon(
+                              category.icon,
+                              color: category.color,
+                              size: 31.0,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                category.name ?? "Unbekannt",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                const SizedBox(width: 12),
+                              ),
+                            ),
+                            // Nachricht rechts oben im Widget
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
                                 Text(
-                                  category.name,
+                                  statusMessage,
                                   style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black,
-                                    fontSize: 18.0, // Größerer Text
+                                    fontSize: 12,
+                                    color: remaining < 0 ? Colors.red : Colors.green,
                                   ),
                                 ),
                               ],
                             ),
-                            Spacer(), // Füllt den Platz zwischen den beiden Teilen
-                            // Budgetanzeige oben rechts
-                            Text(
-                              '${remaining.abs().toStringAsFixed(0)}€ von ${category.budgetLimit}€ verfügbar',
-                              style: TextStyle(
-                                color: Colors.grey[700],
-                                fontSize: 14.0,
-                              ),
-                              textAlign: TextAlign.right,
-                            ),
                           ],
                         ),
+
                         const SizedBox(height: 8),
-                        // Bewertung (Good Job oder Budget überschritten)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end, // Nach rechts ausgerichtet
-                          children: [
-                            Icon(
-                              isOverBudget ? Icons.warning : Icons.thumb_up,
-                              color: isOverBudget ? Colors.red : Colors.green,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              isOverBudget ? 'Budget überschritten!' : 'Good Job!',
-                              style: TextStyle(
-                                color: isOverBudget ? Colors.red : Colors.green,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14.0,
-                              ),
-                            ),
-                          ],
+
+                        // Anzeige der verbleibenden Budgetanzeige
+                        Text(
+                          '${remaining.toStringAsFixed(2)}€ von ${category.budgetLimit?.toStringAsFixed(2)}€ verfügbar',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: remaining < 0 ? Colors.red : Colors.green,
+                          ),
                         ),
+
                         const SizedBox(height: 8),
-                        // Fortschrittsanzeige
+
+                        // LinearProgressIndicator
                         LinearProgressIndicator(
-                          value: (category.budgetLimit! / totalIncome).clamp(0.0, 1.0),
+                          value: spentPercent, // Dieser Wert wird nun angepasst
                           backgroundColor: Colors.teal[100],
                           color: category.color,
                           minHeight: 8,
@@ -286,11 +350,13 @@ class _SavingPlanState extends State<SavingPlan> {
                     ),
                   ),
                 );
-
-                  },
+              },
               childCount: categories.length,
             ),
           ),
+
+
+
         ],
       ),
     );

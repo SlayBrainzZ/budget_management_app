@@ -364,7 +364,6 @@ class FirestoreService {
     try {
       final userCategoriesRef = usersRef.doc(documentId).collection('Categories');
       firestore.QuerySnapshot snapshot = await userCategoriesRef.get();
-
       return snapshot.docs.map((doc) {
         try {
           return Category.fromMap(doc.data() as Map<String, dynamic>, doc.id);
@@ -802,8 +801,8 @@ class FirestoreService {
     try {
       final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
       firestore.QuerySnapshot snapshot = await userTransactionsRef
-          .where('date', isGreaterThanOrEqualTo: startDate)
-          .where('date', isLessThanOrEqualTo: endDate)
+          .where('date', isGreaterThanOrEqualTo: startDate.toIso8601String())
+          .where('date', isLessThanOrEqualTo: endDate.toIso8601String())
           .orderBy('date', descending: true)
           .get();
       return snapshot.docs.map((doc) => Transaction.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
@@ -832,5 +831,29 @@ class FirestoreService {
     return monthlySpending;
   }
 
+  Future<List<Transaction>> getTransactionsByDateRangeAndCategory(String documentId, String categoryId, DateTime startDate, DateTime endDate) async {
+    try {
+      final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
+      firestore.QuerySnapshot snapshot = await userTransactionsRef
+          .where('categoryId', isEqualTo: categoryId)
+          .where('date', isGreaterThanOrEqualTo: startDate.toIso8601String())
+          .where('date', isLessThanOrEqualTo: endDate.toIso8601String())
+          .orderBy('date', descending: true)
+          .get();
+      return snapshot.docs.map((doc) => Transaction.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+    } catch (e) {
+      print("Error getting transactions by date range: $e");
+      return [];
+    }
+  }
+
+
 
 }
+
+
+
+
+
+
+

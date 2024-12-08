@@ -47,7 +47,7 @@ void main() async {
         print("User logged in: ${user.email}");
 
         // Now proceed with CSV import after login
-        await FirestoreService().importCsvTransactions(user.uid); // Pass the logged-in user's ID
+        //await FirestoreService().importCsvTransactions(user.uid); // Pass the logged-in user's ID
       } else {
         print("No user logged in. Please log in.");
       }
