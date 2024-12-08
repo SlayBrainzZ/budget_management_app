@@ -847,6 +847,32 @@ class FirestoreService {
     }
   }
 
+  Future<List<Category>> getUserCategoriesWithBudget(String documentId) async {
+    try {
+      final userCategoriesRef = usersRef.doc(documentId).collection('Categories');
+      firestore.QuerySnapshot snapshot = await userCategoriesRef.get();
+
+      // Map und Filter gleichzeitig: Nur Kategorien mit gültigem Budgetlimit
+      return snapshot.docs.map((doc) {
+        try {
+          Category category = Category.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+
+          // Nur Kategorien zurückgeben, bei denen ein Budgetlimit existiert und > 0 ist
+          if (category.budgetLimit != null && category.budgetLimit! > 0) {
+            return category;
+          } else {
+            return null; // Ignoriere Kategorien ohne gültiges Budget
+          }
+        } catch (e) {
+          print("Error parsing category: $e");
+          return null; // Handle gracefully
+        }
+      }).whereType<Category>().toList(); // Entferne nulls aus der Liste
+    } catch (e) {
+      print("Error getting user categories: $e");
+      return [];
+    }
+  }
 
 
 }

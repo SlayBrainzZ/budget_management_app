@@ -32,7 +32,7 @@ class _SavingPlanState extends State<SavingPlan> {
     });
 
     try {
-      List<Category> userCategories = await _firestoreService.getUserCategories(user.uid);
+      List<Category> userCategories = await _firestoreService.getUserCategoriesWithBudget(user.uid);
 
       DateTime now = DateTime.now();
       DateTime startOfMonth = DateTime.utc(now.year, now.month, 1);
