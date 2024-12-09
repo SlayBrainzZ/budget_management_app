@@ -167,7 +167,7 @@ class FirestoreService {
         userId: userId,
         amount: amount,
         date: date,
-        payerOrRecipient: row['Auftraggeber/Empfänger']?.toString() ?? '',
+        payerOrRecipient: row['Auftraggeber/Empfaenger']?.toString() ?? '',
         description: row['Buchungstext']?.toString() ?? '',
         outflow: outflow,
         inflow: inflow,
