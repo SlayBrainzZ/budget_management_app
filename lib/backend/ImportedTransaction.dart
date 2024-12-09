@@ -4,7 +4,7 @@ class ImportedTransaction {
   final String userId;
   double amount;
   final DateTime date;
-  String? categoryId;
+  //String? categoryId;
   final String description;  // Description of the transaction (Buchungstext)
   final String payerOrRecipient;  // The payer or recipient (Auftraggeber/Empfänger)
   final double outflow;  // Amount for outgoing transactions (Ausgang)
@@ -26,7 +26,7 @@ class ImportedTransaction {
       'userId': userId,
       'amount': amount.toString(),
       'date': date.toIso8601String(),
-      'categoryId': categoryId ?? null, // Pass null if undefined
+      //'categoryId': categoryId ?? null, // Pass null if undefined
       'description': description,
       'payerOrRecipient': payerOrRecipient,
       'outflow': outflow,
