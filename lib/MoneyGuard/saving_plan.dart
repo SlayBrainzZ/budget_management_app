@@ -32,7 +32,15 @@ class _SavingPlanState extends State<SavingPlan> {
     });
 
     try {
-      List<Category> userCategories = await _firestoreService.getUserCategories(user.uid);
+      List<Category> userCategories = await _firestoreService.getUserCategoriesWithBudget(user.uid);
+
+      if (userCategories.isEmpty) {
+        print("Keine Kategorien gefunden für den Benutzer.");
+        setState(() {
+          totalIncome = 0.0;
+        });
+        return;
+      }
 
       DateTime now = DateTime.now();
       DateTime startOfMonth = DateTime.utc(now.year, now.month, 1);
@@ -185,13 +193,27 @@ class _SavingPlanState extends State<SavingPlan> {
             ),
           ),
 
-          // Balkendiagramm anzeigen
+          // Balkendiagramm oder Hinweis anzeigen
           SliverToBoxAdapter(
-            child: Padding(
+            child: categories.isEmpty
+                ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  '',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                  ),
+                ),
+              ),
+            )
+                : Padding(
               padding: const EdgeInsets.all(16.0),
               child: Container(
                 width: double.infinity,
-                height: 300,
+                height: 200,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
@@ -203,9 +225,7 @@ class _SavingPlanState extends State<SavingPlan> {
                     ),
                   ],
                 ),
-                child: categories.isEmpty
-                    ? Center(child: CircularProgressIndicator())
-                    : BarChart(
+                child: BarChart(
                   BarChartData(
                     alignment: BarChartAlignment.spaceEvenly, // Mehr Platz zwischen den Balken
                     maxY: 100, // Maximaler Y-Wert für die Prozentanzeige
@@ -217,7 +237,7 @@ class _SavingPlanState extends State<SavingPlan> {
                       ),
                       bottomTitles: AxisTitles(
                         sideTitles: SideTitles(
-                          showTitles: false,  // Kategorienamen unter dem Balken anzeigen
+                          showTitles: true, // Kategorienamen unter dem Balken anzeigen
                           getTitlesWidget: (double value, TitleMeta meta) {
                             int index = value.toInt();
                             if (index < categories.length) {
@@ -241,7 +261,8 @@ class _SavingPlanState extends State<SavingPlan> {
                       touchTooltipData: BarTouchTooltipData(
                         getTooltipItem: (group, groupIndex, rod, rodIndex) {
                           final category = categories[groupIndex];
-                          final double percentage = (category.budgetLimit! / totalIncome) * 100;
+                          final double percentage =
+                              (category.budgetLimit! / totalIncome) * 100;
                           return BarTooltipItem(
                             '${category.name}\n${percentage.toStringAsFixed(1)}%', // Tooltip mit Prozentwert
                             TextStyle(color: Colors.white), // Textfarbe des Tooltips
@@ -255,15 +276,31 @@ class _SavingPlanState extends State<SavingPlan> {
             ),
           ),
 
-          // Kategorienliste
+          // Kategorienliste oder Hinweis anzeigen
           categories.isEmpty
-              ? SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
+              ? SliverFillRemaining(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  'Noch keine Kategorien vorhanden! \n Bitte lege ein Budget für deine Kategorien fest, um loszulegen :)',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                  ),
+                ),
+              ),
+            ),
+          )
               : SliverList(
             delegate: SliverChildBuilderDelegate(
                   (context, index) {
                 final category = categories[index];
                 final remaining = remainingBudget[index];
-                final spentPercent = 1 - (remaining / (category.budgetLimit ?? 1)).clamp(0.0, 1.0);
+                final spentPercent = 1 -
+                    (remaining / (category.budgetLimit ?? 1))
+                        .clamp(0.0, 1.0);
 
                 // Bedingte Nachricht je nach Budgetstatus
                 String statusMessage = remaining < 0
@@ -272,9 +309,9 @@ class _SavingPlanState extends State<SavingPlan> {
                     ? "Achtung, Limit bald überschritten!"
                     : "Super!";
 
-
                 return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 8.0, horizontal: 16.0),
                   child: Container(
                     padding: const EdgeInsets.all(16.0),
                     decoration: BoxDecoration(
@@ -318,7 +355,9 @@ class _SavingPlanState extends State<SavingPlan> {
                                   statusMessage,
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: remaining < 0 ? Colors.red : Colors.green,
+                                    color: remaining < 0
+                                        ? Colors.red
+                                        : Colors.green,
                                   ),
                                 ),
                               ],
@@ -354,11 +393,9 @@ class _SavingPlanState extends State<SavingPlan> {
               childCount: categories.length,
             ),
           ),
-
-
-
         ],
       ),
     );
   }
+
 }
