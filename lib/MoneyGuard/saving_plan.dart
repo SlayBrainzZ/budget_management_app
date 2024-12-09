@@ -21,6 +21,8 @@ class _SavingPlanState extends State<SavingPlan> {
   List<Transaction> monthlyTransactionCategoryAll = [];
   List<double> remainingBudget = []; // Liste, um verbleibende Budgets für jede Kategorie zu speichern
 
+
+
   // Methode zum Laden der Kategorien und Benutzerinformationen
   Future<void> _loadUserAndCategories() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -312,7 +314,7 @@ class _SavingPlanState extends State<SavingPlan> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 20,
-                    color: Colors.green,
+                    color: Colors.grey,
                     fontFamily: 'Roboto',
                   ),
                 ),

@@ -17,14 +17,15 @@ class _StatisticsPageState extends State<StatisticsPage> {
   final ScrollController _scrollController = ScrollController();  // Der ScrollController
 
   final FirestoreService _firestoreService = FirestoreService();
+  String? _userId;
 
   @override
   void initState() {
     super.initState();
-    _loadCategories();
+    _loadUserAndCategories();
   }
 
-  Future<void> _loadCategories() async {
+  /*Future<void> _loadCategories() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
@@ -36,7 +37,68 @@ class _StatisticsPageState extends State<StatisticsPage> {
         print('Fehler beim Abrufen der Kategorien: $e');
       }
     }
+  }*/
+
+  Future<void> _loadUserAndCategories() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    setState(() {
+      categories = [];
+    });
+
+    try {
+      List<Category> userCategories = await _firestoreService.getUserCategories(user.uid);
+
+      if (userCategories.isEmpty) {
+        print("Keine Kategorien gefunden für den Benutzer.");
+        return;
+      }
+
+      DateTime now = DateTime.now();
+      DateTime startOfMonth = DateTime.utc(now.year, now.month, 1);
+      DateTime endOfMonth = DateTime.utc(now.year, now.month + 1, 0);
+
+      List<Future<double>> transactionFutures = [];
+      for (final userCategory in userCategories) {
+        transactionFutures.add(
+          _firestoreService.getTransactionsByDateRangeAndCategory(
+            user.uid,
+            userCategory.id!,
+            startOfMonth,
+            endOfMonth,
+          ).then((transactions) async {
+            // Summiere die Beträge und stelle sicher, dass jeder Betrag ein finaler 'double' ist
+            double sum = 0.0;
+            for (final transaction in transactions) {
+              final amount = transaction.amount is int
+                  ? (transaction.amount as int).toDouble()
+                  : transaction.amount ?? 0.0;
+              sum += amount;
+            }
+            return sum;
+          }),
+        );
+      }
+
+      setState(() {
+        _userId = user.uid;
+        categories = userCategories;
+
+      });
+    } catch (e) {
+      print('Fehler beim Laden der Kategorien: ${e.toString()}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Fehler beim Laden der Daten")),
+      );
+    }
+
   }
+
+
+
+
+
 
   // Placeholder für Diagramm-Daten
   final gridData = FlGridData(
@@ -299,7 +361,7 @@ class CategoryStatWidget extends StatelessWidget {
           const SizedBox(height: 20),
           // Kategoriediagramm mit einer Linie
           Container(
-            height: 150,
+            height: 230,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(8),
