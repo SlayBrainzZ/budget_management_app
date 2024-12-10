@@ -1,11 +1,10 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'home_page.dart';
-import 'package:budget_management_app/backend/User.dart';
 import 'package:budget_management_app/backend/Transaction.dart';
 import 'package:budget_management_app/backend/Category.dart';
 import 'package:budget_management_app/backend/firestore_service.dart';
+import 'home_page.dart';
 
 class AddTransactionPage extends StatefulWidget {
   final Transaction? transaction; // Optional: übergebene Transaktion
@@ -38,7 +37,6 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     _tabController = TabController(length: 2, vsync: this);
     _loadUserAndCategories();
 
-    // Felder mit Daten der übergebenen Transaktion vorbelegen
     if (widget.transaction != null) {
       final transaction = widget.transaction!;
       _selectedDate = transaction.date;
@@ -46,20 +44,25 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       _amountController.text = transaction.amount.toStringAsFixed(2);
       _selectedCategory = transaction.categoryId;
       _isUrgent = transaction.importance;
-      //_selectedAccount = transaction.account;
+
+      // Setze den Tab basierend auf dem Transaktionstyp
+      if (transaction.type == 'Einnahme') {
+        _tabController.index = 1; // Setze auf Einnahme-Tab
+      } else {
+        _tabController.index = 0; // Setze auf Ausgabe-Tab
+      }
     }
   }
 
+
   Future<void> _loadUserAndCategories() async {
-    // Benutzer aus der Datenbank abrufen
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      // Kategorien für den Benutzer abrufen
       List<Category> userCategories =
-      await _firestoreService.getUserCategories(user.uid); // user.id verwenden
+      await _firestoreService.getUserCategories(user.uid);
       setState(() {
-        _userId = user.uid; // Benutzer-ID speichern
-        categories = userCategories; // Kategorien speichern
+        _userId = user.uid;
+        categories = userCategories;
       });
     }
   }
@@ -88,6 +91,63 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       });
     }
   }
+
+  void _saveTransaction(String type) {
+    final transaction = Transaction(
+      userId: _userId!,
+      amount: double.tryParse(_amountController.text) ?? 0.0,
+      date: _selectedDate,
+      categoryId: _selectedCategory,
+      type: type,
+      importance: _isUrgent,
+      note: _noteController.text,
+    );
+
+    _firestoreService.createTransaction(_userId!, transaction).then((_) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => MyHomePage(title: 'MoneyGuard')),
+            (Route<dynamic> route) => false,
+      );
+    });
+  }
+
+  void _deleteTransaction() {
+    if (widget.transaction == null) return;
+
+    _firestoreService
+        .deleteTransaction(_userId!, widget.transaction!.id!)
+        .then((_) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => MyHomePage(title: 'MoneyGuard')),
+            (Route<dynamic> route) => false,
+      );
+    });
+  }
+
+  void _saveOrUpdateTransaction(String type) {
+    if (widget.transaction != null) {
+      // Update bestehende Transaktion
+      final updatedTransaction = widget.transaction!.copyWith(
+        //userId: _userId,
+        amount: double.tryParse(_amountController.text) ?? 0.0,
+        date: _selectedDate,
+        categoryId: _selectedCategory,
+        type: type,
+        importance: _isUrgent,
+        note: _noteController.text,
+        id: widget.transaction!.id, // Übergibt die ID hier
+      );
+
+      _firestoreService.updateTransaction(_userId!,widget.transaction!.id!, updatedTransaction).then((_) {
+        Navigator.of(context).pop(); // Zurück zur vorherigen Seite
+      });
+    } else {
+      // Neue Transaktion erstellen
+      _saveTransaction(type);
+    }
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -206,33 +266,21 @@ class _AddTransactionPageState extends State<AddTransactionPage>
           ElevatedButton(
             onPressed: () {
               if (_userId != null) {
-                _saveTransaction(type);
+                _saveOrUpdateTransaction(type);
               }
             },
             child: const Text('Speichern'),
           ),
+          const SizedBox(height: 16),
+          if (widget.transaction != null) // Zeige Löschen-Button nur bei existierenden Transaktionen
+            ElevatedButton(
+              onPressed: _deleteTransaction,
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Löschen',
+                  style: TextStyle(color: Colors.white)),
+            ),
         ],
       ),
     );
-  }
-
-  void _saveTransaction(String type) {
-    final transaction = Transaction(
-      userId: _userId!,
-      amount: double.tryParse(_amountController.text) ?? 0.0,
-      date: _selectedDate,
-      categoryId: _selectedCategory,
-      type: type,
-      importance: _isUrgent,
-      note: _noteController.text,
-    );
-
-    // Hier wird die Instanz von FirestoreService verwendet, um die Transaktion zu speichern
-    _firestoreService.createTransaction(_userId!, transaction).then((_) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => MyHomePage(title: 'MoneyGuard')),
-            (Route<dynamic> route) => false,
-      );
-    });
   }
 }

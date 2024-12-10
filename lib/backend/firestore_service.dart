@@ -677,14 +677,28 @@ class FirestoreService {
   ///
   /// This function takes the user's `documentId` and a `Transaction` object as input,
   /// and updates the corresponding transaction document in the user's `Transactions` subcollection.
-  Future<void> updateTransaction(String documentId, Transaction transaction) async {
+  Future<void> updateTransaction(
+      String userId, String transactionId, Transaction transaction) async {
     try {
-      final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
-      await userTransactionsRef.doc(transaction.id).update(transaction.toMap());
+      final userTransactionsRef = usersRef
+          .doc(userId) // Benutzer-ID
+          .collection('Transactions')
+          .doc(transactionId); // Transaktions-ID
+      final docSnapshot = await userTransactionsRef.get();
+
+      // Überprüfen, ob das Dokument existiert
+      if (!docSnapshot.exists) {
+        print("Transaction not found for userId: $userId, transactionId: $transactionId");
+        return;
+      }
+
+      await userTransactionsRef.update(transaction.toMap());
+      print("Transaction successfully updated!");
     } catch (e) {
       print("Error updating transaction: $e");
     }
   }
+
 
   /// Deletes a transaction from Firestore for a specific user.
   ///
