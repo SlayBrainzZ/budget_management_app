@@ -125,6 +125,17 @@ class _AddTransactionPageState extends State<AddTransactionPage>
   }
 
   void _saveOrUpdateTransaction(String type) {
+
+    if (_selectedAccount == null || _selectedCategory == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bitte wählen Sie ein Konto und eine Kategorie aus.'),
+          backgroundColor: Colors.grey,
+        ),
+      );
+      return;
+    }//entferne diese if bedingung wenn auch ohne kategorie auswahl oder konto auswahl
+
     if (widget.transaction != null) {
       // Update bestehende Transaktion
       final updatedTransaction = widget.transaction!.copyWith(
