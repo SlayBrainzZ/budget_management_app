@@ -259,6 +259,7 @@ class FirestoreService {
   ///
   /// This function takes the user's `documentId` and a `BankAccount` object as input,
   /// and updates the corresponding bank account document in the user's `bankAccounts` subcollection.
+  /*
   Future<void> updateBankAccount(String documentId, BankAccount account) async {
     try {
       final userBankAccountsRef = usersRef.doc(documentId).collection('bankAccounts');
@@ -266,7 +267,21 @@ class FirestoreService {
     } catch (e) {
       print("Error updating bank account: $e");
     }
+  }*/
+
+  Future<void> updateBankAccount(String userId, BankAccount account) async {
+    try {
+      final userBankAccountsRef = usersRef.doc(userId).collection('bankAccounts');
+      if (account.id != null) {
+        await userBankAccountsRef.doc(account.id).update(account.toMap());
+      } else {
+        throw Exception("Account ID is null. Cannot update.");
+      }
+    } catch (e) {
+      print("Error updating bank account: $e");
+    }
   }
+
 
   /// Deletes a bank account from Firestore for a specific user.
   ///

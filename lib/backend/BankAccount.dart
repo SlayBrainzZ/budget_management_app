@@ -28,12 +28,13 @@ class BankAccount {
 
   Map<String, dynamic> toMap() {
     return {
+      'id': id, // Die ID hinzufügen
       'userId': userId,
       'accountName': accountName,
       'balance': balance?.toString(),
       'lastUpdated': lastUpdated?.toIso8601String(),
       'accountType': accountType,
-      'exclude' : exclude,
+      'exclude': exclude,
       'importFilePath': importFilePath,
     };
   }
