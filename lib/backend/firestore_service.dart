@@ -806,14 +806,6 @@ class FirestoreService {
     return totalBalance;
   }
 
-  /*Future<double> calculateTotalBalanceForMonth(String documentId, DateTime startDate, DateTime endDate) async {
-    List<Transaction> transactions = await getSpecificTransactionByDateRange(documentId, "null", startDate, endDate);
-    double totalBalance = 0.0;
-    for (var transaction in transactions) {
-      totalBalance += transaction.amount;
-    }
-    return totalBalance;
-  }*/
 
   /// Calculates the total spending for a specific user and category.
   ///
@@ -853,9 +845,9 @@ class FirestoreService {
   Future<List<Transaction>> getSpecificTransactionByDateRange(String documentId, String type, DateTime startDate, DateTime endDate) async {
     try {
       // Setze startDate auf Mitternacht (00:00:00) und endDate auf den letzten Moment des Tages (23:59:59)
-      startDate = DateTime.utc(startDate.year, startDate.month, startDate.day, 0, 0, 0); // Setze die Zeit auf 00:00
+      startDate = DateTime.utc(startDate.year, startDate.month, startDate.day, 0, 0, 0).subtract(Duration(microseconds: 1)); // Setze die Zeit auf 00:00
       endDate = DateTime.utc(endDate.year, endDate.month, endDate.day, 23, 59, 59); // Setze die Zeit auf 23:59
-      //print("STARTDATE: $startDate UND ENDDATE: $endDate");
+      print("STARTDATE: $startDate UND ENDDATE: $endDate");
       final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
 
       // Basiskonfiguration der Abfrage
@@ -874,7 +866,7 @@ class FirestoreService {
       /*if (type != "null" && type.isNotEmpty) {
         transactions = transactions.where((transaction) => transaction.type == type).toList();
       }*/
-      print(transactions);
+      //print(transactions);
       return transactions;
     } catch (e) {
       print("Error getting transactions by date range: $e");
@@ -891,24 +883,7 @@ class FirestoreService {
   /// This function takes the user's `documentId` and a `year` as input,
   /// and calculates the total spending for each month of the given year.
 
-  Future<Map<String, Map<String, double>>> filterAllTransactions(String documentId, String year) async {
 
-
-    Map<String, double> incomeMap = {};
-    Map<String, double> expenseMap = {};
-    Map<String, double> netMap = {};
-
-
-
-
-
-
-    return {
-      "Einnahmen": incomeMap,
-      "Ausgaben": expenseMap,
-      "Netto": netMap,
-    };
-  }
 
   Future<Map<String, Map<String, double>>> calculateYearlySpendingByMonth2(String documentId) async {
     // Drei separate Dictionaries für Einnahmen, Ausgaben und Netto
@@ -962,17 +937,19 @@ class FirestoreService {
   }
 
   Future<Map<String, double>> calculateYearlySpendingByMonth(String documentId, String type, String chosenYear) async {
+    print("Entered calculateYearlySpendingByMonth");
     Map<String, double> yearlySpending = {}; // Initialisiere das Dictionary
     double cumulativeNetAmount = 0.0;
     for (int month = 1; month <= 12; month++) {
-      // Setze Start- und Enddatum für den Monat (inklusive des ersten Tages und letzten Tages im Monat)
-      DateTime startDate = DateTime.utc(int.parse(chosenYear), month, 0); // Erster Tag des Monats
-      DateTime endDate = DateTime.utc(int.parse(chosenYear), month + 1, 1).subtract(Duration(microseconds: 1)); // Letzter Tag des Monats (wir verwenden 0 für den letzten Tag des vorherigen Monats)
+
+      DateTime startDate = DateTime.utc(int.parse(chosenYear), month, 1); // Erster Tag des Monats
+      DateTime endDate = DateTime.utc(DateTime.now().year, month + 1, 1).subtract(Duration(days: 1)); // Letzter Tag des Monats (wir verwenden 0 für den letzten Tag des vorherigen Monats)
+
+
 
       // Hole die Transaktionen für den aktuellen Monat
       List<Transaction> monthTransactions = await getSpecificTransactionByDateRange(documentId, type, startDate, endDate);
-      print("$type $monthTransactions" );
-      // Berechne die Einnahmen und Ausgaben für den Monat
+
       double monthIncome = 0.0;
       double monthExpense = 0.0;
 
@@ -997,9 +974,9 @@ class FirestoreService {
       }
 
       // Debug-Ausgabe für jeden Monat
-      print("Monat: $monthKey, Einnahmen: $monthIncome, Ausgaben: $monthExpense, Kumuliertes Netto: $cumulativeNetAmount");
+      //print("Monat: $monthKey, Einnahmen: $monthIncome, Ausgaben: $monthExpense, Kumuliertes Netto: $cumulativeNetAmount");
     }
-
+    print("Left calculateYearlySpendingByMonth");
     return yearlySpending;
   }
 
@@ -1007,16 +984,12 @@ class FirestoreService {
 
   Future<List<double>> calculateMonthlySpendingByDay(
       String documentId, String type, String chosenYear, String chosenMonth, double lastMonthBalance) async {
-
+    print("Entered calculateMonthlySpendingbyday");
     // Erster Tag des aktuellen Monats
     DateTime startDate = DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth), 1);
-    // Letzter Tag des aktuellen Monats
-    DateTime endDate = DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth) + 1, 1).subtract(Duration(microseconds: 1));
 
-    // Letzter Tag des vorherigen Monats
-    DateTime lastDayPreviousMonth = startDate.subtract(Duration(days: 1));
+    DateTime endDate = DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth) + 1 , 1).subtract(Duration(days: 1));
 
-    print("Berechnung: Start Date: $startDate, End Date: $endDate, Last Day Prev Month: $lastDayPreviousMonth");
 
     // Initialisierung der Liste für die Tage des Monats
     List<double> monthlySpending = List.filled(endDate.day, 0.0);
@@ -1028,35 +1001,13 @@ class FirestoreService {
     List<Transaction> monthTransactions = await getSpecificTransactionByDateRange(
         documentId, "null", startDate, endDate);
 
-    // Optional: Hole Transaktionen für den letzten Tag des vorherigen Monats
-    List<Transaction> prevDayTransactions = await getSpecificTransactionByDateRange(
-        documentId, "null", lastDayPreviousMonth, lastDayPreviousMonth);
-
-    print("Transaktionen des vorherigen Monats: $prevDayTransactions");
-    print("Transaktionen des aktuellen Monats: $monthTransactions");
-
-    // Berechne das Guthaben vom letzten Tag des vorherigen Monats
-    double previousDayIncome = 0.0;
-    double previousDayExpense = 0.0;
-
-    for (var transaction in prevDayTransactions) {
-      if (transaction.type == "Einnahme") {
-        previousDayIncome += transaction.amount;
-      } else if (transaction.type == "Ausgabe") {
-        previousDayExpense += transaction.amount;
-      }
-    }
-
-    // Aktualisiere das kumulative Guthaben
-    cumulativeNetAmount += (previousDayIncome - previousDayExpense);
-
     // Iteriere über alle Tage des Monats
     for (int day = 1; day <= endDate.day; day++) {
-      DateTime currentDay = DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth), day);
+          DateTime currentDay = DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth), day).subtract(Duration(days: 1));
 
-      // Filtere Transaktionen für den aktuellen Tag
-      List<Transaction> dayTransactions = monthTransactions.where((transaction) {
-        return transaction.date.toUtc().year == currentDay.year &&
+          // Filtere Transaktionen für den aktuellen Tag
+          List<Transaction> dayTransactions = monthTransactions.where((transaction) {
+            return transaction.date.toUtc().year == currentDay.year &&
             transaction.date.toUtc().month == currentDay.month &&
             transaction.date.toUtc().day == currentDay.day;
       }).toList();
@@ -1082,10 +1033,9 @@ class FirestoreService {
         monthlySpending[day - 1] = dayExpense;
       }
 
-      print(
-          "Tag: $day, Einnahmen: $dayIncome, Ausgaben: $dayExpense, Kumuliertes Netto: $cumulativeNetAmount");
+      ///print("Tag: $day, Einnahmen: $dayIncome, Ausgaben: $dayExpense, Kumuliertes Netto: $cumulativeNetAmount");
     }
-
+    print("Left calculateMonthlySpendingbyday");
     return monthlySpending;
   }
 

@@ -29,6 +29,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
   List<Category> categories = [];
   List <double> allMonthBalanceData = [];
   double lastMonthBalance = 0.0;
+  Map<String, double> monthlyBalanceList = {};
+
 
   @override
   void initState() {
@@ -92,33 +94,41 @@ class _StatisticsPageState extends State<StatisticsPage> {
     List<double> data = [];
 
     Map<String, double> monthlySpending = {};
+
+
     double x = 1;
     int iter = 1;
 
     try {
       if (chosenMonth == "Monat") {
+
         monthlySpending = await _firestoreService.calculateYearlySpendingByMonth(user.uid, type, chosenYear);
 
         if (type == "null") {
-          lastMonthBalance = findLastMonthBalance(monthlySpending);
-          print(lastMonthBalance);
+          print("Entering because type = null");
+          monthlyBalanceList = await _firestoreService.calculateYearlySpendingByMonth(user.uid, type, chosenYear);
+          monthlySpending = monthlyBalanceList;
+          print(monthlyBalanceList);
         }
+
       } else {
-        data = await _firestoreService.calculateMonthlySpendingByDay(user.uid, type, chosenYear, chosenMonth ,0.0);
-        print(data);}
+
+        if (type == "null"){
+          print(monthlyBalanceList);
+          lastMonthBalance = findLastMonthBalance(monthlyBalanceList, chosenYear, chosenMonth);
+        } else{
+          lastMonthBalance = 0.0;
+        }
+        print("lastMonthBalance nach Monatsangabe: $lastMonthBalance");
+        data = await _firestoreService.calculateMonthlySpendingByDay(user.uid, type, chosenYear, chosenMonth , lastMonthBalance);
+        //print(data);
+      }
 
       if (chosenMonth == "Monat") {
         for (var entry in monthlySpending.entries) {
-          // Hier wird der Schlüssel (Monat) aus der Map als DateTime-String im Format "YYYY-MM" genommen
           String monthKey = entry.key; // Beispiel: "2024-01"
-
-          // Konvertiere den Monatsschlüssel in ein gültiges DateTime-Format (füge "-01" für den Tag hinzu)
           DateTime dateTime = DateTime.parse(monthKey + "-01");
-
-          // Betrag der Ausgabe
           double y = entry.value;
-
-          // Füge den FlSpot zur Liste hinzu, wobei x den Monat (1 für Januar, 2 für Februar ...) und y den Betrag repräsentiert
           FlSpotlist.add(FlSpot(double.parse(dateTime.month.toString()), y));
           x = x + 1;
         }
@@ -267,32 +277,84 @@ class _StatisticsPageState extends State<StatisticsPage> {
     return daysInMonth;
   }
 
-  double findLastMonthBalance(Map<String, double> data) {
+  double findLastMonthBalance1(Map<String, double> data, String chosenYear, String chosenMonth) {
     //es muss ein sortiertes Dictonary sein, zeitlich aufsteigend
+    try {
+      print("Der aktuelle Monat ist der $chosenMonth oder auch in int: ${int.parse(chosenMonth)}");
 
-    double lastMonthBalance = 0.0;
-    DateTime today = DateTime.now();
-    String currentMonth = "${today.year}-${today.month.toString().padLeft(
-        2, '0')}";
+      double lastMonthBalance = 0.0;
+      DateTime today = DateTime(int.parse(chosenYear), int.parse(chosenMonth));
+      print(today);
+      String currentMonth = "${today.year}-${today.month.toString().padLeft(2, '0')}";
+      print(currentMonth);
 
-    // Iteriere durch die Map
-    data.forEach((key, value) {
-      // String in DateTime umwandeln
-      DateTime keyDate = DateTime.parse(
-          key + "-01"); // "-01" hinzufügen, um ein gültiges Datum zu erstellen
-      // Vergleiche mit aktuellem Datum
-      if (keyDate == DateTime(today.year, today.month)) {
-        print("Der Schlüssel $key entspricht dem heutigen Monat. Wert: $value");
-      } else if (keyDate.isBefore(today)) {
-        print("Der Schlüssel $key liegt vor dem heutigen Monat.");
-        lastMonthBalance = value;
-      } else if (keyDate.isAfter(today)) {
-        print("Der Schlüssel $key liegt nach dem heutigen Monat.");
-      }
-    });
-    print(lastMonthBalance);
+
+
+      // Iteriere durch die Map
+      data.forEach((key, value) {
+        // String in DateTime umwandeln
+        DateTime keyDate = DateTime.parse(key); // "-01" hinzufügen, um ein gültiges Datum zu erstellen
+        print("Der Key lautet $key");
+        print("Und die andere Datetime ist: ${DateTime(today.year, today.month)}");
+        // Vergleiche mit aktuellem Datum
+        if (keyDate == DateTime(today.year, today.month)) {
+          print("Der Schlüssel $key entspricht dem heutigen Monat. Wert: $value");
+        } else if (keyDate.isBefore(today)) {
+          print("Der Schlüssel $key liegt vor dem heutigen Monat.");
+          lastMonthBalance = value;
+        } else if (keyDate.isAfter(today)) {
+          print("Der Schlüssel $key liegt nach dem heutigen Monat.");
+        } else{
+          print("No match found");
+        }
+      });
+      print(lastMonthBalance);
+
+
+    } catch (e) {
+      print("Fehler beim Laden der Ausgaben: ${e.toString()}");
+    }
     return lastMonthBalance;
   }
+
+
+  double findLastMonthBalance(Map<String, double> data, String chosenYear, String chosenMonth) {
+    // Startwert für das vorherige Monatsguthaben
+    double lastMonthBalance = 0.0;
+
+    // Berechne den Monat vor dem gewählten Monat
+    int currentMonth = int.parse(chosenMonth);
+
+    int previousMonth = currentMonth - 1;
+
+    String previousYear = chosenYear;
+
+    // Wenn der aktuelle Monat Januar ist, wechsel zum Dezember des Vorjahres
+    if (previousMonth == 0) {
+      previousMonth = 12;
+      previousYear = (int.parse(chosenYear) - 1).toString();
+    }
+
+    // Formatiere den Schlüssel für den vorherigen Monat (z. B. "2023-12")
+    String previousMonthKey = "$previousYear-${previousMonth.toString().padLeft(2, '0')}";
+
+    // Überprüfen, ob der Schlüssel existiert
+    if (data.containsKey(previousMonthKey)) {
+      lastMonthBalance = data[previousMonthKey]!;
+      print("Vorheriger Monat gefunden: $previousMonthKey, Guthaben: $lastMonthBalance");
+    } else {
+      print("Kein Guthaben für den vorherigen Monat $previousMonthKey gefunden, weil er mit ${data} nicht übereinstimt.");
+      print("previousMonthKey: $previousMonthKey");
+      print("Der Typ lautet ${previousMonthKey.runtimeType} ");
+      print("Der erste Schlüssel von data ist: ${data.keys.first}");
+      print("Der Typ des ersten Schlüssels: ${data.keys.first.runtimeType}");
+    }
+
+    return lastMonthBalance;
+  }
+
+
+
 
 
   @override
