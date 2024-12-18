@@ -94,7 +94,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
     List<double> data = [];
 
     Map<String, double> monthlySpending = {};
-
+    List<Map<String, double>> monthlyTransactions = [];
 
     double x = 1;
     int iter = 1;
@@ -102,13 +102,22 @@ class _StatisticsPageState extends State<StatisticsPage> {
     try {
       if (chosenMonth == "Monat") {
 
-        monthlySpending = await _firestoreService.calculateYearlySpendingByMonth(user.uid, type, chosenYear);
+        //monthlySpending = await _firestoreService.calculateYearlySpendingByMonth(user.uid, type, chosenYear);
+        monthlyTransactions = await _firestoreService.calculateYearlySpendingByMonth2(user.uid, chosenYear);
+        if (type == "Einnahme") {
+          monthlySpending = monthlyTransactions[0];
 
-        if (type == "null") {
+        } else if (type == "Ausgabe"){
+          monthlySpending = monthlyTransactions[1];
+        }
+        else if (type == "null") {
           print("Entering because type = null");
-          monthlyBalanceList = await _firestoreService.calculateYearlySpendingByMonth(user.uid, type, chosenYear);
-          monthlySpending = monthlyBalanceList;
+          monthlySpending = monthlyTransactions[2];
+          //monthlySpending = await _firestoreService.calculateYearlySpendingByMonth(user.uid, type, chosenYear);
+          monthlyBalanceList.addAll(monthlySpending);
           print(monthlyBalanceList);
+        } else {
+          print("Kein Typ ausgwählt");
         }
 
       } else {
@@ -297,11 +306,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
         print("Der Key lautet $key");
         print("Und die andere Datetime ist: ${DateTime(today.year, today.month)}");
         // Vergleiche mit aktuellem Datum
-        if (keyDate == DateTime(today.year, today.month)) {
-          print("Der Schlüssel $key entspricht dem heutigen Monat. Wert: $value");
+        if (keyDate == DateTime(today.year, today.month -1 )) {
+          print("Der Schlüssel $key entspricht dem vorherigen Monat. Wert: $value");
+          lastMonthBalance = value;
         } else if (keyDate.isBefore(today)) {
           print("Der Schlüssel $key liegt vor dem heutigen Monat.");
-          lastMonthBalance = value;
         } else if (keyDate.isAfter(today)) {
           print("Der Schlüssel $key liegt nach dem heutigen Monat.");
         } else{
@@ -385,8 +394,14 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     value: selectedYear,
                     onChanged: (String? newValue) {
                       setState(() {
+                        if (selectedMonth == "Monat"){
                         selectedYear = newValue!;
                         loadLineChartBarData(selectedYear, selectedMonth);
+                        } else {
+                          selectedYear = newValue!;
+                          selectedMonth = "Monat";
+                          loadLineChartBarData(selectedYear, selectedMonth);
+                        }
                       });
                     },
                     items: <String>[

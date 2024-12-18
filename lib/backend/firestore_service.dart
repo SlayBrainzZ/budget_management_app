@@ -885,23 +885,22 @@ class FirestoreService {
 
 
 
-  Future<Map<String, Map<String, double>>> calculateYearlySpendingByMonth2(String documentId) async {
-    // Drei separate Dictionaries für Einnahmen, Ausgaben und Netto
+  Future<List<Map<String, double>>> calculateYearlySpendingByMonth2(String documentId, String chosenYear) async {
+    print("Entered calculateYearlySpendingByMonth2");
     Map<String, double> incomeMap = {};
     Map<String, double> expenseMap = {};
     Map<String, double> netMap = {};
 
-    double cumulativeNetAmount = 0.0; // Kumuliertes Netto
+    double cumulativeNetAmount = 0.0;
 
     for (int month = 1; month <= 12; month++) {
       // Setze Start- und Enddatum für den Monat
-      DateTime startDate = DateTime.utc(DateTime.now().year, month, 0); // Erster Tag des Monats
-      DateTime endDate = DateTime.utc(DateTime.now().year, month + 1, 1).subtract(Duration(microseconds: 1)); // Letzter Tag des Monats (wir verwenden 0 für den letzten Tag des vorherigen Monats)
+      DateTime startDate = DateTime.utc(int.parse(chosenYear), month, 1);
+      DateTime endDate = DateTime.utc(int.parse(chosenYear), month + 1, 1).subtract(Duration(days: 1));
 
       // Hole die Transaktionen für den aktuellen Monat
       List<Transaction> monthTransactions = await getSpecificTransactionByDateRange(documentId, "null", startDate, endDate);
-      print(monthTransactions);
-      // Berechne Einnahmen und Ausgaben für den Monat
+
       double monthIncome = 0.0;
       double monthExpense = 0.0;
 
@@ -928,13 +927,10 @@ class FirestoreService {
       print("Monat: $monthKey, Einnahmen: $monthIncome, Ausgaben: $monthExpense, Kumuliertes Netto: $cumulativeNetAmount");
     }
 
-    // Rückgabe der drei separaten Dictionaries in einer Map
-    return {
-      "Einnahmen": incomeMap,
-      "Ausgaben": expenseMap,
-      "Netto": netMap,
-    };
+    // Rückgabe der drei separaten Dictionaries in einer Liste
+    return [incomeMap, expenseMap, netMap];
   }
+
 
   Future<Map<String, double>> calculateYearlySpendingByMonth(String documentId, String type, String chosenYear) async {
     print("Entered calculateYearlySpendingByMonth");
@@ -942,8 +938,8 @@ class FirestoreService {
     double cumulativeNetAmount = 0.0;
     for (int month = 1; month <= 12; month++) {
 
-      DateTime startDate = DateTime.utc(int.parse(chosenYear), month, 1); // Erster Tag des Monats
-      DateTime endDate = DateTime.utc(int.parse(chosenYear), month + 1, 1).subtract(Duration(days: 1)); // Letzter Tag des Monats (wir verwenden 0 für den letzten Tag des vorherigen Monats)
+      DateTime startDate = DateTime.utc(int.parse(chosenYear), month, 1);
+      DateTime endDate = DateTime.utc(int.parse(chosenYear), month + 1, 1).subtract(Duration(days: 1));
 
 
 
