@@ -847,7 +847,7 @@ class FirestoreService {
       // Setze startDate auf Mitternacht (00:00:00) und endDate auf den letzten Moment des Tages (23:59:59)
       startDate = DateTime.utc(startDate.year, startDate.month, startDate.day, 0, 0, 0).subtract(Duration(microseconds: 1)); // Setze die Zeit auf 00:00
       endDate = DateTime.utc(endDate.year, endDate.month, endDate.day, 23, 59, 59); // Setze die Zeit auf 23:59
-      print("STARTDATE: $startDate UND ENDDATE: $endDate");
+      //print("STARTDATE: $startDate UND ENDDATE: $endDate");
       final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
 
       // Basiskonfiguration der Abfrage
@@ -943,7 +943,7 @@ class FirestoreService {
     for (int month = 1; month <= 12; month++) {
 
       DateTime startDate = DateTime.utc(int.parse(chosenYear), month, 1); // Erster Tag des Monats
-      DateTime endDate = DateTime.utc(DateTime.now().year, month + 1, 1).subtract(Duration(days: 1)); // Letzter Tag des Monats (wir verwenden 0 für den letzten Tag des vorherigen Monats)
+      DateTime endDate = DateTime.utc(int.parse(chosenYear), month + 1, 1).subtract(Duration(days: 1)); // Letzter Tag des Monats (wir verwenden 0 für den letzten Tag des vorherigen Monats)
 
 
 
