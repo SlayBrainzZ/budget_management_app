@@ -83,81 +83,85 @@ class _StatisticsPageState extends State<StatisticsPage> {
     }
   }
 
-  Future<List<FlSpot>> generateSpots(String chosenYear, chosenMonth, String type) async {
+
+
+
+  Future<List<FlSpot>> generateSpotsforMonth(String chosenYear, chosenMonth, String type) async {
+    final user = await _loadUser();
+    if (user == null) {
+      print("Kein Benutzer gefunden.");
+      return [];
+    }
+    double x = 1;
+    List<FlSpot> FlSpotlist = [];
+    List<double> data = [];
+
+    try {
+      print(monthlyBalanceList);
+      lastMonthBalance =
+          findLastMonthBalance(monthlyBalanceList, chosenYear, chosenMonth);
+      print("lastMonthBalance nach Monatsangabe: $lastMonthBalance");
+      data = await _firestoreService.calculateMonthlySpendingByDay(
+          user.uid, type, chosenYear, chosenMonth, lastMonthBalance);
+      for (double y in data) {
+        FlSpotlist.add(FlSpot(x, y));
+        x = x + 1;
+      }
+    } catch (e) {
+      print("Fehler beim Laden der Ausgaben für Monat: ${e.toString()}");
+    }
+    return FlSpotlist;
+  }
+
+
+
+
+
+
+  Future<List<List<FlSpot>>> generateSpotsforYear(String chosenYear, chosenMonth, String type) async {
     final user = await _loadUser();
     if (user == null) {
       print("Kein Benutzer gefunden.");
       return [];
     }
 
-    List<FlSpot> FlSpotlist = [];
-    List<double> data = [];
+    List<List<FlSpot>> FlSpotListList = [];
 
+    List<double> data = [];
     Map<String, double> monthlySpending = {};
     List<Map<String, double>> monthlyTransactions = [];
 
-    double x = 1;
-    int iter = 1;
 
     try {
       if (chosenMonth == "Monat") {
-
-        //monthlySpending = await _firestoreService.calculateYearlySpendingByMonth(user.uid, type, chosenYear);
         monthlyTransactions = await _firestoreService.calculateYearlySpendingByMonth2(user.uid, chosenYear);
-        if (type == "Einnahme") {
-          monthlySpending = monthlyTransactions[0];
 
-        } else if (type == "Ausgabe"){
-          monthlySpending = monthlyTransactions[1];
-        }
-        else if (type == "null") {
-          print("Entering because type = null");
-          monthlySpending = monthlyTransactions[2];
-          //monthlySpending = await _firestoreService.calculateYearlySpendingByMonth(user.uid, type, chosenYear);
-          monthlyBalanceList.addAll(monthlySpending);
-          print(monthlyBalanceList);
-        } else {
-          print("Kein Typ ausgwählt");
+        for (int j = 0; j <= 2; j++) {
+          Map<String, double> monthlySpending = monthlyTransactions[j];
+          List<FlSpot> FlSpotlist = [];
+          for (var entry in monthlySpending.entries) {
+            String monthKey = entry.key; // Beispiel: "2024-01"
+            DateTime dateTime = DateTime.parse(monthKey + "-01");
+            double y = entry.value;
+            FlSpotlist.add(FlSpot(double.parse(dateTime.month.toString()), y));
+          }
+          FlSpotListList.add(FlSpotlist);
         }
 
-      } else {
-
-        if (type == "null"){
-          print(monthlyBalanceList);
-          lastMonthBalance = findLastMonthBalance(monthlyBalanceList, chosenYear, chosenMonth);
-        } else{
-          lastMonthBalance = 0.0;
-        }
-        print("lastMonthBalance nach Monatsangabe: $lastMonthBalance");
-        data = await _firestoreService.calculateMonthlySpendingByDay(user.uid, type, chosenYear, chosenMonth , lastMonthBalance);
-        //print(data);
+        monthlySpending = monthlyTransactions[2];
+        monthlyBalanceList.addAll(monthlySpending);
+        print(monthlyBalanceList);
       }
 
-      if (chosenMonth == "Monat") {
-        for (var entry in monthlySpending.entries) {
-          String monthKey = entry.key; // Beispiel: "2024-01"
-          DateTime dateTime = DateTime.parse(monthKey + "-01");
-          double y = entry.value;
-          FlSpotlist.add(FlSpot(double.parse(dateTime.month.toString()), y));
-          x = x + 1;
-        }
-      } else {
-
-        for (double y in data) {
-          FlSpotlist.add(FlSpot(x, y));
-          x = x + 1;
-        }
-      }
     } catch (e) {
-      print("Fehler beim Laden der Ausgaben: ${e.toString()}");
+      print("Fehler beim Laden der Ausgaben für Jahr: ${e.toString()}");
     }
-
-    return FlSpotlist;
+    return FlSpotListList;
   }
 
 
-  Future<LineChartBarData> defineLineChartBarData(Color color, String chosenYear, String chosenMonth, String type) async {
-    List<FlSpot> spotsList = await generateSpots(chosenYear, chosenMonth, type);
+  Future<LineChartBarData> defineLineChartBarData(Color color, String chosenYear, String chosenMonth, String type, List<FlSpot> spotsList) async {
+
 
     return LineChartBarData(
       //show: false,
@@ -175,6 +179,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
   }
 
   Future<void> loadLineChartBarData(String chosenYear, String chosenMonth) async {
+
     try {
       if (chosenMonth == 'Monat') {
         // Zeige den Jahresverlauf
@@ -184,9 +189,19 @@ class _StatisticsPageState extends State<StatisticsPage> {
           });
         } else {
           // Berechne die Jahresdaten
-          LineChartBarData einnahmeDaten = await defineLineChartBarData(Colors.green, chosenYear,"Monat", "Einnahme");
-          LineChartBarData ausgabeDaten = await defineLineChartBarData(Colors.red, chosenYear,"Monat", "Ausgabe");
-          LineChartBarData gesamtDaten = await defineLineChartBarData(Colors.blue, chosenYear, "Monat", "null");
+
+
+
+
+          List<List<FlSpot>> FlSpotListList = await generateSpotsforYear(chosenYear, chosenMonth, "null");
+
+          LineChartBarData einnahmeDaten = await defineLineChartBarData(Colors.green, chosenYear,"Monat", "Einnahme", FlSpotListList[0]);
+          LineChartBarData ausgabeDaten = await defineLineChartBarData(Colors.red, chosenYear,"Monat", "Ausgabe", FlSpotListList[1]);
+          LineChartBarData gesamtDaten = await defineLineChartBarData(Colors.blue, chosenYear, "Monat", "null", FlSpotListList[2]);
+
+
+
+
 
           setState(() {
             cachedLineChartData = [einnahmeDaten, ausgabeDaten, gesamtDaten];
@@ -206,10 +221,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
             cachedLineChartData = chartCache['$chosenYear-$chosenMonth']?.lineBarsData;
           });
         } else {
-          // Berechne die Monatsdaten
-          LineChartBarData einnahmeDaten = await defineLineChartBarData(Colors.green, chosenYear, chosenMonth, "Einnahme");
-          LineChartBarData ausgabeDaten = await defineLineChartBarData(Colors.red, chosenYear, chosenMonth, "Ausgabe");
-          LineChartBarData gesamtDaten = await defineLineChartBarData(Colors.blue, chosenYear, chosenMonth, "null");
+          List<FlSpot> FlSpotlist1 = await generateSpotsforMonth(chosenYear, chosenMonth, "Einnahme");
+          List<FlSpot> FlSpotlist2 = await generateSpotsforMonth(chosenYear, chosenMonth, "Ausgabe");
+          List<FlSpot> FlSpotlist3 = await generateSpotsforMonth(chosenYear, chosenMonth, "null");
+
+          LineChartBarData einnahmeDaten = await defineLineChartBarData(Colors.green, chosenYear, chosenMonth, "Einnahme", FlSpotlist1);
+          LineChartBarData ausgabeDaten = await defineLineChartBarData(Colors.red, chosenYear, chosenMonth, "Ausgabe", FlSpotlist2);
+          LineChartBarData gesamtDaten = await defineLineChartBarData(Colors.blue, chosenYear, chosenMonth, "null", FlSpotlist3);
 
           setState(() {
             cachedLineChartData = [einnahmeDaten, ausgabeDaten, gesamtDaten];
@@ -395,8 +413,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     onChanged: (String? newValue) {
                       setState(() {
                         if (selectedMonth == "Monat"){
-                        selectedYear = newValue!;
-                        loadLineChartBarData(selectedYear, selectedMonth);
+                          selectedYear = newValue!;
+                          loadLineChartBarData(selectedYear, selectedMonth);
                         } else {
                           selectedYear = newValue!;
                           selectedMonth = "Monat";
