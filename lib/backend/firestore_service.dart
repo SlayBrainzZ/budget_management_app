@@ -887,49 +887,78 @@ class FirestoreService {
 
   Future<List<Map<String, double>>> calculateYearlySpendingByMonth2(String documentId, String chosenYear) async {
     print("Entered calculateYearlySpendingByMonth2");
+
+    // Erstelle Maps zur Speicherung der Ergebnisse
     Map<String, double> incomeMap = {};
     Map<String, double> expenseMap = {};
     Map<String, double> netMap = {};
 
+    // Kumulatives Netto
     double cumulativeNetAmount = 0.0;
 
+    // Liste für parallele Futures
+    List<Future<Map<String, dynamic>>> futures = [];
+
+    // Erstelle Futures für alle Monate
     for (int month = 1; month <= 12; month++) {
-      // Setze Start- und Enddatum für den Monat
-      DateTime startDate = DateTime.utc(int.parse(chosenYear), month, 1);
-      DateTime endDate = DateTime.utc(int.parse(chosenYear), month + 1, 1).subtract(Duration(days: 1));
+      futures.add(Future(() async {
+        // Setze Start- und Enddatum für den Monat
+        DateTime startDate = DateTime.utc(int.parse(chosenYear), month, 1);
+        DateTime endDate = DateTime.utc(int.parse(chosenYear), month + 1, 1).subtract(Duration(days: 1));
 
-      // Hole die Transaktionen für den aktuellen Monat
-      List<Transaction> monthTransactions = await getSpecificTransactionByDateRange(documentId, "null", startDate, endDate);
+        // Hole die Transaktionen für den aktuellen Monat
+        List<Transaction> monthTransactions = await getSpecificTransactionByDateRange(documentId, "null", startDate, endDate);
 
-      double monthIncome = 0.0;
-      double monthExpense = 0.0;
+        double monthIncome = 0.0;
+        double monthExpense = 0.0;
 
-      for (var transaction in monthTransactions) {
-        if (transaction.type == "Einnahme") {
-          monthIncome += transaction.amount;
-        } else if (transaction.type == "Ausgabe") {
-          monthExpense += transaction.amount;
+        for (var transaction in monthTransactions) {
+          if (transaction.type == "Einnahme") {
+            monthIncome += transaction.amount;
+          } else if (transaction.type == "Ausgabe") {
+            monthExpense += transaction.amount;
+          }
         }
-      }
 
-      // Kumuliertes Netto berechnen
-      cumulativeNetAmount += (monthIncome - monthExpense);
+        // Kumuliertes Netto berechnen
+        double netAmount = monthIncome - monthExpense;
 
-      // Monatsschlüssel generieren
-      String monthKey = "${startDate.year}-${month.toString().padLeft(2, '0')}";
+        // Monatsschlüssel generieren
+        String monthKey = "${startDate.year}-${month.toString().padLeft(2, '0')}";
 
-      // Ergebnisse in die entsprechenden Dictionaries schreiben
+        return {
+          "monthKey": monthKey,
+          "monthIncome": monthIncome,
+          "monthExpense": monthExpense,
+          "netAmount": netAmount
+        };
+      }));
+    }
+
+    // Warte auf alle parallelen Futures
+    List<Map<String, dynamic>> results = await Future.wait(futures);
+
+    // Ergebnisse sammeln
+    for (var result in results) {
+      String monthKey = result["monthKey"];
+      double monthIncome = result["monthIncome"];
+      double monthExpense = result["monthExpense"];
+      double netAmount = result["netAmount"];
+
+      // Aktualisiere Maps und kumulatives Netto
       incomeMap[monthKey] = monthIncome;
       expenseMap[monthKey] = monthExpense;
+      cumulativeNetAmount += netAmount;
       netMap[monthKey] = cumulativeNetAmount;
 
       // Debug-Ausgabe
       print("Monat: $monthKey, Einnahmen: $monthIncome, Ausgaben: $monthExpense, Kumuliertes Netto: $cumulativeNetAmount");
     }
 
-    // Rückgabe der drei separaten Dictionaries in einer Liste
+    print("Left calculateYearlySpendingByMonth2");
     return [incomeMap, expenseMap, netMap];
   }
+
 
 
   Future<Map<String, double>> calculateYearlySpendingByMonth(String documentId, String type, String chosenYear) async {
@@ -980,60 +1009,81 @@ class FirestoreService {
 
   Future<List<double>> calculateMonthlySpendingByDay(
       String documentId, String type, String chosenYear, String chosenMonth, double lastMonthBalance) async {
-    print("Entered calculateMonthlySpendingbyday");
-    // Erster Tag des aktuellen Monats
+    print("Entered calculateMonthlySpendingByDay");
+
+    // Erster und letzter Tag des aktuellen Monats
     DateTime startDate = DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth), 1);
-
-    DateTime endDate = DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth) + 1 , 1).subtract(Duration(days: 1));
-
+    DateTime endDate = DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth) + 1, 1).subtract(Duration(days: 1));
 
     // Initialisierung der Liste für die Tage des Monats
     List<double> monthlySpending = List.filled(endDate.day, 0.0);
 
-    // Kumuliertes Netto-Guthaben
-    double cumulativeNetAmount = lastMonthBalance;
-
-    // Hole Transaktionen für den aktuellen Monat
+    // Hole alle Transaktionen für den aktuellen Monat
     List<Transaction> monthTransactions = await getSpecificTransactionByDateRange(
         documentId, "null", startDate, endDate);
 
-    // Iteriere über alle Tage des Monats
+    // Liste für parallele Futures
+    List<Future<Map<String, dynamic>>> futures = [];
+
+    // Erstelle Futures für jeden Tag des Monats
     for (int day = 1; day <= endDate.day; day++) {
-          DateTime currentDay = DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth), day).subtract(Duration(days: 1));
+      futures.add(Future(() async {
+        DateTime currentDay = DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth), day);
 
-          // Filtere Transaktionen für den aktuellen Tag
-          List<Transaction> dayTransactions = monthTransactions.where((transaction) {
-            return transaction.date.toUtc().year == currentDay.year &&
-            transaction.date.toUtc().month == currentDay.month &&
-            transaction.date.toUtc().day == currentDay.day;
-      }).toList();
+        // Filtere Transaktionen für den aktuellen Tag
+        List<Transaction> dayTransactions = monthTransactions.where((transaction) {
+          return transaction.date.toUtc().year == currentDay.year &&
+              transaction.date.toUtc().month == currentDay.month &&
+              transaction.date.toUtc().day == currentDay.day;
+        }).toList();
 
-      double dayIncome = 0.0;
-      double dayExpense = 0.0;
+        double dayIncome = 0.0;
+        double dayExpense = 0.0;
 
-      for (var transaction in dayTransactions) {
-        if (transaction.type == "Einnahme") {
-          dayIncome += transaction.amount;
-        } else if (transaction.type == "Ausgabe") {
-          dayExpense += transaction.amount;
+        for (var transaction in dayTransactions) {
+          if (transaction.type == "Einnahme") {
+            dayIncome += transaction.amount;
+          } else if (transaction.type == "Ausgabe") {
+            dayExpense += transaction.amount;
+          }
         }
-      }
+
+        // Ergebnis zurückgeben
+        return {
+          "dayIndex": day - 1, // Liste ist 0-basiert
+          "dayIncome": dayIncome,
+          "dayExpense": dayExpense
+        };
+      }));
+    }
+
+    // Warte auf alle parallelen Futures
+    List<Map<String, dynamic>> results = await Future.wait(futures);
+
+    // Variablen zur Berechnung des kumulierten Netto-Guthabens
+    double cumulativeNetAmount = lastMonthBalance;
+
+    // Ergebnisse sammeln
+    for (var result in results) {
+      int dayIndex = result["dayIndex"];
+      double dayIncome = result["dayIncome"];
+      double dayExpense = result["dayExpense"];
 
       if (type == "null") {
         // Aktualisiere das kumulative Netto-Guthaben
         cumulativeNetAmount += (dayIncome - dayExpense);
-        monthlySpending[day - 1] = cumulativeNetAmount; // Liste ist 0-basiert
+        monthlySpending[dayIndex] = cumulativeNetAmount;
       } else if (type == "Einnahme") {
-        monthlySpending[day - 1] = dayIncome;
+        monthlySpending[dayIndex] = dayIncome;
       } else if (type == "Ausgabe") {
-        monthlySpending[day - 1] = dayExpense;
+        monthlySpending[dayIndex] = dayExpense;
       }
-
-      ///print("Tag: $day, Einnahmen: $dayIncome, Ausgaben: $dayExpense, Kumuliertes Netto: $cumulativeNetAmount");
     }
-    print("Left calculateMonthlySpendingbyday");
+
+    print("Left calculateMonthlySpendingByDay");
     return monthlySpending;
   }
+
 
 
 

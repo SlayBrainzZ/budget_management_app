@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:budget_management_app/backend/Category.dart';
 import 'package:budget_management_app/backend/firestore_service.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'home_page.dart';
 
 class StatisticsPage extends StatefulWidget {
   @override
@@ -27,7 +28,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
 
   List<Category> categories = [];
-  List <double> allMonthBalanceData = [];
+  //List <double> allMonthBalanceData = [];
   double lastMonthBalance = 0.0;
   Map<String, double> monthlyBalanceList = {};
 
@@ -36,7 +37,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
   void initState() {
     super.initState();
     _loadCategories();
-    loadLineChartBarData('2024', 'Monat');
+    if (monthlyBalanceList.isEmpty) {
+      loadLineChartBarData('2024', 'Monat');
+    }
   }
 
   Future<User?> _loadUser() async {
