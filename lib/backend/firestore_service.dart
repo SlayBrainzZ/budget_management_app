@@ -1028,7 +1028,7 @@ class FirestoreService {
     // Erstelle Futures für jeden Tag des Monats
     for (int day = 1; day <= endDate.day; day++) {
       futures.add(Future(() async {
-        DateTime currentDay = DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth), day);
+        DateTime currentDay = DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth), day).subtract(Duration(microseconds: 1));
 
         // Filtere Transaktionen für den aktuellen Tag
         List<Transaction> dayTransactions = monthTransactions.where((transaction) {
