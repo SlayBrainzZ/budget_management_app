@@ -1298,6 +1298,45 @@ class FirestoreService {
     }
   }
 
+
+  Future<Map<int, double>> getCurrentMonthTransactionsByDateRangeAndCategory(
+      String documentId, String categoryId) async {
+    Map<int, double> monthlyCategoryValues = {};
+    DateTime today = DateTime.now();
+    DateTime startDate = DateTime(today.year, today.month, 1);
+
+    // Retrieve transactions for the entire month
+    List<Transaction> transactions = await getTransactionsByDateRangeAndCategory(
+        documentId, categoryId, startDate, today);
+
+    // Iterate through each day of the current month up to today
+    for (int day = 1; day <= today.day; day++) {
+      DateTime currentDay = DateTime(today.year, today.month, day).subtract(Duration(microseconds: 1));
+
+      // Filter transactions for the current day
+      List<Transaction> dayTransactions = transactions.where((transaction) {
+        return transaction.date.toUtc().year == currentDay.year &&
+            transaction.date.toUtc().month == currentDay.month &&
+            transaction.date.toUtc().day == currentDay.day;
+      }).toList();
+
+      // Calculate the total expense for the day
+      double dayExpense = 0.0;
+      for (var transaction in dayTransactions) {
+        if (transaction.type == "Ausgabe") {
+          dayExpense += transaction.amount;
+        }
+      }
+
+      // Store the day's expense in the map
+      monthlyCategoryValues[day] = dayExpense;
+    }
+
+    return monthlyCategoryValues;
+  }
+
+
+
   Future<List<Category>> getUserCategoriesWithBudget(String documentId) async {
     try {
       final userCategoriesRef = usersRef.doc(documentId).collection('Categories');

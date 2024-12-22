@@ -267,7 +267,39 @@ class _StatisticsPageState extends State<StatisticsPage> {
   }
 
 
-  LineChartData categoryChartData(Category category) {
+
+  Future<List<FlSpot>> generateSpotsForCategory(String category) async {
+    final user = await _loadUser();
+    if (user == null) {
+      print("Kein Benutzer gefunden.");
+      return [];
+    }
+
+    Map<int, double> monthlyCategoryTransactions = {};
+    List<FlSpot> categoryList = [];
+
+    try {
+      monthlyCategoryTransactions = await _firestoreService.getCurrentMonthTransactionsByDateRangeAndCategory(user.uid, category);
+      print(monthlyCategoryTransactions);
+
+      monthlyCategoryTransactions.forEach((day, amount) {
+        categoryList.add(FlSpot(day.toDouble(), amount));
+      });
+
+      categoryList.sort((a, b) => a.x.compareTo(b.x));
+    } catch (e) {
+      print("Fehler beim Laden der Kategoriedaten: ${e.toString()}");
+    }
+
+    return categoryList;
+  }
+
+
+
+  Future<LineChartData> categoryChartData(String category) async {
+    // Abrufen der Datenpunkte
+    List<FlSpot> categoryList = await generateSpotsForCategory(category);
+
     return LineChartData(
       lineBarsData: [
         LineChartBarData(
@@ -277,13 +309,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
           isStrokeCapRound: true,
           dotData: const FlDotData(show: false),
           belowBarData: BarAreaData(show: false),
-          spots: [
-            FlSpot(1, 1.2),
-            FlSpot(2, 1.8),
-            FlSpot(3, 2.3),
-            FlSpot(4, 2.8),
-            FlSpot(5, 3.2)
-          ],
+          spots: categoryList,
         ),
       ],
       gridData: FlGridData(show: true),
@@ -544,61 +570,77 @@ class _StatisticsPageState extends State<StatisticsPage> {
                         padding: const EdgeInsets.symmetric(horizontal: 8.0),
                         child: CategoryStatWidget(
                           category: category,
-                          chartData: categoryChartData(category),
+                          chartDataFuture: categoryChartData(category.name), // Hier die Future-Daten übergeben
                         ),
                       );
                     }).toList(),
                   ),
                 ),
               ),
+
             ],
           ),
         ),
       ),
     );
   }
-}
-class CategoryStatWidget extends StatelessWidget {
+}class CategoryStatWidget extends StatelessWidget {
   final Category category;
-  final LineChartData chartData;
+  final Future<LineChartData> chartDataFuture;
 
-  CategoryStatWidget({required this.category, required this.chartData});
+  CategoryStatWidget({required this.category, required this.chartDataFuture});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12.0),
-      width: 400,  // Breite des CategoryStatWidgets, damit es horizontal scrollt
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 8,
-            offset: Offset(0, 4),
+    return FutureBuilder<LineChartData>(
+      future: chartDataFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Text('Fehler beim Laden der Daten');
+        } else if (!snapshot.hasData || snapshot.data == null) {
+          return Text('Keine Daten verfügbar');
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(12.0),
+          width: 400, // Responsive Anpassung
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 8,
+                offset: Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            category.name,
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                category.name,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                height: 220,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: LineChart(snapshot.data!), // Anzeige des Diagramms
+              ),
+            ],
           ),
-          const SizedBox(height: 20),
-          // Kategoriediagramm mit einer Linie
-          Container(
-            height: 220,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: LineChart(chartData),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
