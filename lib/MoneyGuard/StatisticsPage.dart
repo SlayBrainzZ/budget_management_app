@@ -157,7 +157,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
       }
 
     } catch (e) {
-      print("Fehler beim Laden der Ausgaben für Jahr: ${e.toString()}");
+      print("Fehler beim Laden der Ausgaben für ein Jahr: ${e.toString()}");
     }
     return FlSpotListList;
   }
