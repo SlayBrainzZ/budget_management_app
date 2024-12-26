@@ -1,6 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'dateButton.dart'; // Import the DateButton widget
+import '../main.dart';
+import 'dateButton.dart';
 import 'category.dart';
+import 'package:budget_management_app/backend/firestore_service.dart';
+import 'package:budget_management_app/backend/BankAccount.dart';
 
 class Dashboard extends StatefulWidget {
   @override
@@ -8,9 +12,38 @@ class Dashboard extends StatefulWidget {
 }
 
 class _DashboardState extends State<Dashboard> {
-  List<Map<String, String>> possibleAccounts = [
-    {'type': 'Bargeld Konto', 'name': 'Mein Konto', 'balance': '0', 'currency': 'EUR'},
-  ];
+  final User? currentUser = FirebaseAuth.instance.currentUser;
+  List<BankAccount> bankAccounts = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchBankAccounts();
+  }
+
+  Future<void> _fetchBankAccounts() async {
+    if (currentUser != null) {
+      List<BankAccount> accounts =
+      await FirestoreService().getUserBankAccounts(currentUser!.uid);
+      setState(() {
+        bankAccounts = accounts;
+      });
+    }
+  }
+
+  Future<void> _createBankAccount(Map<String, String> accountData) async {
+    if (currentUser != null) {
+      final account = BankAccount(
+        userId: currentUser!.uid,
+        accountName: accountData['name'],
+        balance: double.tryParse(accountData['balance'] ?? '0') ?? 0.0,
+        accountType: accountData['type']!,
+        exclude: false,
+      );
+      await FirestoreService().createBankAccount(currentUser!.uid, account);
+      _fetchBankAccounts();
+    }
+  }
 
   Widget _buildAccountCards(BuildContext context) {
     return SingleChildScrollView(
@@ -18,7 +51,7 @@ class _DashboardState extends State<Dashboard> {
       padding: const EdgeInsets.all(10),
       child: Row(
         children: [
-          ...possibleAccounts.map((account) {
+          ...bankAccounts.map((account) {
             return Padding(
               padding: const EdgeInsets.only(right: 10),
               child: GestureDetector(
@@ -27,30 +60,16 @@ class _DashboardState extends State<Dashboard> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => AccountDetailsScreen(
-                        type: account['type']!,
+                        type: 'Bearbeiten',
+                        account: account,
                         onAccountCreated: (updatedAccount) {
-                          setState(() {
-                            final index = possibleAccounts.indexOf(account);
-                            if (index != -1) {
-                              possibleAccounts[index] = updatedAccount;
-                            }
-                          });
+                          _fetchBankAccounts();
                         },
-                        onAccountDeleted: () {
-                          if (possibleAccounts.length > 1) {
-                            setState(() {
-                              possibleAccounts.remove(account);
-                            });
-                            Navigator.pop(context);
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Mindestens ein Konto muss vorhanden sein.'),
-                              ),
-                            );
-                          }
+                        onAccountDeleted: () async {
+                          await FirestoreService()
+                              .deleteBankAccount(currentUser!.uid, account.id!);
+                          _fetchBankAccounts();
                         },
-                        isNewAccount: false,
                       ),
                     ),
                   );
@@ -69,7 +88,7 @@ class _DashboardState extends State<Dashboard> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            account['type'] == 'Bankkonto'
+                            account.accountType == 'Bankkonto'
                                 ? Icons.account_balance
                                 : Icons.attach_money,
                             color: Colors.blue,
@@ -77,7 +96,7 @@ class _DashboardState extends State<Dashboard> {
                           ),
                           const SizedBox(width: 5),
                           Text(
-                            account['type']!,
+                            account.accountType,
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
@@ -88,7 +107,7 @@ class _DashboardState extends State<Dashboard> {
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        account['name']!,
+                        account.accountName ?? '',
                         style: const TextStyle(
                           fontSize: 16,
                           color: Colors.black87,
@@ -96,7 +115,7 @@ class _DashboardState extends State<Dashboard> {
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        '${account['balance']} ${account['currency']}',
+                        '${account.balance?.toStringAsFixed(2) ?? "0.00"} EUR',
                         style: const TextStyle(
                           fontSize: 17,
                           color: Colors.black54,
@@ -115,9 +134,7 @@ class _DashboardState extends State<Dashboard> {
                 MaterialPageRoute(
                   builder: (context) => AccountCreation(
                     onAccountCreated: (newAccount) {
-                      setState(() {
-                        possibleAccounts.add(newAccount);
-                      });
+                      _createBankAccount(newAccount);
                     },
                   ),
                 ),
@@ -144,42 +161,36 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: ListView(
-        padding: EdgeInsets.symmetric(vertical: 20.0), // Optional padding for spacing
+        padding: const EdgeInsets.symmetric(vertical: 20.0),
         children: [
           Center(
             child: SizedBox(
-              height: 150,  // Fixed height for DateButton to ensure visibility
+              height: 150,
               child: _buildAccountCards(context),
             ),
           ),
-          const SizedBox(height: 30), // Spacing between account cards and DateButton
-
+          const SizedBox(height: 30),
           Center(
             child: SizedBox(
-              height: 250,  // Fixed height for DateButton to ensure visibility
+              height: 250,
               child: DateButton(),
             ),
           ),
-
-          const SizedBox(height: 30), // Spacing between DateButton and CategoryButton
-
+          const SizedBox(height: 30),
           Center(
             child: SizedBox(
-              height: 250,  // Fixed height for CategoryButton to ensure visibility
+              height: 250,
               child: CategoryButton(),
             ),
           ),
-
         ],
       ),
     );
   }
-
 }
 
 class AccountCreation extends StatelessWidget {
@@ -210,6 +221,7 @@ class AccountCreation extends StatelessWidget {
                           builder: (context) => AccountDetailsScreen(
                             type: 'Automatische Konfigurierung',
                             onAccountCreated: onAccountCreated,
+                            isNewAccount: true,
                           ),
                         ),
                       );
@@ -239,6 +251,7 @@ class AccountCreation extends StatelessWidget {
                           builder: (context) => AccountDetailsScreen(
                             type: 'Manuelle Eingabe',
                             onAccountCreated: onAccountCreated,
+                            isNewAccount: true,
                           ),
                         ),
                       );
@@ -268,20 +281,19 @@ class AccountCreation extends StatelessWidget {
   }
 }
 
-
-
-
 class AccountDetailsScreen extends StatefulWidget {
   final String type;
+  final BankAccount? account;
   final Function(Map<String, String>) onAccountCreated;
   final Function()? onAccountDeleted;
   final bool isNewAccount;
 
   const AccountDetailsScreen({
     required this.type,
+    this.account,
     required this.onAccountCreated,
     this.onAccountDeleted,
-    this.isNewAccount = false, // Default: Neues Konto
+    this.isNewAccount = false,
     super.key,
   });
 
@@ -290,10 +302,17 @@ class AccountDetailsScreen extends StatefulWidget {
 }
 
 class _AccountDetailsScreen extends State<AccountDetailsScreen> {
-  String accountName = "Mein Konto";
-  String accountBalance = "0";
-  final String currency = "EUR";
-  String accountType = "Bargeld"; // Standardwert auf "Bargeld" gesetzt
+  late String accountName;
+  late String accountBalance;
+  late String accountType;
+
+  @override
+  void initState() {
+    super.initState();
+    accountName = widget.account?.accountName ?? "Mein Konto";
+    accountBalance = widget.account?.balance?.toStringAsFixed(2) ?? "0";
+    accountType = widget.account?.accountType ?? "Bargeld";
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -320,7 +339,6 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
             },
           ),
           const SizedBox(height: 20),
-
           ListTile(
             leading: const Icon(Icons.account_balance, color: Colors.blue),
             title: const Text("Kontotyp"),
@@ -331,7 +349,7 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
                   accountType = newValue!;
                 });
               },
-              items: <String>['Bargeld', 'Bankkonto'] // Reihenfolge garantiert
+              items: <String>['Bargeld', 'Bankkonto']
                   .map<DropdownMenuItem<String>>((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
@@ -341,15 +359,6 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
             ),
           ),
           const SizedBox(height: 20),
-
-          SwitchListTile(
-            title: const Text("Von Statistik ausschließen"),
-            value: false,
-            onChanged: (bool value) {
-              setState(() {});
-            },
-          ),
-
           if (!widget.isNewAccount && widget.onAccountDeleted != null)
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
@@ -358,35 +367,41 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
                 _showDeleteConfirmationDialog();
               },
             ),
-
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-             /*   if (widget.isNewAccount)
-                  OutlinedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.black),
-                    ),
-                    child: const Text(
-                      "Abbrechen",
-                      style: TextStyle(color: Colors.black),
-                    ),
-                  ),
-                const SizedBox(width: 8),*/
                 ElevatedButton(
-                  onPressed: () {
-                    widget.onAccountCreated({
+                  onPressed: () async {
+                    Map<String, String> accountData = {
                       'type': accountType,
                       'name': accountName,
                       'balance': accountBalance,
-                      'currency': currency,
-                    });
-                    Navigator.popUntil(context, ModalRoute.withName(Navigator.defaultRouteName));
+                    };
+
+                    if (widget.account != null && widget.account!.id != null) {
+                      BankAccount updatedAccount = BankAccount(
+                        userId: widget.account!.userId,
+                        accountName: accountName,
+                        balance: double.tryParse(accountBalance) ?? 0.0,
+                        accountType: accountType,
+                        exclude: widget.account!.exclude,
+                        lastUpdated: DateTime.now(),
+                      );
+                      updatedAccount.id = widget.account!.id;
+                      await FirestoreService()
+                          .updateBankAccount(widget.account!.userId, updatedAccount);
+                    } else {
+                      widget.onAccountCreated(accountData);
+                    }
+
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MyApp(),
+                      ),
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
@@ -404,34 +419,26 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
     );
   }
 
-// Weitere Methoden (_editField, _showDeleteConfirmationDialog) bleiben unverändert
-
-
-
-  void _editField(String fieldName, Function(String) onValueSaved) {
+  void _editField(String title, Function(String) onSubmit) {
     TextEditingController controller = TextEditingController();
-
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (context) {
         return AlertDialog(
-          title: Text("$fieldName bearbeiten"),
+          title: Text(title),
           content: TextField(
             controller: controller,
-            decoration: const InputDecoration(hintText: "Neuen Wert eingeben"),
-            keyboardType: fieldName == "Aktueller Kontostand" ? TextInputType.number : TextInputType.text,
+            decoration: InputDecoration(hintText: "Eingeben"),
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: () => Navigator.pop(context),
               child: const Text("Abbrechen"),
             ),
             TextButton(
               onPressed: () {
-                onValueSaved(controller.text);
-                Navigator.of(context).pop();
+                onSubmit(controller.text);
+                Navigator.pop(context);
               },
               child: const Text("Speichern"),
             ),
@@ -444,26 +451,26 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
   void _showDeleteConfirmationDialog() {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (context) {
         return AlertDialog(
           title: const Text("Konto löschen"),
-          content: const Text("Möchtest du dieses Konto wirklich löschen?"),
-          actions: <Widget>[
+          content: const Text("Möchten Sie dieses Konto wirklich löschen?"),
+          actions: [
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: () => Navigator.pop(context),
               child: const Text("Abbrechen"),
             ),
             TextButton(
               onPressed: () {
-                // Hier wird die Löschfunktion nur ausgeführt, wenn mindestens 2 Konten vorhanden sind
-                if (widget.onAccountDeleted != null) {
-                  widget.onAccountDeleted!();
-                }
-                Navigator.of(context).pop();
+                widget.onAccountDeleted?.call();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MyApp(),
+                  ),
+                );
               },
-              child: const Text("Löschen", style: TextStyle(color: Colors.red)),
+              child: const Text("Löschen"),
             ),
           ],
         );
@@ -471,6 +478,3 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
     );
   }
 }
-
-
-
