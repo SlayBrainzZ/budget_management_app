@@ -1099,7 +1099,7 @@ class FirestoreService {
     DateTime currentWeekStart = startOfYear;
     while (currentWeekStart.isBefore(endOfYear)) {
       // Ende der Woche berechnen (Sonntag)
-      DateTime currentWeekEnd = currentWeekStart.add(const Duration(days: 6));
+      DateTime currentWeekEnd = currentWeekStart.add(const Duration(days: 7));
 
       // Hole die Transaktionen für die aktuelle Woche
       List<Transaction> weekTransactions = await getSpecificTransactionByDateRange(documentId, type, currentWeekStart, currentWeekEnd);
@@ -1282,6 +1282,8 @@ class FirestoreService {
 
 
   Future<List<Transaction>> getTransactionsByDateRangeAndCategory(String documentId, String categoryId, DateTime startDate, DateTime endDate) async {
+    startDate = DateTime.utc(startDate.year, startDate.month, startDate.day, 0, 0, 0).subtract(Duration(microseconds: 1)); // Setze die Zeit auf 00:00
+    endDate = DateTime(endDate.year, endDate.month, endDate.day).subtract(Duration(microseconds: 1));
     try {
       final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
       firestore.QuerySnapshot snapshot = await userTransactionsRef
@@ -1299,19 +1301,25 @@ class FirestoreService {
   }
 
 
-  Future<Map<int, double>> getCurrentMonthTransactionsByDateRangeAndCategory(
-      String documentId, String categoryId) async {
+
+
+  Future<Map<int, double>> getCurrentMonthTransactionsByDateRangeAndCategory(String documentId, String categoryId) async {
     Map<int, double> monthlyCategoryValues = {};
     DateTime today = DateTime.now();
+    DateTime usableToday = DateTime(today.year, today.month, today.day);
+    print("DAYTIME NOW IST: ${today} ODER AUCH $today");
     DateTime startDate = DateTime(today.year, today.month, 1);
 
     // Retrieve transactions for the entire month
-    List<Transaction> transactions = await getTransactionsByDateRangeAndCategory(
-        documentId, categoryId, startDate, today);
+    List<Transaction> transactions = await getTransactionsByDateRangeAndCategory(documentId, categoryId, startDate, usableToday);
+
+    print(transactions);
 
     // Iterate through each day of the current month up to today
-    for (int day = 1; day <= today.day; day++) {
-      DateTime currentDay = DateTime(today.year, today.month, day).subtract(Duration(microseconds: 1));
+    for (int day = 1; day <= usableToday.day; day++) {
+      DateTime currentDay = DateTime(usableToday.year, usableToday.month, day).subtract(Duration(microseconds: 1));
+      print("Der Tag innerhalb der iteration lautet: $currentDay");
+      //print("Today Monat ist: ${currentDay.month}! Today Tag ist: ${currentDay.day}!");
 
       // Filter transactions for the current day
       List<Transaction> dayTransactions = transactions.where((transaction) {
@@ -1334,6 +1342,56 @@ class FirestoreService {
 
     return monthlyCategoryValues;
   }
+
+  Future<Map<int, double>> getCurrentWeekTransactionsByDateRangeAndCategory(
+      String documentId, String categoryId) async {
+    Map<int, double> weeklyCategoryValues = {};
+
+    // Berechne den Montag der aktuellen Woche
+    DateTime today = DateTime.now();
+    DateTime mondayOfWeek = _getMondayOfWeek(today);
+
+    // Enddatum ist "heute", aber ohne Uhrzeit
+    DateTime usableToday = DateTime(today.year, today.month, today.day);
+
+    // Hole Transaktionen im wöchentlichen Zeitrahmen
+    List<Transaction> transactions = await getTransactionsByDateRangeAndCategory(
+      documentId,
+      categoryId,
+      mondayOfWeek,
+      usableToday,
+    );
+
+    print("Transaktionen der Woche: $transactions");
+
+    // Iteriere durch die Tage von Montag bis heute
+    for (int i = 0; i <= usableToday.difference(mondayOfWeek).inDays+1; i++) {
+      DateTime currentDay = mondayOfWeek.add(Duration(days: i));
+      print("Der aktuelle Tag ist: $currentDay");
+
+      // Filtere Transaktionen für den aktuellen Tag
+      List<Transaction> dayTransactions = transactions.where((transaction) {
+        return transaction.date.toUtc().year == currentDay.year &&
+            transaction.date.toUtc().month == currentDay.month &&
+            transaction.date.toUtc().day == currentDay.day;
+      }).toList();
+
+      // Berechne die Gesamtausgaben für den aktuellen Tag
+      double dayExpense = 0.0;
+      for (var transaction in dayTransactions) {
+        if (transaction.type == "Ausgabe") {
+          dayExpense += transaction.amount;
+        }
+      }
+
+      // Speichere die Ausgaben des Tages in der Map
+      int weekDayIndex = currentDay.weekday; // 1 = Montag, 7 = Sonntag
+      weeklyCategoryValues[weekDayIndex] = dayExpense;
+    }
+
+    return weeklyCategoryValues;
+  }
+
 
 
 

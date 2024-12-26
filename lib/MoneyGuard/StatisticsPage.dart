@@ -14,8 +14,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
   String? _userId;
   String selectedAmountType = 'Gesamtbetrag';
 
-  String selectedTimeCategory = 'Jahr';
-
+  String selectedTimeCategory = 'Monat';
   String selectedYear = '2024'; // Standardwert für das Jahr
   String selectedMonth = 'Monat'; // Standardwert für den Monat
 
@@ -24,6 +23,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
   final FirestoreService _firestoreService = FirestoreService();
 
   List<LineChartBarData>? cachedLineChartData;
+  List<LineChartBarData>? cachedCategoryLineChartData;
+
   Map<String, LineChartData> chartCache = {};
 
 
@@ -49,6 +50,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
     try {
       await _firestoreService.getUserCategories(
           user.uid); // Just loading categories for now
+      //print("Der Benutzer im Allgemeinen ist ${user.uid}");
       return user;
     } catch (e) {
       print('Fehler beim Laden des Users: ${e.toString()}');
@@ -250,6 +252,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
     }
   }
 
+  //Future<void> loadCategoryLineChartBarData(String chosenYear, String chosenMonth) async {}
+
 
 
   LineChartData get chartData {
@@ -264,29 +268,42 @@ class _StatisticsPageState extends State<StatisticsPage> {
       titlesData: FlTitlesData(),
       lineTouchData: LineTouchData(handleBuiltInTouches: true),
     );
+
   }
 
 
 
-  Future<List<FlSpot>> generateSpotsForCategory(String category) async {
+  Future<List<FlSpot>> generateSpotsForCategory(String category, String selectedTimeCategory) async {
     final user = await _loadUser();
     if (user == null) {
       print("Kein Benutzer gefunden.");
       return [];
     }
 
-    Map<int, double> monthlyCategoryTransactions = {};
+    Map<int, double> categoryTransactions = {};
     List<FlSpot> categoryList = [];
 
     try {
-      monthlyCategoryTransactions = await _firestoreService.getCurrentMonthTransactionsByDateRangeAndCategory(user.uid, category);
-      print(monthlyCategoryTransactions);
+      if (selectedTimeCategory == "Monat") {
+        //print("Der Benutzer in Categorie ist ${user.uid}");
+        categoryTransactions = await _firestoreService
+            .getCurrentMonthTransactionsByDateRangeAndCategory(
+            user.uid, category);
+      } else if (selectedTimeCategory == "Woche"){
+        categoryTransactions = await _firestoreService
+            .getCurrentWeekTransactionsByDateRangeAndCategory(
+            user.uid, category);
+      } else {
+        print("Keine Periode für Kategorie ausgwählt");
+      }
+        print(categoryTransactions);
 
-      monthlyCategoryTransactions.forEach((day, amount) {
-        categoryList.add(FlSpot(day.toDouble(), amount));
-      });
+        categoryTransactions.forEach((day, amount) {
+          categoryList.add(FlSpot(day.toDouble(), amount));
+        });
 
-      categoryList.sort((a, b) => a.x.compareTo(b.x));
+        categoryList.sort((a, b) => a.x.compareTo(b.x));
+
     } catch (e) {
       print("Fehler beim Laden der Kategoriedaten: ${e.toString()}");
     }
@@ -296,16 +313,19 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
 
 
-  Future<LineChartData> categoryChartData(String category) async {
+  Future<LineChartData> categoryChartData(String category, String selectedTimeCategory) async {
     // Abrufen der Datenpunkte
-    List<FlSpot> categoryList = await generateSpotsForCategory(category);
+    //print("Der Kategoriename lautet:  $category");
+    List<FlSpot> categoryList = await generateSpotsForCategory(category, selectedTimeCategory);
 
     return LineChartData(
       lineBarsData: [
         LineChartBarData(
+          preventCurveOverShooting: true,
           isCurved: true,
-          color: Colors.blue,
-          barWidth: 8,
+          color: Colors.red,
+          curveSmoothness: 0.35,
+          barWidth: 4,
           isStrokeCapRound: true,
           dotData: const FlDotData(show: false),
           belowBarData: BarAreaData(show: false),
@@ -322,56 +342,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
 
-  int dayCurrentMonth() {
-    DateTime now = DateTime.now();
-    // Ermitteln des letzten Tages des aktuellen Monats
-    DateTime lastDayOfMonth = DateTime.utc(now.year, now.month + 1, 0);
-    // Anzahl der Tage im aktuellen Monat
-    int daysInMonth = lastDayOfMonth.day;
-
-    print("Der aktuelle Monat hat $daysInMonth Tage.");
-    return daysInMonth;
-  }
-
-  double findLastMonthBalance1(Map<String, double> data, String chosenYear, String chosenMonth) {
-    //es muss ein sortiertes Dictonary sein, zeitlich aufsteigend
-    try {
-      print("Der aktuelle Monat ist der $chosenMonth oder auch in int: ${int.parse(chosenMonth)}");
-
-      double lastMonthBalance = 0.0;
-      DateTime today = DateTime(int.parse(chosenYear), int.parse(chosenMonth));
-      print(today);
-      String currentMonth = "${today.year}-${today.month.toString().padLeft(2, '0')}";
-      print(currentMonth);
-
-
-
-      // Iteriere durch die Map
-      data.forEach((key, value) {
-        // String in DateTime umwandeln
-        DateTime keyDate = DateTime.parse(key); // "-01" hinzufügen, um ein gültiges Datum zu erstellen
-        print("Der Key lautet $key");
-        print("Und die andere Datetime ist: ${DateTime(today.year, today.month)}");
-        // Vergleiche mit aktuellem Datum
-        if (keyDate == DateTime(today.year, today.month -1 )) {
-          print("Der Schlüssel $key entspricht dem vorherigen Monat. Wert: $value");
-          lastMonthBalance = value;
-        } else if (keyDate.isBefore(today)) {
-          print("Der Schlüssel $key liegt vor dem heutigen Monat.");
-        } else if (keyDate.isAfter(today)) {
-          print("Der Schlüssel $key liegt nach dem heutigen Monat.");
-        } else{
-          print("No match found");
-        }
-      });
-      print(lastMonthBalance);
-
-
-    } catch (e) {
-      print("Fehler beim Laden der Ausgaben: ${e.toString()}");
-    }
-    return lastMonthBalance;
-  }
 
 
   double findLastMonthBalance(Map<String, double> data, String chosenYear, String chosenMonth) {
@@ -543,10 +513,12 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     value: selectedTimeCategory,
                     onChanged: (String? newValue) {
                       setState(() {
+
                         selectedTimeCategory = newValue!;
+
                       });
                     },
-                    items: <String>['Jahr', 'Monat', 'Woche']
+                    items: <String>['Monat', 'Woche']
                         .map<DropdownMenuItem<String>>((String value) {
                       return DropdownMenuItem<String>(
                         value: value,
@@ -570,7 +542,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                         padding: const EdgeInsets.symmetric(horizontal: 8.0),
                         child: CategoryStatWidget(
                           category: category,
-                          chartDataFuture: categoryChartData(category.name), // Hier die Future-Daten übergeben
+                          chartDataFuture: categoryChartData(category.id!, selectedTimeCategory), // Hier die Future-Daten übergeben
                         ),
                       );
                     }).toList(),
@@ -584,7 +556,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
       ),
     );
   }
-}class CategoryStatWidget extends StatelessWidget {
+}
+class CategoryStatWidget extends StatelessWidget {
   final Category category;
   final Future<LineChartData> chartDataFuture;
 
