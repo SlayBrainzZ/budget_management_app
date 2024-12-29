@@ -592,6 +592,23 @@ class FirestoreService {
     }
   }
 
+  /// Function to fetch all imported transactions
+  Future<List<ImportedTransaction>> getImportedTransactions(String userId) async {
+    try {
+      // Access the user's ImportedTransactions sub-collection
+      final userImportedTransactionsRef = usersRef.doc(userId).collection('ImportedTransactions');
+      final querySnapshot = await userImportedTransactionsRef.get();
+
+      // Parse each document into an ImportedTransaction object
+      return querySnapshot.docs.map((doc) {
+        return ImportedTransaction.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+      }).toList();
+    } catch (e) {
+      print("Error fetching imported transactions: $e");
+      return [];
+    }
+  }
+
 
   ///TEST
   ///update: Test successfully done. This function does exactly what it's named.
