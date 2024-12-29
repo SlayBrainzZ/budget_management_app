@@ -46,7 +46,26 @@ void main() async {
       if (user != null) {
         print("User logged in: ${user.email}");
 
-        // Now proceed with CSV import after login
+        try {
+          print("Starting CSV import...");
+          await FirestoreService().importCsvTransactions(user.uid);
+          print("CSV import done!");
+
+          print("Fetching all imported transactions...");
+          List<ImportedTransaction> importedTransactions =
+              await FirestoreService().getImportedTransactions(user.uid);
+
+          if(importedTransactions.isNotEmpty){
+            print("Fetched ${importedTransactions.length} Imported Transactions:");
+            for(var transaction in importedTransactions){
+              print(transaction.toMap());
+            }
+          } else {
+            print("No imported Transactions found for user: ${user.uid}!");
+          }
+        } catch (e){
+          print("Error during CSV import or fetching transactions: $e");
+        }
         //await FirestoreService().importCsvTransactions(user.uid); // Pass the logged-in user's ID
       } else {
         print("No user logged in. Please log in.");
