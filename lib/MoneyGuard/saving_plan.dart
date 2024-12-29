@@ -21,6 +21,8 @@ class _SavingPlanState extends State<SavingPlan> {
   List<Transaction> monthlyTransactionCategoryAll = [];
   List<double> remainingBudget = []; // Liste, um verbleibende Budgets für jede Kategorie zu speichern
 
+
+
   // Methode zum Laden der Kategorien und Benutzerinformationen
   Future<void> _loadUserAndCategories() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -166,6 +168,7 @@ class _SavingPlanState extends State<SavingPlan> {
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
+                            //fontFamily: 'Roboto,
                           ),
                         ),
                         const SizedBox(width: 4),
@@ -175,6 +178,7 @@ class _SavingPlanState extends State<SavingPlan> {
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
+                            //fontFamily: 'Roboto',
                           ),
                         ),
                       ],
@@ -185,6 +189,7 @@ class _SavingPlanState extends State<SavingPlan> {
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.grey[600],
+                        //fontFamily: 'Roboto',
                       ),
                     ),
                   ],
@@ -205,6 +210,7 @@ class _SavingPlanState extends State<SavingPlan> {
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.grey,
+                    fontFamily: 'Roboto',
                   ),
                 ),
               ),
@@ -230,14 +236,33 @@ class _SavingPlanState extends State<SavingPlan> {
                     alignment: BarChartAlignment.spaceEvenly, // Mehr Platz zwischen den Balken
                     maxY: 100, // Maximaler Y-Wert für die Prozentanzeige
                     titlesData: FlTitlesData(
-                      leftTitles: AxisTitles(
+                      /*leftTitles: AxisTitles(
                         sideTitles: SideTitles(
-                          showTitles: false, // Keine Y-Beschriftung anzeigen
+                          showTitles: true, // Aktiviere die Titel auf der linken Seite
+                          interval: 25, // Schrittweite für die angezeigten Werte (z. B. 0, 25, 50, 75, 100)
+                          getTitlesWidget: (double value, TitleMeta meta) {
+                            // Bedingte Logik für die Anzeige
+                            if (value % 25 == 0) {
+                              return Text(
+                                '${value.toInt()}', // Zeigt den Prozentwert an
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black,
+                                ),
+                              );
+                            }
+                            return const SizedBox.shrink(); // Keine Anzeige für andere Werte
+                          },
+                        ),
+                      ),*/
+                      rightTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: false, // Rechte Achse deaktivieren
                         ),
                       ),
                       bottomTitles: AxisTitles(
                         sideTitles: SideTitles(
-                          showTitles: true, // Kategorienamen unter dem Balken anzeigen
+                          showTitles: false, // Kategorienamen unter dem Balken anzeigen
                           getTitlesWidget: (double value, TitleMeta meta) {
                             int index = value.toInt();
                             if (index < categories.length) {
@@ -247,6 +272,7 @@ class _SavingPlanState extends State<SavingPlan> {
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.black,
+                                  fontFamily: 'Roboto',
                                 ),
                               );
                             }
@@ -254,6 +280,7 @@ class _SavingPlanState extends State<SavingPlan> {
                           },
                         ),
                       ),
+                      topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                     ),
                     borderData: FlBorderData(show: false), // Keine Border anzeigen
                     barGroups: _buildCategoryData(),
@@ -283,11 +310,12 @@ class _SavingPlanState extends State<SavingPlan> {
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Text(
-                  'Noch keine Kategorien vorhanden! \n Bitte lege ein Budget für deine Kategorien fest, um loszulegen :)',
+                  'Noch keine Kategorien vorhanden! \n Bitte lege ein Budget für deine Kategorien fest,\n um loszulegen :)',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 20,
                     color: Colors.grey,
+                    fontFamily: 'Roboto',
                   ),
                 ),
               ),
@@ -344,6 +372,7 @@ class _SavingPlanState extends State<SavingPlan> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
+                                  fontFamily: 'Roboto',
                                 ),
                               ),
                             ),
@@ -358,6 +387,7 @@ class _SavingPlanState extends State<SavingPlan> {
                                     color: remaining < 0
                                         ? Colors.red
                                         : Colors.green,
+                                    fontFamily: 'Roboto',
                                   ),
                                 ),
                               ],
@@ -373,6 +403,7 @@ class _SavingPlanState extends State<SavingPlan> {
                           style: TextStyle(
                             fontSize: 14,
                             color: remaining < 0 ? Colors.red : Colors.green,
+                            fontFamily: 'Roboto',
                           ),
                         ),
 

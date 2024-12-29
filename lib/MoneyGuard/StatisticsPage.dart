@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:budget_management_app/backend/Category.dart';
 import 'package:budget_management_app/backend/firestore_service.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'home_page.dart';
 
 class StatisticsPage extends StatefulWidget {
   @override
@@ -10,156 +11,377 @@ class StatisticsPage extends StatefulWidget {
 }
 
 class _StatisticsPageState extends State<StatisticsPage> {
+  String? _userId;
   String selectedAmountType = 'Gesamtbetrag';
-  String selectedTimePeriod = 'Monat';
+
+  String selectedTimeCategory = 'Monat';
+  String selectedYear = '2024'; // Standardwert für das Jahr
+  String selectedMonth = 'Monat'; // Standardwert für den Monat
+
+
+  final ScrollController _scrollController = ScrollController();
+  final FirestoreService _firestoreService = FirestoreService();
+
+  List<LineChartBarData>? cachedLineChartData;
+  List<LineChartBarData>? cachedCategoryLineChartData;
+
+  Map<String, LineChartData> chartCache = {};
+
 
   List<Category> categories = [];
-  final ScrollController _scrollController = ScrollController();  // Der ScrollController
+  //List <double> allMonthBalanceData = [];
+  double lastMonthBalance = 0.0;
+  Map<String, double> monthlyBalanceList = {};
 
-  final FirestoreService _firestoreService = FirestoreService();
 
   @override
   void initState() {
     super.initState();
     _loadCategories();
-  }
-
-  Future<void> _loadCategories() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      try {
-        List<Category> userCategories = await _firestoreService.getUserCategories(user.uid);
-        setState(() {
-          categories = userCategories;
-        });
-      } catch (e) {
-        print('Fehler beim Abrufen der Kategorien: $e');
-      }
+    if (monthlyBalanceList.isEmpty) {
+      loadLineChartBarData('2024', 'Monat');
     }
   }
 
-  // Placeholder für Diagramm-Daten
-  final gridData = FlGridData(
-    show: true,
-    getDrawingHorizontalLine: (value) {
-      return FlLine(
-        color: const Color(0xff37434d),
-        strokeWidth: 0.5,
+  Future<User?> _loadUser() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+
+    try {
+      await _firestoreService.getUserCategories(
+          user.uid); // Just loading categories for now
+      //print("Der Benutzer im Allgemeinen ist ${user.uid}");
+      return user;
+    } catch (e) {
+      print('Fehler beim Laden des Users: ${e.toString()}');
+      return null;
+    }
+  }
+
+  Future<void> _loadCategories() async {
+    final user = await _loadUser();
+    if (user == null) {
+      print('Kein Benutzer gefunden.');
+      return;
+    }
+    setState(() {
+      categories = [];
+    });
+
+    try {
+      List<Category> userCategories = await _firestoreService.getUserCategories(
+          user.uid);
+      if (userCategories.isEmpty) {
+        print("Keine Kategorien gefunden für den Benutzer.");
+        return;
+      }
+
+      setState(() {
+        _userId = user.uid;
+        categories = userCategories;
+      });
+    } catch (e) {
+      print('Fehler beim Laden der Kategorien: ${e.toString()}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Fehler beim Laden der Daten")),
       );
-    },
-    getDrawingVerticalLine: (value) {
-      return FlLine(
-        color: const Color(0xff37434d),
-        strokeWidth: 0.5,
-      );
-    },
-  );
+    }
+  }
 
-  final borderData = FlBorderData(
-    show: true,
-    border: Border.all(
-      color: const Color(0xff37434d),
-      width: 1,
-    ),
-  );
 
-  // Drei Linien für das Haupt-Diagramm
-  LineChartBarData get lineChartBarData1 => LineChartBarData(
-    isCurved: true,
-    color: Colors.green,
-    barWidth: 8,
-    isStrokeCapRound: true,
-    dotData: const FlDotData(show: false),
-    belowBarData: BarAreaData(show: false),
-    spots: [
-      FlSpot(1, 1),
-      FlSpot(2, 2),
-      FlSpot(3, 1.5),
-      FlSpot(4, 3),
-      FlSpot(5, 2.8),
-      FlSpot(6, 3.5),
-      FlSpot(7, 4),
-    ],
-  );
 
-  LineChartBarData get lineChartBarData2 => LineChartBarData(
-    isCurved: true,
-    color: Colors.blue,
-    barWidth: 8,
-    isStrokeCapRound: true,
-    dotData: const FlDotData(show: false),
-    belowBarData: BarAreaData(show: false),
-    spots: [
-      FlSpot(1, 1),
-      FlSpot(2, 2.5),
-      FlSpot(3, 2),
-      FlSpot(4, 3.5),
-      FlSpot(5, 3),
-      FlSpot(6, 3.8),
-      FlSpot(7, 4.5),
-    ],
-  );
 
-  LineChartBarData get lineChartBarData3 => LineChartBarData(
-    isCurved: true,
-    color: Colors.orange,
-    barWidth: 8,
-    isStrokeCapRound: true,
-    dotData: const FlDotData(show: false),
-    belowBarData: BarAreaData(show: false),
-    spots: [
-      FlSpot(1, 1.2),
-      FlSpot(2, 1.8),
-      FlSpot(3, 2.3),
-      FlSpot(4, 2.8),
-      FlSpot(5, 3.2),
-      FlSpot(6, 4.1),
-      FlSpot(7, 4.3),
-    ],
-  );
+  Future<List<FlSpot>> generateSpotsforMonth(String chosenYear, chosenMonth, String type) async {
+    final user = await _loadUser();
+    if (user == null) {
+      print("Kein Benutzer gefunden.");
+      return [];
+    }
+    double x = 1;
+    List<FlSpot> FlSpotlist = [];
+    List<double> data = [];
 
-  // Daten für das Haupt-Diagramm mit drei Linien
-  LineChartData get chartData => LineChartData(
-    lineBarsData: [
-      lineChartBarData1,
-      lineChartBarData2,
-      lineChartBarData3,
-    ],
-    gridData: gridData,
-    borderData: borderData,
-    titlesData: FlTitlesData(
+    try {
+      print(monthlyBalanceList);
+      lastMonthBalance =
+          findLastMonthBalance(monthlyBalanceList, chosenYear, chosenMonth);
+      print("lastMonthBalance nach Monatsangabe: $lastMonthBalance");
+      data = await _firestoreService.calculateMonthlySpendingByDay(
+          user.uid, type, chosenYear, chosenMonth, lastMonthBalance);
+      for (double y in data) {
+        FlSpotlist.add(FlSpot(x, y));
+        x = x + 1;
+      }
+    } catch (e) {
+      print("Fehler beim Laden der Ausgaben für Monat: ${e.toString()}");
+    }
+    return FlSpotlist;
+  }
 
-    ),
-  );
 
-  // Daten für die Kategoriediagramme mit nur einer Linie
-  LineChartData categoryChartData(Category category) {
-    LineChartBarData categoryLineData = LineChartBarData(
+
+
+
+
+  Future<List<List<FlSpot>>> generateSpotsforYear(String chosenYear, chosenMonth, String type) async {
+    final user = await _loadUser();
+    if (user == null) {
+      print("Kein Benutzer gefunden.");
+      return [];
+    }
+
+    List<List<FlSpot>> FlSpotListList = [];
+
+    List<double> data = [];
+    Map<String, double> monthlySpending = {};
+    List<Map<String, double>> monthlyTransactions = [];
+
+
+    try {
+      if (chosenMonth == "Monat") {
+        monthlyTransactions = await _firestoreService.calculateYearlySpendingByMonth2(user.uid, chosenYear);
+
+        for (int j = 0; j <= 2; j++) {
+          Map<String, double> monthlySpending = monthlyTransactions[j];
+          List<FlSpot> FlSpotlist = [];
+          for (var entry in monthlySpending.entries) {
+            String monthKey = entry.key; // Beispiel: "2024-01"
+            DateTime dateTime = DateTime.parse(monthKey + "-01");
+            double y = entry.value;
+            FlSpotlist.add(FlSpot(double.parse(dateTime.month.toString()), y));
+          }
+          FlSpotListList.add(FlSpotlist);
+        }
+
+        monthlySpending = monthlyTransactions[2];
+        monthlyBalanceList.addAll(monthlySpending);
+        print(monthlyBalanceList);
+      }
+
+    } catch (e) {
+      print("Fehler beim Laden der Ausgaben für ein Jahr: ${e.toString()}");
+    }
+    return FlSpotListList;
+  }
+
+
+  Future<LineChartBarData> defineLineChartBarData(Color color, String chosenYear, String chosenMonth, String type, List<FlSpot> spotsList) async {
+
+
+    return LineChartBarData(
+      //show: false,
       isCurved: true,
-      color: Colors.blue,
-      barWidth: 8,
+      //shadow: Shadow(color: Colors.black),
+      curveSmoothness: 0.35,
+      preventCurveOverShooting: true,
+      color: color,
+      barWidth: 4,
       isStrokeCapRound: true,
-      dotData: const FlDotData(show: false),
+      dotData: const FlDotData(show: true),
       belowBarData: BarAreaData(show: false),
-      spots: [
-        FlSpot(1, 1.2),
-        FlSpot(2, 1.8),
-        FlSpot(3, 2.3),
-        FlSpot(4, 2.8),
-        FlSpot(5, 3.2),
-        FlSpot(6, 4.1),
-        FlSpot(7, 4.3),
-      ],
+      spots: spotsList,
+    );
+  }
+
+  Future<void> loadLineChartBarData(String chosenYear, String chosenMonth) async {
+
+    try {
+      if (chosenMonth == 'Monat') {
+        // Zeige den Jahresverlauf
+        if (chartCache.containsKey(chosenYear)) {
+          setState(() {
+            cachedLineChartData = chartCache[chosenYear]?.lineBarsData;
+          });
+        } else {
+          // Berechne die Jahresdaten
+
+
+
+
+          List<List<FlSpot>> FlSpotListList = await generateSpotsforYear(chosenYear, chosenMonth, "null");
+
+          LineChartBarData einnahmeDaten = await defineLineChartBarData(Colors.green, chosenYear,"Monat", "Einnahme", FlSpotListList[0]);
+          LineChartBarData ausgabeDaten = await defineLineChartBarData(Colors.red, chosenYear,"Monat", "Ausgabe", FlSpotListList[1]);
+          LineChartBarData gesamtDaten = await defineLineChartBarData(Colors.blue, chosenYear, "Monat", "null", FlSpotListList[2]);
+
+
+
+
+
+          setState(() {
+            cachedLineChartData = [einnahmeDaten, ausgabeDaten, gesamtDaten];
+            chartCache[chosenYear] = LineChartData(
+              lineBarsData: cachedLineChartData!,
+              gridData: FlGridData(show: true),
+              borderData: FlBorderData(show: true),
+              titlesData: FlTitlesData(),
+              lineTouchData: LineTouchData(handleBuiltInTouches: true),
+            );
+          });
+        }
+      } else {
+        // Zeige nur den Verlauf für den bestimmten Monat
+        if (chartCache.containsKey('$chosenYear-$chosenMonth')) {
+          setState(() {
+            cachedLineChartData = chartCache['$chosenYear-$chosenMonth']?.lineBarsData;
+          });
+        } else {
+          List<FlSpot> FlSpotlist1 = await generateSpotsforMonth(chosenYear, chosenMonth, "Einnahme");
+          List<FlSpot> FlSpotlist2 = await generateSpotsforMonth(chosenYear, chosenMonth, "Ausgabe");
+          List<FlSpot> FlSpotlist3 = await generateSpotsforMonth(chosenYear, chosenMonth, "null");
+
+          LineChartBarData einnahmeDaten = await defineLineChartBarData(Colors.green, chosenYear, chosenMonth, "Einnahme", FlSpotlist1);
+          LineChartBarData ausgabeDaten = await defineLineChartBarData(Colors.red, chosenYear, chosenMonth, "Ausgabe", FlSpotlist2);
+          LineChartBarData gesamtDaten = await defineLineChartBarData(Colors.blue, chosenYear, chosenMonth, "null", FlSpotlist3);
+
+          setState(() {
+            cachedLineChartData = [einnahmeDaten, ausgabeDaten, gesamtDaten];
+            chartCache['$chosenYear-$chosenMonth'] = LineChartData(
+              lineBarsData: cachedLineChartData!,
+              gridData: FlGridData(show: true),
+              borderData: FlBorderData(show: true),
+              titlesData: FlTitlesData(),
+              lineTouchData: LineTouchData(handleBuiltInTouches: true),
+            );
+          });
+        }
+      }
+    } catch (e) {
+      print('Fehler beim Laden der Diagrammdaten: ${e.toString()}');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Fehler beim Laden der Diagrammdaten")));
+    }
+  }
+
+  //Future<void> loadCategoryLineChartBarData(String chosenYear, String chosenMonth) async {}
+
+
+
+  LineChartData get chartData {
+
+    if (cachedLineChartData == null) {
+      throw Exception("Daten müssen vorab geladen werden!");
+    }
+    return LineChartData(
+      lineBarsData: cachedLineChartData!,
+      gridData: FlGridData(show: true),
+      borderData: FlBorderData(show: true),
+      titlesData: FlTitlesData(),
+      lineTouchData: LineTouchData(handleBuiltInTouches: true),
     );
 
+  }
+
+
+
+  Future<List<FlSpot>> generateSpotsForCategory(String category, String selectedTimeCategory) async {
+    final user = await _loadUser();
+    if (user == null) {
+      print("Kein Benutzer gefunden.");
+      return [];
+    }
+
+    Map<int, double> categoryTransactions = {};
+    List<FlSpot> categoryList = [];
+
+    try {
+      if (selectedTimeCategory == "Monat") {
+        //print("Der Benutzer in Categorie ist ${user.uid}");
+        categoryTransactions = await _firestoreService
+            .getCurrentMonthTransactionsByDateRangeAndCategory(
+            user.uid, category);
+      } else if (selectedTimeCategory == "Woche"){
+        categoryTransactions = await _firestoreService
+            .getCurrentWeekTransactionsByDateRangeAndCategory(
+            user.uid, category);
+      } else {
+        print("Keine Periode für Kategorie ausgwählt");
+      }
+        print(categoryTransactions);
+
+        categoryTransactions.forEach((day, amount) {
+          categoryList.add(FlSpot(day.toDouble(), amount));
+        });
+
+        categoryList.sort((a, b) => a.x.compareTo(b.x));
+
+    } catch (e) {
+      print("Fehler beim Laden der Kategoriedaten: ${e.toString()}");
+    }
+
+    return categoryList;
+  }
+
+
+
+  Future<LineChartData> categoryChartData(String category, String selectedTimeCategory) async {
+    // Abrufen der Datenpunkte
+    //print("Der Kategoriename lautet:  $category");
+    List<FlSpot> categoryList = await generateSpotsForCategory(category, selectedTimeCategory);
+
     return LineChartData(
-      lineBarsData: [categoryLineData],
-      gridData: gridData,
-      borderData: borderData,
+      lineBarsData: [
+        LineChartBarData(
+          preventCurveOverShooting: true,
+          isCurved: true,
+          color: Colors.red,
+          curveSmoothness: 0.35,
+          barWidth: 4,
+          isStrokeCapRound: true,
+          dotData: const FlDotData(show: false),
+          belowBarData: BarAreaData(show: false),
+          spots: categoryList,
+        ),
+      ],
+      gridData: FlGridData(show: true),
+      borderData: FlBorderData(show: true),
       titlesData: FlTitlesData(
+      ),
+      lineTouchData: LineTouchData(
+        handleBuiltInTouches: true,
       ),
     );
   }
+
+
+
+  double findLastMonthBalance(Map<String, double> data, String chosenYear, String chosenMonth) {
+    // Startwert für das vorherige Monatsguthaben
+    double lastMonthBalance = 0.0;
+
+    // Berechne den Monat vor dem gewählten Monat
+    int currentMonth = int.parse(chosenMonth);
+
+    int previousMonth = currentMonth - 1;
+
+    String previousYear = chosenYear;
+
+    // Wenn der aktuelle Monat Januar ist, wechsel zum Dezember des Vorjahres
+    if (previousMonth == 0) {
+      previousMonth = 12;
+      previousYear = (int.parse(chosenYear) - 1).toString();
+    }
+
+    // Formatiere den Schlüssel für den vorherigen Monat (z. B. "2023-12")
+    String previousMonthKey = "$previousYear-${previousMonth.toString().padLeft(2, '0')}";
+
+    // Überprüfen, ob der Schlüssel existiert
+    if (data.containsKey(previousMonthKey)) {
+      lastMonthBalance = data[previousMonthKey]!;
+      print("Vorheriger Monat gefunden: $previousMonthKey, Guthaben: $lastMonthBalance");
+    } else {
+      print("Kein Guthaben für den vorherigen Monat $previousMonthKey gefunden, weil er mit ${data} nicht übereinstimt.");
+      print("previousMonthKey: $previousMonthKey");
+      print("Der Typ lautet ${previousMonthKey.runtimeType} ");
+      print("Der erste Schlüssel von data ist: ${data.keys.first}");
+      print("Der Typ des ersten Schlüssels: ${data.keys.first.runtimeType}");
+    }
+
+    return lastMonthBalance;
+  }
+
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -170,21 +392,76 @@ class _StatisticsPageState extends State<StatisticsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Gesamtübersicht im Zeitraum (Jahr und Monat nebeneinander)
               Row(
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   const SizedBox(width: 20),
                   Text(
                     'Gesamtübersicht im Zeitraum:  ',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+                    style: TextStyle(fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black),
                   ),
+                  const SizedBox(width: 10),
+                  // Abstand zwischen Text und Dropdowns
+
+                  // Dropdown für Jahr
                   DropdownButton<String>(
-                    value: selectedTimePeriod,
+                    value: selectedYear,
                     onChanged: (String? newValue) {
                       setState(() {
-                        selectedTimePeriod = newValue!;
+                        if (selectedMonth == "Monat"){
+                          selectedYear = newValue!;
+                          loadLineChartBarData(selectedYear, selectedMonth);
+                        } else {
+                          selectedYear = newValue!;
+                          selectedMonth = "Monat";
+                          loadLineChartBarData(selectedYear, selectedMonth);
+                        }
                       });
                     },
-                    items: <String>['Monat', 'Woche', 'Jahr']
+                    items: <String>[
+                      '2024',
+                      '2023',
+                      '2022',
+                      '2021'
+                    ]
+                        .map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                  ),
+
+                  const SizedBox(width: 20),
+                  // Abstand zwischen den beiden Dropdowns
+
+                  // Dropdown für Monat
+                  DropdownButton<String>(
+                    value: selectedMonth,
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        selectedMonth = newValue!;
+                        loadLineChartBarData(selectedYear,selectedMonth);
+                      });
+                    },
+                    items: <String>[
+                      'Monat',
+                      '01',
+                      '02',
+                      '03',
+                      '04',
+                      '05',
+                      '06',
+                      '07',
+                      '08',
+                      '09',
+                      '10',
+                      '11',
+                      '12'
+                    ]
                         .map<DropdownMenuItem<String>>((String value) {
                       return DropdownMenuItem<String>(
                         value: value,
@@ -197,8 +474,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
               const SizedBox(height: 20),
 
-              // Haupt-Diagramm mit drei Linien
-              Container(
+              cachedLineChartData == null
+                  ? Center(child: CircularProgressIndicator()) // Ladeanzeige
+                  : Container(
                 width: double.infinity,
                 height: 300,
                 decoration: BoxDecoration(
@@ -212,24 +490,35 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     ),
                   ],
                 ),
-                child: LineChart(chartData), // Diagramm hier eingefügt
+                child: LineChart(chartData), // Diagramm anzeigen
               ),
+
               const SizedBox(height: 40),
+
+              // Kategorieübersicht (mit einem Dropdown zur Auswahl des Zeitraums)
               Row(
                 children: [
                   const SizedBox(width: 20),
                   Text(
                     'Kategorieübersicht im Zeitraum:  ',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+                    style: TextStyle(fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black),
                   ),
+                  const SizedBox(width: 10),
+                  // Abstand zwischen Text und Dropdown
+
+                  // Dropdown für Zeitraum in der Kategorieübersicht
                   DropdownButton<String>(
-                    value: selectedTimePeriod,
+                    value: selectedTimeCategory,
                     onChanged: (String? newValue) {
                       setState(() {
-                        selectedTimePeriod = newValue!;
+
+                        selectedTimeCategory = newValue!;
+
                       });
                     },
-                    items: <String>['Monat', 'Woche', 'Jahr']
+                    items: <String>['Monat', 'Woche']
                         .map<DropdownMenuItem<String>>((String value) {
                       return DropdownMenuItem<String>(
                         value: value,
@@ -239,6 +528,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                   ),
                 ],
               ),
+
               categories.isEmpty
                   ? Center(child: CircularProgressIndicator())
                   : Scrollbar(
@@ -252,13 +542,14 @@ class _StatisticsPageState extends State<StatisticsPage> {
                         padding: const EdgeInsets.symmetric(horizontal: 8.0),
                         child: CategoryStatWidget(
                           category: category,
-                          chartData: categoryChartData(category),
+                          chartDataFuture: categoryChartData(category.id!, selectedTimeCategory), // Hier die Future-Daten übergeben
                         ),
                       );
                     }).toList(),
                   ),
                 ),
               ),
+
             ],
           ),
         ),
@@ -266,48 +557,63 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
 }
-
 class CategoryStatWidget extends StatelessWidget {
   final Category category;
-  final LineChartData chartData;
+  final Future<LineChartData> chartDataFuture;
 
-  CategoryStatWidget({required this.category, required this.chartData});
+  CategoryStatWidget({required this.category, required this.chartDataFuture});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12.0),
-      width: 400,  // Breite des CategoryStatWidgets, damit es horizontal scrollt
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 8,
-            offset: Offset(0, 4),
+    return FutureBuilder<LineChartData>(
+      future: chartDataFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Text('Fehler beim Laden der Daten');
+        } else if (!snapshot.hasData || snapshot.data == null) {
+          return Text('Keine Daten verfügbar');
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(12.0),
+          width: 400, // Responsive Anpassung
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 8,
+                offset: Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            category.name,
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                category.name,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                height: 220,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: LineChart(snapshot.data!), // Anzeige des Diagramms
+              ),
+            ],
           ),
-          const SizedBox(height: 20),
-          // Kategoriediagramm mit einer Linie
-          Container(
-            height: 150,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: LineChart(chartData), // Diagramm hier eingefügt
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

@@ -14,6 +14,7 @@ class BankAccount {
   DateTime? lastUpdated;
   final String accountType;
   bool exclude;
+  String? importFilePath;
 
   BankAccount({
     required this.userId,
@@ -22,16 +23,19 @@ class BankAccount {
     this.lastUpdated,
     required this.accountType,
     this.exclude = false,
+    this.importFilePath,
   });
 
   Map<String, dynamic> toMap() {
     return {
+      'id': id, // Die ID hinzufügen
       'userId': userId,
       'accountName': accountName,
       'balance': balance?.toString(),
       'lastUpdated': lastUpdated?.toIso8601String(),
       'accountType': accountType,
-      'exclude' : exclude,
+      'exclude': exclude,
+      'importFilePath': importFilePath,
     };
   }
 
@@ -43,6 +47,7 @@ class BankAccount {
       balance: data['balance'] != null ? double.parse(data['balance']) : null,
       accountType: data['accountType'],
       exclude: data['exclude'] ?? false,
+      importFilePath: data['importFilePath'],
     )..id = documentId; // Assign the document ID after creation
   }
 }
