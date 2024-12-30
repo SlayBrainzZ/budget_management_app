@@ -15,6 +15,7 @@ class Transaction {
   final String type;
   String? note;
   final bool importance;
+  String? accountId;
 
   Category? categoryData; // Neu: Verknüpfte Kategorie-Daten
 
@@ -27,6 +28,7 @@ class Transaction {
     required this.importance,
     this.note,
     this.categoryData, // Neu
+    this.accountId, // Optional account link
   });
 
   Map<String, dynamic> toMap() {
@@ -38,6 +40,7 @@ class Transaction {
       'type': type,
       'importance': importance,
       'note': note ?? '',
+      'accountId': accountId,
     };
   }
 
@@ -51,6 +54,7 @@ class Transaction {
     bool? importance,
     Category? categoryData,
     String? id, // Füge `id` als optionales Argument hinzu
+    String? accountId,
   }) {
     return Transaction(
       userId: userId ?? this.userId,
@@ -61,6 +65,7 @@ class Transaction {
       note: note ?? this.note,
       importance: importance ?? this.importance,
       categoryData: categoryData ?? this.categoryData,
+      accountId: accountId ?? this.accountId,
     )..id = id ?? this.id; // Setze die ID hier korrekt
   }
 
@@ -73,6 +78,7 @@ class Transaction {
       type: data['type'],
       importance: data['importance'],
       note: data['note'],
+      accountId: data['accountId'],
     )..id = documentId;
   }
 }
