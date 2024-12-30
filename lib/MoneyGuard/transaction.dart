@@ -5,6 +5,7 @@ import 'package:budget_management_app/backend/Transaction.dart';
 import 'package:budget_management_app/backend/Category.dart';
 import 'package:budget_management_app/backend/firestore_service.dart';
 import 'home_page.dart';
+import 'package:budget_management_app/backend/BankAccount.dart';
 
 class AddTransactionPage extends StatefulWidget {
   final Transaction? transaction; // Optional: übergebene Transaktion
@@ -27,7 +28,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
   final TextEditingController _noteController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
 
-  final List<String> accounts = ['Konto 1', 'Konto 2', 'Konto 3'];
+  List<BankAccount> userAccounts = [];
   List<Category> categories = [];
   final FirestoreService _firestoreService = FirestoreService();
 
@@ -35,7 +36,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadUserAndCategories();
+    _loadUserAndData();
 
     if (widget.transaction != null) {
       final transaction = widget.transaction!;
@@ -45,25 +46,30 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       _selectedCategory = transaction.categoryId;
       _isUrgent = transaction.importance;
 
-      // Setze den Tab basierend auf dem Transaktionstyp
       if (transaction.type == 'Einnahme') {
-        _tabController.index = 1; // Setze auf Einnahme-Tab
+        _tabController.index = 1;
       } else {
-        _tabController.index = 0; // Setze auf Ausgabe-Tab
+        _tabController.index = 0;
       }
     }
   }
 
 
-  Future<void> _loadUserAndCategories() async {
+  Future<void> _loadUserAndData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      List<Category> userCategories =
-      await _firestoreService.getUserCategories(user.uid);
-      setState(() {
-        _userId = user.uid;
-        categories = userCategories;
-      });
+      try {
+        final userCategories = await _firestoreService.getUserCategories(user.uid);
+        final userBankAccounts = await _firestoreService.getUserBankAccounts(user.uid);
+
+        setState(() {
+          _userId = user.uid;
+          categories = userCategories;
+          userAccounts = userBankAccounts; // Echte Konten laden
+        });
+      } catch (e) {
+        print("Fehler beim Laden der Daten: $e");
+      }
     }
   }
 
@@ -221,12 +227,26 @@ class _AddTransactionPageState extends State<AddTransactionPage>
           DropdownButtonFormField<String>(
             value: _selectedAccount,
             decoration: const InputDecoration(labelText: 'Konto auswählen'),
-            items: accounts
-                .map((account) =>
-                DropdownMenuItem(value: account, child: Text(account)))
-                .toList(),
+            items: userAccounts.map((account) {
+              // Bestimme das Symbol basierend auf dem accountType
+              final icon = account.accountType == "Bargeld"
+                  ? Icons.attach_money // Symbol für Bargeld
+                  : Icons.account_balance; // Symbol für Bankkonto
+
+              return DropdownMenuItem(
+                value: account.id,
+                child: Row(
+                  children: [
+                    Icon(icon, color: Colors.blue), // Füge das Symbol hinzu
+                    const SizedBox(width: 8), // Abstand zwischen Icon und Text
+                    Text(account.accountName ?? 'Unbenanntes Konto'), // Kontoname
+                  ],
+                ),
+              );
+            }).toList(),
             onChanged: (value) => setState(() => _selectedAccount = value),
           ),
+
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
             value: _selectedCategory,
