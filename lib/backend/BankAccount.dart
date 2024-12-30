@@ -14,16 +14,17 @@ class BankAccount {
   DateTime? lastUpdated;
   final String accountType;
   bool exclude;
-  String? importFilePath;
+  //String? importFilePath;
 
   BankAccount({
+    this.id,
     required this.userId,
     this.accountName,
     this.balance,
     this.lastUpdated,
     required this.accountType,
     this.exclude = false,
-    this.importFilePath,
+    //this.importFilePath,
   });
 
   Map<String, dynamic> toMap() {
@@ -35,19 +36,23 @@ class BankAccount {
       'lastUpdated': lastUpdated?.toIso8601String(),
       'accountType': accountType,
       'exclude': exclude,
-      'importFilePath': importFilePath,
+      //'importFilePath': importFilePath,
     };
   }
 
-  static BankAccount fromMap(Map<String, dynamic> data, String documentId) {
+  static BankAccount fromMap(Map<String, dynamic> data, String id) {
     return BankAccount(
-      userId: data['userId'],
-      accountName: data['accountName'],
-      lastUpdated: data['lastUpdated'] != null ? DateTime.parse(data['lastUpdated']) : null,
-      balance: data['balance'] != null ? double.parse(data['balance']) : null,
-      accountType: data['accountType'],
-      exclude: data['exclude'] ?? false,
-      importFilePath: data['importFilePath'],
-    )..id = documentId; // Assign the document ID after creation
+      id: id, // Use the provided Firestore document ID
+      userId: data['userId'] ?? '', // Ensure a default empty string if missing
+      accountName: data['accountName'], // Nullable, no change needed
+      lastUpdated: data['lastUpdated'] != null
+          ? DateTime.tryParse(data['lastUpdated']) // Safely parse the date
+          : null, // Keep it null if missing
+      balance: data['balance'] != null
+          ? double.tryParse(data['balance']) ?? 0.0 // Parse or fallback to 0.0
+          : 0.0,
+      accountType: data['accountType'] ?? 'unknown', // Default account type
+      exclude: data['exclude'] ?? false, // Default to `false` if missing
+    );
   }
 }
