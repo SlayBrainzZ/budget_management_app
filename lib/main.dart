@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:budget_management_app/backend/BankAccount.dart';
 import 'package:csv/csv.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -46,27 +47,31 @@ void main() async {
       if (user != null) {
         print("User logged in: ${user.email}");
 
-        try {
-          print("Starting CSV import...");
-          await FirestoreService().importCsvTransactions(user.uid);
-          print("CSV import done!");
+        // Get user's bank accounts
+        FirestoreService firestoreService = FirestoreService();
+        List<BankAccount> accounts = await firestoreService.getUserBankAccounts2(user.uid);
 
-          print("Fetching all imported transactions...");
-          List<ImportedTransaction> importedTransactions =
-              await FirestoreService().getImportedTransactions(user.uid);
+        if (accounts.isNotEmpty) {
+          // Hardcode the first account ID for testing
+          String? hardcodedAccountId = accounts[0].id;
 
-          if(importedTransactions.isNotEmpty){
-            print("Fetched ${importedTransactions.length} Imported Transactions:");
-            for(var transaction in importedTransactions){
-              print(transaction.toMap());
-            }
-          } else {
-            print("No imported Transactions found for user: ${user.uid}!");
-          }
-        } catch (e){
-          print("Error during CSV import or fetching transactions: $e");
+
+          testTrans.Transaction transaction = testTrans.Transaction(
+            userId: user.uid,
+            amount: 100.0,
+            date: DateTime.now(),
+            type: 'expense',
+            importance: false,
+            accountId: hardcodedAccountId, // Assign the hardcoded account ID
+          );
+
+
+          await firestoreService.createTransactionV2(user.uid, hardcodedAccountId!, transaction);
+
+          print("Transaction created successfully under account ID: $hardcodedAccountId");
+        } else {
+          print("No bank accounts found for this user.");
         }
-        //await FirestoreService().importCsvTransactions(user.uid); // Pass the logged-in user's ID
       } else {
         print("No user logged in. Please log in.");
       }
