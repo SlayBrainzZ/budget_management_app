@@ -56,19 +56,48 @@ void main() async {
           String? hardcodedAccountId = accounts[0].id;
 
 
-          testTrans.Transaction transaction = testTrans.Transaction(
-            userId: user.uid,
-            amount: 100.0,
-            date: DateTime.now(),
-            type: 'expense',
-            importance: false,
-            accountId: hardcodedAccountId, // Assign the hardcoded account ID
-          );
+          // Create 5 transactions
+          for (int i = 1; i <= 5; i++) {
+            testTrans.Transaction transaction = testTrans.Transaction(
+              userId: user.uid,
+              amount: 100.0 * i,
+              date: DateTime.now(),
+              type: 'expense',
+              importance: false,
+              accountId: hardcodedAccountId,
+            );
+            await firestoreService.createTransactionV2(user.uid, hardcodedAccountId!, transaction);
+            print("Transaction $i created successfully under account ID: $hardcodedAccountId");
+          }
 
+          // Create 5 categories
+          List<String> createdCategoryIds = [];
+          for (int i = 1; i <= 5; i++) {
+            testCat.Category category = testCat.Category(
+              userId: user.uid,
+              name: "Category $i",
+              accountId: hardcodedAccountId,
+            );
+            String categoryId = await firestoreService.createCategoryV2(user.uid, hardcodedAccountId!, category);
+            createdCategoryIds.add(categoryId);
+            print("Category $i created successfully under account ID: $hardcodedAccountId");
+          }
 
-          await firestoreService.createTransactionV2(user.uid, hardcodedAccountId!, transaction);
-
-          print("Transaction created successfully under account ID: $hardcodedAccountId");
+          // Create 5 transactions under a random category
+          for (int i = 1; i <= 5; i++) {
+            String randomCategoryId = createdCategoryIds[i % createdCategoryIds.length];
+            testTrans.Transaction transaction = testTrans.Transaction(
+              userId: user.uid,
+              amount: 50.0 * i,
+              date: DateTime.now(),
+              type: 'expense',
+              importance: false,
+              accountId: hardcodedAccountId,
+              categoryId: randomCategoryId,
+            );
+            await firestoreService.createTransactionV2(user.uid, hardcodedAccountId!, transaction, categoryId: randomCategoryId);
+            print("Transaction $i created successfully under category ID: $randomCategoryId and account ID: $hardcodedAccountId");
+          }
         } else {
           print("No bank accounts found for this user.");
         }
