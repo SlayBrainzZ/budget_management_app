@@ -9,6 +9,7 @@ class ImportedTransaction {
   final String payerOrRecipient;  // The payer or recipient (Auftraggeber/Empfänger)
   final double outflow;  // Amount for outgoing transactions (Ausgang)
   final double inflow;   // Amount for incoming transactions (Eingang)
+  String? accountId;
 
   ImportedTransaction({
     required this.userId,
@@ -18,6 +19,7 @@ class ImportedTransaction {
     required this.description,
     required this.outflow,
     required this.inflow,
+    this.accountId, // Optional account link
   });
 
   // Map to Firestore representation
@@ -31,6 +33,7 @@ class ImportedTransaction {
       'payerOrRecipient': payerOrRecipient,
       'outflow': outflow,
       'inflow': inflow,
+      'accountId': accountId,
     };
   }
 
@@ -45,6 +48,7 @@ class ImportedTransaction {
       description: data['description']?.toString() ?? '',
       outflow: double.tryParse(data['outflow']?.toString() ?? '0.0') ?? 0.0,
       inflow: double.tryParse(data['inflow']?.toString() ?? '0.0') ?? 0.0,
+      accountId: data['accountId'],
     )..id = documentId;
   }
 
