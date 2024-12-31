@@ -203,6 +203,146 @@ class FirestoreService {
     }
   }
 
+  /// Function to create an imported transaction
+  Future<void> createImportedTransaction(String userId, ImportedTransaction transaction) async {
+    try {
+      final userImportedTransactionsRef = usersRef.doc(userId).collection('ImportedTransactions');
+
+      // Create imported transaction as a normal transaction for the user
+      firestore.DocumentReference docRef = await userImportedTransactionsRef.add(transaction.toMap());
+      transaction.id = docRef.id; // Assign the generated ID to the transaction object
+      await docRef.set(transaction.toMap()); // Set the document's data
+
+    } catch (e) {
+      print("Error creating imported transaction: $e");
+    }
+  }
+
+  /// Function to fetch all imported transactions
+  Future<List<ImportedTransaction>> getImportedTransactions(String userId) async {
+    try {
+      // Access the user's ImportedTransactions sub-collection
+      final userImportedTransactionsRef = usersRef.doc(userId).collection('ImportedTransactions');
+      final querySnapshot = await userImportedTransactionsRef.get();
+
+      // Parse each document into an ImportedTransaction object
+      return querySnapshot.docs.map((doc) {
+        return ImportedTransaction.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+      }).toList();
+    } catch (e) {
+      print("Error fetching imported transactions: $e");
+      return [];
+    }
+  }
+
+  /// TEST PHASE!
+  /// TEST PHASE!
+  /// TEST PHASE!
+  /// TEST PHASE!
+  /// TEST PHASE!
+
+  Future<void> importCsvTransactionsV2(String userId, String accountId) async {
+    try {
+      print("Select a CSV file for import...");
+      List<Map<String, dynamic>> csvData = await pickAndReadCsvWeb();
+
+      if (csvData.isEmpty) {
+        print("No data found in the CSV file.");
+        return;
+      }
+
+      List<ImportedTransaction> transactions = convertCsvDataToImportedTransactionsV2(csvData, userId, accountId);
+
+      print("Saving transactions to Firestore...");
+
+      for (var transaction in transactions) {
+        await createImportedTransactionV2(userId, accountId, transaction);
+        print("Saved transaction: ${transaction.toMap()}");
+      }
+
+      print("All transactions imported successfully!");
+    } catch (e) {
+      print("Error importing transactions: $e");
+    }
+  }
+
+// Function to convert CSV data into ImportedTransactions (V2)
+  List<ImportedTransaction> convertCsvDataToImportedTransactionsV2(
+      List<Map<String, dynamic>> csvData, String userId, String accountId) {
+    return csvData.map((row) {
+      double outflow = 0.0;
+      double inflow = 0.0;
+      double amount = 0.0;
+
+      // Safely convert outflow and inflow, ensuring they are parsed as doubles
+      if (row['Ausgang'] != null) {
+        outflow = double.tryParse(row['Ausgang'].toString()) ?? 0.0;
+      }
+      if (row['Eingang'] != null) {
+        inflow = double.tryParse(row['Eingang'].toString()) ?? 0.0;
+      }
+
+      // Calculate total amount
+      amount = outflow + inflow;
+
+      // Safely parse the date (ensure it's a string and convert it)
+      DateTime date = DateTime.tryParse(row['Buchungstag']?.toString() ?? '') ?? DateTime.now();
+
+      return ImportedTransaction(
+        userId: userId,
+        amount: amount,
+        date: date,
+        payerOrRecipient: row['Auftraggeber/Empfaenger']?.toString() ?? '',
+        description: row['Buchungstext']?.toString() ?? '',
+        outflow: outflow,
+        inflow: inflow,
+        accountId: accountId, // Include the account ID
+      );
+    }).toList();
+  }
+
+// Function to create an imported transaction (V2)
+  Future<void> createImportedTransactionV2(String userId, String accountId, ImportedTransaction transaction) async {
+    try {
+      final userImportedTransactionsRef = usersRef
+          .doc(userId)
+          .collection('bankAccounts')
+          .doc(accountId)
+          .collection('ImportedTransactions');
+
+      firestore.DocumentReference docRef = await userImportedTransactionsRef.add(transaction.toMap());
+      transaction.id = docRef.id;
+      await docRef.set(transaction.toMap());
+    } catch (e) {
+      print("Error creating imported transaction: $e");
+    }
+  }
+
+// Function to fetch all imported transactions (V2)
+  Future<List<ImportedTransaction>> getImportedTransactionsV2(String userId, String accountId) async {
+    try {
+      final userImportedTransactionsRef = usersRef
+          .doc(userId)
+          .collection('bankAccounts')
+          .doc(accountId)
+          .collection('ImportedTransactions');
+      final querySnapshot = await userImportedTransactionsRef.get();
+
+      return querySnapshot.docs.map((doc) {
+        return ImportedTransaction.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+      }).toList();
+    } catch (e) {
+      print("Error fetching imported transactions: $e");
+      return [];
+    }
+  }
+
+  /// TEST PHASE!
+  /// TEST PHASE!
+  /// TEST PHASE!
+  /// TEST PHASE!
+  /// TEST PHASE!
+
   /// ==============
   /// CSV OPERATIONS (END)
   /// ==============
@@ -255,6 +395,27 @@ class FirestoreService {
     }
   }
 
+  /// TEST PHASE! More error handling!
+  Future<List<BankAccount>> getUserBankAccounts2(String documentId) async {
+    try {
+      final userBankAccountsRef = usersRef.doc(documentId).collection('bankAccounts');
+      firestore.QuerySnapshot snapshot = await userBankAccountsRef.get();
+
+      return snapshot.docs.map((doc) {
+        try {
+          // Attempt to map the document to a BankAccount object
+          return BankAccount.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+        } catch (e) {
+          print("Error mapping document ${doc.id}: $e");
+          return null; // Skip invalid documents
+        }
+      }).whereType<BankAccount>().toList(); // Filter out null entries
+    } catch (e) {
+      print("Error getting user bank accounts: $e");
+      return [];
+    }
+  }
+
   /// Updates an existing bank account in Firestore for a specific user.
   ///
   /// This function takes the user's `documentId` and a `BankAccount` object as input,
@@ -299,6 +460,108 @@ class FirestoreService {
   // =======================
   //  Category Functions
   // =======================
+
+  /// TEST PHASE!
+  /// TEST PHASE!
+  /// TEST PHASE!
+  /// TEST PHASE!
+  /// TEST PHASE!
+
+  Future<String> createCategoryV2(String documentId, String accountId, Category category) async {
+    try {
+      final userCategoriesRef = usersRef
+          .doc(documentId)
+          .collection('bankAccounts')
+          .doc(accountId)
+          .collection('Categories');
+
+      final docRef = await userCategoriesRef.add(category.toMap());
+      await docRef.update({'id': docRef.id});
+      return docRef.id;
+    } catch (e) {
+      print("Error creating category: $e");
+      rethrow;
+    }
+  }
+
+  Future<List<Category>> getUserCategoriesV2(String documentId, String accountId) async {
+    try {
+      final categoriesRef = usersRef
+          .doc(documentId)
+          .collection('bankAccounts')
+          .doc(accountId)
+          .collection('Categories');
+
+      final snapshot = await categoriesRef.get();
+      return snapshot.docs.map((doc) => Category.fromMap(doc.data(), doc.id)).toList();
+    } catch (e) {
+      print("Error fetching categories for user: $e");
+      return [];
+    }
+  }
+
+  Future<Category?> getCategoryV2(String documentId, String accountId, String categoryId) async {
+    try {
+      final categoryRef = usersRef
+          .doc(documentId)
+          .collection('bankAccounts')
+          .doc(accountId)
+          .collection('Categories')
+          .doc(categoryId);
+
+      final docSnapshot = await categoryRef.get();
+      if (docSnapshot.exists) {
+        return Category.fromMap(docSnapshot.data() as Map<String, dynamic>, docSnapshot.id);
+      } else {
+        return null;
+      }
+    } catch (e) {
+      print("Error getting category: $e");
+      return null;
+    }
+  }
+
+  Future<void> updateCategoryV2(String documentId, String accountId, String categoryId, Category category) async {
+    try {
+      final userCategoriesRef = usersRef
+          .doc(documentId)
+          .collection('bankAccounts')
+          .doc(accountId)
+          .collection('Categories')
+          .doc(categoryId);
+
+      final docSnapshot = await userCategoriesRef.get();
+      if (!docSnapshot.exists) {
+        print("Category not found for documentId: $documentId, categoryId: $categoryId");
+        return;
+      }
+
+      await userCategoriesRef.update(category.toMap());
+      print("Category successfully updated!");
+    } catch (e) {
+      print("Error updating category: $e");
+    }
+  }
+
+  Future<void> deleteCategoryV2(String documentId, String accountId, String categoryId) async {
+    try {
+      final userCategoriesRef = usersRef
+          .doc(documentId)
+          .collection('bankAccounts')
+          .doc(accountId)
+          .collection('Categories');
+
+      await userCategoriesRef.doc(categoryId).delete();
+    } catch (e) {
+      print("Error deleting category: $e");
+    }
+  }
+
+  /// TEST PHASE!
+  /// TEST PHASE!
+  /// TEST PHASE!
+  /// TEST PHASE!
+  /// TEST PHASE!
 
   /// Creates a new category in Firestore for a specific user.
   ///
@@ -543,6 +806,136 @@ class FirestoreService {
   // =======================
   //  Transaction Functions
   // =======================
+  /// TEST PHASE!
+  /// TEST PHASE!
+  /// TEST PHASE!
+  /// TEST PHASE!
+  /// TEST PHASE!
+
+  Future<void> createTransactionV2(String documentId, String accountId, Transaction transaction, {String? categoryId}) async {
+    try {
+      final accountRef = usersRef
+          .doc(documentId)
+          .collection('bankAccounts')
+          .doc(accountId);
+
+      if (categoryId != null) {
+        final categoryTransactionsRef = accountRef
+            .collection('Categories')
+            .doc(categoryId)
+            .collection('Transactions');
+        firestore.DocumentReference docRef = await categoryTransactionsRef.add(transaction.toMap());
+        transaction.id = docRef.id;
+        await docRef.set(transaction.toMap());
+      } else {
+        final transactionsRef = accountRef.collection('Transactions');
+        firestore.DocumentReference docRef = await transactionsRef.add(transaction.toMap());
+        transaction.id = docRef.id;
+        await docRef.set(transaction.toMap());
+      }
+    } catch (e) {
+      print("Error creating transaction: $e");
+    }
+  }
+
+  Future<List<Transaction>> getUserTransactionsV2(String documentId, String accountId) async {
+    try {
+      final transactionsRef = usersRef
+          .doc(documentId)
+          .collection('bankAccounts')
+          .doc(accountId)
+          .collection('Transactions');
+
+      final snapshot = await transactionsRef.get();
+      return snapshot.docs
+          .map((doc) => Transaction.fromMap(doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      print("Error fetching transactions for user: $e");
+      return [];
+    }
+  }
+
+  Future<List<Transaction>> getTransactionsByCategoryV2(String documentId, String accountId, String categoryId) async {
+    try {
+      final transactionsRef = usersRef
+          .doc(documentId)
+          .collection('bankAccounts')
+          .doc(accountId)
+          .collection('Categories')
+          .doc(categoryId)
+          .collection('Transactions');
+
+      final snapshot = await transactionsRef.get();
+      return snapshot.docs
+          .map((doc) => Transaction.fromMap(doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      print("Error fetching transactions for category: $e");
+      return [];
+    }
+  }
+
+  Future<Transaction?> getTransactionV2(String documentId, String accountId, String transactionId) async {
+    try {
+      final transactionsRef = usersRef
+          .doc(documentId)
+          .collection('bankAccounts')
+          .doc(accountId)
+          .collection('Transactions');
+      final docSnapshot = await transactionsRef.doc(transactionId).get();
+
+      if (docSnapshot.exists) {
+        return Transaction.fromMap(docSnapshot.data() as Map<String, dynamic>, docSnapshot.id);
+      } else {
+        return null;
+      }
+    } catch (e) {
+      print("Error getting transaction: $e");
+      return null;
+    }
+  }
+
+  Future<void> updateTransactionV2(String documentId, String accountId, String transactionId, Transaction transaction) async {
+    try {
+      final userTransactionsRef = usersRef
+          .doc(documentId)
+          .collection('bankAccounts')
+          .doc(accountId)
+          .collection('Transactions')
+          .doc(transactionId);
+
+      final docSnapshot = await userTransactionsRef.get();
+      if (!docSnapshot.exists) {
+        print("Transaction not found for documentId: $documentId, transactionId: $transactionId");
+        return;
+      }
+
+      await userTransactionsRef.update(transaction.toMap());
+      print("Transaction successfully updated!");
+    } catch (e) {
+      print("Error updating transaction: $e");
+    }
+  }
+
+  Future<void> deleteTransactionV2(String documentId, String accountId, String transactionId) async {
+    try {
+      final userTransactionsRef = usersRef
+          .doc(documentId)
+          .collection('bankAccounts')
+          .doc(accountId)
+          .collection('Transactions');
+      await userTransactionsRef.doc(transactionId).delete();
+    } catch (e) {
+      print("Error deleting transaction: $e");
+    }
+  }
+
+  /// TEST PHASE!
+  /// TEST PHASE!
+  /// TEST PHASE!
+  /// TEST PHASE!
+  /// TEST PHASE!
 
   /// Creates a new transaction in Firestore for a specific user.
   ///
@@ -574,38 +967,6 @@ class FirestoreService {
       }
     } catch (e) {
       print("Error creating transaction: $e");
-    }
-  }
-
-  /// Function to create an imported transaction
-  Future<void> createImportedTransaction(String userId, ImportedTransaction transaction) async {
-    try {
-      final userImportedTransactionsRef = usersRef.doc(userId).collection('ImportedTransactions');
-
-      // Create imported transaction as a normal transaction for the user
-      firestore.DocumentReference docRef = await userImportedTransactionsRef.add(transaction.toMap());
-      transaction.id = docRef.id; // Assign the generated ID to the transaction object
-      await docRef.set(transaction.toMap()); // Set the document's data
-
-    } catch (e) {
-      print("Error creating imported transaction: $e");
-    }
-  }
-
-  /// Function to fetch all imported transactions
-  Future<List<ImportedTransaction>> getImportedTransactions(String userId) async {
-    try {
-      // Access the user's ImportedTransactions sub-collection
-      final userImportedTransactionsRef = usersRef.doc(userId).collection('ImportedTransactions');
-      final querySnapshot = await userImportedTransactionsRef.get();
-
-      // Parse each document into an ImportedTransaction object
-      return querySnapshot.docs.map((doc) {
-        return ImportedTransaction.fromMap(doc.data() as Map<String, dynamic>, doc.id);
-      }).toList();
-    } catch (e) {
-      print("Error fetching imported transactions: $e");
-      return [];
     }
   }
 
@@ -745,65 +1106,6 @@ class FirestoreService {
     }
   }
 
-  // =======================
-  //  Subscription Functions
-  // =======================
-
-  /// Creates a new subscription in Firestore for a specific user.
-  ///
-  /// This function takes the user's `documentId` and a `Subscription` object as input,
-  /// and adds the subscription to the user's `Subscriptions` subcollection.
-  Future<void> createSubscription(String documentId, Subscription subscription) async {
-    try {
-      final userSubscriptionsRef = usersRef.doc(documentId).collection('Subscriptions');
-      firestore.DocumentReference docRef = await userSubscriptionsRef.add(subscription.toMap());
-      subscription.id = docRef.id;
-      await docRef.set(subscription.toMap());
-    } catch (e) {
-      print("Error creating subscription: $e");
-    }
-  }
-
-  /// Retrieves all subscriptions for a specific user from Firestore.
-  ///
-  /// This function takes the user's `documentId` as input and retrieves all subscription documents
-  /// from the user's `Subscriptions` subcollection.
-  Future<List<Subscription>> getUserSubscriptions(String documentId) async {
-    try {
-      final userSubscriptionsRef = usersRef.doc(documentId).collection('Subscriptions');
-      firestore.QuerySnapshot snapshot = await userSubscriptionsRef.get();
-      return snapshot.docs.map((doc) => Subscription.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
-    } catch (e) {
-      print("Error getting user subscriptions: $e");
-      return [];
-    }
-  }
-
-  /// Updates an existing subscription in Firestore for a specific user.
-  ///
-  /// This function takes the user's `documentId` and a `Subscription` object as input,
-  /// and updates the corresponding subscription document in the user's `Subscriptions` subcollection.
-  Future<void> updateSubscription(String documentId, Subscription subscription) async {
-    try {
-      final userSubscriptionsRef = usersRef.doc(documentId).collection('Subscriptions');
-      await userSubscriptionsRef.doc(subscription.id).update(subscription.toMap());
-    } catch (e) {
-      print("Error updating subscription: $e");
-    }
-  }
-
-  /// Deletes a subscription from Firestore for a specific user.
-  ///
-  /// This function takes the user's `documentId` and the `subscriptionId` as input,
-  /// and deletes the corresponding subscription document from the user's `Subscriptions` subcollection.
-  Future<void> deleteSubscription(String documentId, String subscriptionId) async {
-    try {
-      final userSubscriptionsRef = usersRef.doc(documentId).collection('Subscriptions');
-      await userSubscriptionsRef.doc(subscriptionId).delete();
-    } catch (e) {
-      print("Error deleting subscription: $e");
-    }
-  }
 
   // =======================
   //  Summary and Utility Functions
