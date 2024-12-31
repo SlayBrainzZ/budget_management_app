@@ -4,6 +4,11 @@ import 'package:budget_management_app/backend/firestore_service.dart';
 import 'package:budget_management_app/backend/Transaction.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:budget_management_app/backend/Category.dart';
+import 'package:budget_management_app/backend/BankAccount.dart';
+import 'package:budget_management_app/backend/ImportedTransaction.dart';
+
+
+import 'ImportButton.dart';
 
 class DateButton extends StatelessWidget {
   @override
@@ -92,7 +97,8 @@ class DateButtonScreen extends StatefulWidget {
 
 class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  List<Transaction> dailyTransactions = [];
+  List<Map<String, dynamic>> dailyTransactions = [];
+
   bool isLoading = true;
 
   // Dropdown-Werte
@@ -132,12 +138,11 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
       final firestoreService = FirestoreService();
       final userId = currentUser.uid;
 
+      // Hole reguläre Transaktionen
       List<Transaction> transactions;
       if (selectedCategories.isEmpty || selectedCategories.length == categories.length) {
-        // "Alle" ist gewählt, lade alle Transaktionen
         transactions = await firestoreService.getUserTransactions(userId);
       } else {
-        // Lade Transaktionen für spezifische Kategorien
         transactions = [];
         for (final category in selectedCategories) {
           final filteredTransactions = await firestoreService.getTransactionsByCategory(
@@ -148,7 +153,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
         }
       }
 
-      // Lade Kategorie-Daten für jede Transaktion
+      // Kategorie-Daten für jede Transaktion laden
       for (var transaction in transactions) {
         if (transaction.categoryId != null) {
           final category = await firestoreService.getCategory(userId, transaction.categoryId!);
@@ -156,9 +161,35 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
         }
       }
 
-      setState(() {
-        dailyTransactions = transactions;
+      // Hole importierte Transaktionen
+      final importedTransactions = await firestoreService.getImportedTransactions(userId);
+
+      final combinedTransactions = [
+        ...transactions.map((t) => {
+          'type': 'regular',
+          'data': t,
+        }),
+        ...importedTransactions.map((t) => {
+          'type': 'imported',
+          'data': t,
+        }),
+      ];
+
+// Sortiere die Transaktionen nach Datum
+      combinedTransactions.sort((a, b) {
+        final aDate = a['type'] == 'regular'
+            ? (a['data'] as Transaction).date
+            : (a['data'] as ImportedTransaction).date;
+        final bDate = b['type'] == 'regular'
+            ? (b['data'] as Transaction).date
+            : (b['data'] as ImportedTransaction).date;
+        return bDate.compareTo(aDate);
       });
+
+      setState(() {
+        dailyTransactions = combinedTransactions;
+      });
+
     } catch (e) {
       print('Fehler beim Abrufen der Transaktionen: $e');
     } finally {
@@ -167,6 +198,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
       });
     }
   }
+
 
 
   Future<void> _fetchCategories() async {
@@ -227,6 +259,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                         });
                       },
                     ),
+                    ImportButton(),
                   ],
                 ),
               ),
@@ -398,66 +431,104 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
     return ListView.builder(
       itemCount: dailyTransactions.length,
       itemBuilder: (context, index) {
-        final transaction = dailyTransactions[index];
-        final category = transaction.categoryData;
+        final transactionData = dailyTransactions[index];
+        final type = transactionData['type'];
+        final data = transactionData['data'];
 
-        return ListTile(
-          leading: _buildLeadingIcon(transaction.type),
-          title: Row(
-            children: [
-              if (category != null) ...[
-                Icon(
-                  category.icon ?? Icons.category,
-                  color: category.color ?? Colors.grey,
-                  size: 24,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    category.name,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                    overflow: TextOverflow.ellipsis,
+        if (type == 'regular') {
+          final transaction = data as Transaction;
+          final category = transaction.categoryData;
+
+          return ListTile(
+            leading: _buildLeadingIcon(transaction.type),
+            title: Row(
+              children: [
+                if (category != null) ...[
+                  Icon(
+                    category.icon ?? Icons.category,
+                    color: category.color ?? Colors.grey,
+                    size: 24,
                   ),
-                ),
-              ] else
-                const Text(
-                  'Keine Kategorie',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
-                ),
-            ],
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(transaction.note ?? 'Keine Notiz'),
-              Text(
-                'Datum: ${transaction.date.toLocal().toIso8601String()}',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ],
-          ),
-          trailing: Text(
-            '${transaction.amount.toStringAsFixed(2)} €',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: transaction.type == 'Einnahme' ? Colors.green : Colors.red,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      category.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ] else
+                  const Text(
+                    'Keine Kategorie',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+                  ),
+              ],
             ),
-          ),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => AddTransactionPage(transaction: transaction),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(transaction.note ?? 'Keine Notiz'),
+                Text(
+                  'Datum: ${transaction.date.toLocal().toIso8601String()}',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+            trailing: Text(
+              '${transaction.amount.toStringAsFixed(2)} €',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: transaction.type == 'Einnahme' ? Colors.green : Colors.red,
               ),
-            ).then((_) {
-              _fetchTransactions(); // Aktualisiere die Liste nach Rückkehr
-            });
-          },
-        );
+            ),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AddTransactionPage(transaction: transaction),
+                ),
+              ).then((_) {
+                _fetchTransactions();
+              });
+            },
+          );
+        } else if (type == 'imported') {
+          final importedTransaction = data as ImportedTransaction;
+
+          return ListTile(
+            leading: _buildLeadingIcon(importedTransaction.inflow > 0 ? 'Einnahme' : 'Ausgabe'),
+            title: Text(
+              importedTransaction.description,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Empfänger: ${importedTransaction.payerOrRecipient}'),
+                Text(
+                  'Datum: ${importedTransaction.date.toLocal().toIso8601String()}',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+            trailing: Text(
+              '${importedTransaction.amount.toStringAsFixed(2)} €',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: importedTransaction.inflow > 0 ? Colors.green : Colors.red,
+              ),
+            ),
+          );
+        }
+
+        return SizedBox.shrink(); // Für den Fall, dass der Typ nicht erkannt wird
       },
     );
   }
+
+
 
   Widget _buildLeadingIcon(String type) {
     return Container(
