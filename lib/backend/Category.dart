@@ -15,6 +15,7 @@ class Category {
   IconData? icon;
   Color? color;
   bool isDefault;  // New field for default category identification
+  String? accountId;
 
   Category({
     required this.userId,
@@ -23,6 +24,7 @@ class Category {
     this.icon,
     this.color,
     this.isDefault = true,  // Default is false for user-defined categories
+    this.accountId, // Optional account link
   });
 
   Map<String, dynamic> toMap() {
@@ -33,6 +35,7 @@ class Category {
       'icon': icon?.codePoint,
       'color': color?.value,
       'isDefault': isDefault, // Save isDefault field
+      'accountId': accountId,
     };
   }
 
@@ -44,6 +47,7 @@ class Category {
       icon: data['icon'] != null ? IconData(data['icon'], fontFamily: 'MaterialIcons') : null,
       color: data['color'] != null ? Color(data['color']) : null,
       isDefault: data['isDefault'] ?? false,  // Parse isDefault from Firestore
+      accountId: data['accountId'],
     )..id = documentId;
   }
 }
