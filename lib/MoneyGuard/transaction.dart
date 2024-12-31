@@ -45,6 +45,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       _amountController.text = transaction.amount.toStringAsFixed(2);
       _selectedCategory = transaction.categoryId;
       _isUrgent = transaction.importance;
+      _selectedAccount = transaction.accountId; // Bankkonto setzen
 
       if (transaction.type == 'Einnahme') {
         _tabController.index = 1;
@@ -52,6 +53,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
         _tabController.index = 0;
       }
     }
+
   }
 
 
@@ -99,6 +101,16 @@ class _AddTransactionPageState extends State<AddTransactionPage>
   }
 
   void _saveTransaction(String type) {
+    if (_userId == null || _selectedAccount == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bitte wählen Sie ein Konto aus.'),
+          backgroundColor: Colors.grey,
+        ),
+      );
+      return;
+    }
+
     final transaction = Transaction(
       userId: _userId!,
       amount: double.tryParse(_amountController.text) ?? 0.0,
@@ -107,15 +119,27 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       type: type,
       importance: _isUrgent,
       note: _noteController.text,
+      accountId: _selectedAccount,
     );
 
-    _firestoreService.createTransaction(_userId!, transaction).then((_) {
+    _firestoreService
+        .createTransactionV2(_userId!, _selectedAccount!, transaction, categoryId: _selectedCategory)
+        .then((_) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => MyHomePage(title: 'MoneyGuard')),
             (Route<dynamic> route) => false,
       );
+    }).catchError((e) {
+      print("Fehler beim Speichern der Transaktion: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Fehler beim Speichern der Transaktion.'),
+          backgroundColor: Colors.red,
+        ),
+      );
     });
   }
+
 
   void _deleteTransaction() {
     if (widget.transaction == null) return;
@@ -131,38 +155,41 @@ class _AddTransactionPageState extends State<AddTransactionPage>
   }
 
   void _saveOrUpdateTransaction(String type) {
-
-    if (_selectedAccount == null || _selectedCategory == null) {
+    if (_selectedAccount == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Bitte wählen Sie ein Konto und eine Kategorie aus.'),
+          content: Text('Bitte wählen Sie ein Konto aus.'),
           backgroundColor: Colors.grey,
         ),
       );
       return;
-    }//entferne diese if bedingung wenn auch ohne kategorie auswahl oder konto auswahl
+    }
 
     if (widget.transaction != null) {
       // Update bestehende Transaktion
       final updatedTransaction = widget.transaction!.copyWith(
-        //userId: _userId,
         amount: double.tryParse(_amountController.text) ?? 0.0,
         date: _selectedDate,
         categoryId: _selectedCategory,
         type: type,
         importance: _isUrgent,
         note: _noteController.text,
-        id: widget.transaction!.id, // Übergibt die ID hier
+        accountId: _selectedAccount,
       );
 
-      _firestoreService.updateTransaction(_userId!,widget.transaction!.id!, updatedTransaction).then((_) {
-        Navigator.of(context).pop(); // Zurück zur vorherigen Seite
+      _firestoreService
+          .updateTransaction(_userId!, widget.transaction!.id!, updatedTransaction)
+          .then((_) {
+        Navigator.of(context).pop();
+      }).catchError((e) {
+        print("Fehler beim Aktualisieren der Transaktion: $e");
       });
     } else {
       // Neue Transaktion erstellen
       _saveTransaction(type);
     }
   }
+
 
 
 

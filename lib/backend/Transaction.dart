@@ -1,4 +1,5 @@
 import 'Category.dart';
+import 'BankAccount.dart';
 /**
  * This class represents a financial transaction. It stores information
  * such as ID, user ID, bank account ID, amount, date, time, category ID, transaction type,
@@ -18,6 +19,7 @@ class Transaction {
   String? accountId;
 
   Category? categoryData; // Neu: Verknüpfte Kategorie-Daten
+  BankAccount? bankAccount;
 
   Transaction({
     required this.userId,
@@ -27,7 +29,8 @@ class Transaction {
     required this.type,
     required this.importance,
     this.note,
-    this.categoryData, // Neu
+    this.categoryData,
+    this.bankAccount,// Neu
     this.accountId, // Optional account link
   });
 
@@ -53,6 +56,7 @@ class Transaction {
     String? note,
     bool? importance,
     Category? categoryData,
+    BankAccount? bankAccount,
     String? id, // Füge `id` als optionales Argument hinzu
     String? accountId,
   }) {
@@ -65,6 +69,7 @@ class Transaction {
       note: note ?? this.note,
       importance: importance ?? this.importance,
       categoryData: categoryData ?? this.categoryData,
+      bankAccount: bankAccount?? this.bankAccount,
       accountId: accountId ?? this.accountId,
     )..id = id ?? this.id; // Setze die ID hier korrekt
   }

@@ -138,6 +138,10 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
       final firestoreService = FirestoreService();
       final userId = currentUser.uid;
 
+      // Hole alle Bankkonten
+      final bankAccounts = await firestoreService.getUserBankAccounts(userId);
+      final bankAccountMap = {for (var account in bankAccounts) account.id: account};
+
       // Hole reguläre Transaktionen
       List<Transaction> transactions;
       if (selectedCategories.isEmpty || selectedCategories.length == categories.length) {
@@ -153,11 +157,16 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
         }
       }
 
-      // Kategorie-Daten für jede Transaktion laden
+      // Kategorie- und Bankkonto-Daten für jede Transaktion laden
       for (var transaction in transactions) {
         if (transaction.categoryId != null) {
           final category = await firestoreService.getCategory(userId, transaction.categoryId!);
           transaction.categoryData = category;
+        }
+        if (transaction.accountId != null) {
+          transaction.bankAccount = bankAccountMap[transaction.accountId];
+        }else {
+          transaction.bankAccount = null; // Falls kein Konto existiert
         }
       }
 
@@ -438,6 +447,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
         if (type == 'regular') {
           final transaction = data as Transaction;
           final category = transaction.categoryData;
+          final bankAccount = transaction.bankAccount;
 
           return ListTile(
             leading: _buildLeadingIcon(transaction.type),
@@ -468,6 +478,28 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(transaction.note ?? 'Keine Notiz'),
+                if (bankAccount != null)
+                  Row(
+                    children: [
+                      _buildAccountLogo(bankAccount.accountType), // Correct way to display the logo
+                      const SizedBox(width: 10),
+                      Text(
+                        '${bankAccount.accountName}',
+                        style: const TextStyle(color: Colors.black, fontSize: 13),
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    children: [
+                      _buildAccountLogo('unknown'), // Display icon for unknown account
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Konto: Unbekannt',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                    ],
+                  ),
                 Text(
                   'Datum: ${transaction.date.toLocal().toIso8601String()}',
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
@@ -505,7 +537,8 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Empfänger: ${importedTransaction.payerOrRecipient}'),
+                Text('Kategorie: Keine Kategorie'),
+                Text('Konto: Kein Konto'),
                 Text(
                   'Datum: ${importedTransaction.date.toLocal().toIso8601String()}',
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
@@ -527,6 +560,35 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
       },
     );
   }
+
+// Methode für das Konto-Logo basierend auf dem Typ
+  Widget _buildAccountLogo(String accountType) {
+    if (accountType == 'Bankkonto') {
+      return Icon(
+        Icons.account_balance,
+        color: Colors.blue,
+        size: 16,
+      );
+    } else if (accountType == 'Bargeld') {
+      return Icon(
+        Icons.attach_money,
+        color: Colors.blue,
+        size: 17,
+      );
+    } else {
+      return Icon(
+        Icons.help_outline, // Using a help icon for unknown accounts
+        color: Colors.grey,
+        size: 16,
+      );
+    }
+  }
+
+
+
+
+
+
 
 
 
