@@ -388,6 +388,7 @@ class FirestoreService {
     try {
       final userBankAccountsRef = usersRef.doc(documentId).collection('bankAccounts');
       firestore.QuerySnapshot snapshot = await userBankAccountsRef.get();
+      print("Abgerufene Konten: ${snapshot.docs.length}");
       return snapshot.docs.map((doc) => BankAccount.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
     } catch (e) {
       print("Error getting user bank accounts: $e");
@@ -818,6 +819,17 @@ class FirestoreService {
           .doc(documentId)
           .collection('bankAccounts')
           .doc(accountId);
+      // Print detailed information about the transaction before adding it
+      print('Transaktionsdetails:');
+      print('UserID: ${transaction.userId}');
+      print('Betrag: ${transaction.amount}');
+      print('Datum: ${transaction.date.toIso8601String()}');
+      print('KategorieID: ${transaction.categoryId}');
+      print('Typ: ${transaction.type}');
+      print('Wichtigkeit: ${transaction.importance}');
+      print('Notiz: ${transaction.note}');
+      print('KontoID: ${transaction.accountId}');
+      print('Map-Daten: ${transaction.toMap()}'); // Zeige die Map-Daten für die Transaktion
 
       if (categoryId != null) {
         final categoryTransactionsRef = accountRef
@@ -832,7 +844,7 @@ class FirestoreService {
         firestore.DocumentReference docRef = await transactionsRef.add(transaction.toMap());
         transaction.id = docRef.id;
         await docRef.set(transaction.toMap());
-      }
+      } print("all right");
     } catch (e) {
       print("Error creating transaction: $e");
     }
@@ -847,6 +859,8 @@ class FirestoreService {
           .collection('Transactions');
 
       final snapshot = await transactionsRef.get();
+      print('Transaktionen für Konto ${accountId}: ${snapshot.docs.map((doc) => doc.data()).toList()}');
+      print("Abgerufene Transaktionen: ${snapshot.docs.length}");
       return snapshot.docs
           .map((doc) => Transaction.fromMap(doc.data(), doc.id))
           .toList();
@@ -855,6 +869,60 @@ class FirestoreService {
       return [];
     }
   }
+/*
+  Future<List<Transaction>> getUserTransactionsV2(String documentId, String accountId) async {
+    try {
+      // Überprüfe die Referenz
+      final transactionsRef = usersRef
+          .doc(documentId)
+          .collection('bankAccounts')
+          .doc(accountId)
+          .collection('Transactions');
+
+      // Hole die Daten aus Firestore
+      final snapshot = await transactionsRef.get();
+
+      // Wenn keine Transaktionen vorhanden sind
+      if (snapshot.docs.isEmpty) {
+        print("Keine Transaktionen für Konto $accountId gefunden.");
+      } else {
+        print("Transaktionen für Konto $accountId:");
+        // Ausgabe der Transaktionsdaten
+        for (var doc in snapshot.docs) {
+          print('Transaktions-ID: ${doc.id}');
+          print('Daten: ${doc.data()}');
+        }
+      }
+
+      // Wenn es keine Transaktionen gibt, gebe eine leere Liste zurück
+      if (snapshot.docs.isEmpty) {
+        return [];
+      }
+
+      // Konvertiere die Dokumente in Transaktionen und gebe sie zurück
+      return snapshot.docs
+          .map((doc) {
+        try {
+          // Hier wird jede Transaktion in ein Transaction-Objekt umgewandelt
+          final transaction = Transaction.fromMap(doc.data(), doc.id);
+          print('Erstellte Transaktion: ${transaction.toMap()}');
+          return transaction;
+        } catch (e) {
+          // Fehler bei der Umwandlung in ein Transaction-Objekt
+          print("Fehler beim Erstellen der Transaktion für ${doc.id}: $e");
+          return null;  // Falls eine Transaktion nicht erstellt werden kann, null zurückgeben
+        }
+      })
+          .where((transaction) => transaction != null)  // Null-Werte herausfiltern
+          .cast<Transaction>() // Cast die Liste zu List<Transaction>
+          .toList();
+    } catch (e) {
+      print("Fehler beim Abrufen der Transaktionen für Benutzer: $e");
+      return [];
+    }
+  }*/
+
+
 
   Future<List<Transaction>> getTransactionsByCategoryV2(String documentId, String accountId, String categoryId) async {
     try {
