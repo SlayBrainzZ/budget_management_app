@@ -23,7 +23,7 @@ class ImportedTransaction {
     required this.outflow,
     required this.inflow,
     this.accountId, // Optional account link
-    this.linkedAccount,
+    this.linkedAccount, //
   });
 
   // Map to Firestore representation
