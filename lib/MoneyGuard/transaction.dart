@@ -178,7 +178,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       );
 
       _firestoreService
-          .updateTransaction(_userId!, widget.transaction!.id!, updatedTransaction)
+          .updateTransactionV2(_userId!, _selectedAccount!, widget.transaction!.id!, updatedTransaction)
           .then((_) {
         Navigator.of(context).pop();
       }).catchError((e) {
@@ -250,11 +250,13 @@ class _AddTransactionPageState extends State<AddTransactionPage>
               ),
             ],
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 15),/*
           DropdownButtonFormField<String>(
             value: _selectedAccount,
             decoration: const InputDecoration(labelText: 'Konto auswählen'),
-            items: userAccounts.map((account) {
+            items: userAccounts
+                .where((account) => account.forImport == false) // Filterung
+                .map((account) {
               // Bestimme das Symbol basierend auf dem accountType
               final icon = account.accountType == "Bargeld"
                   ? Icons.attach_money // Symbol für Bargeld
@@ -272,7 +274,39 @@ class _AddTransactionPageState extends State<AddTransactionPage>
               );
             }).toList(),
             onChanged: (value) => setState(() => _selectedAccount = value),
-          ),
+          ),*/
+          // Bankkonto Auswahl (Nicht änderbar wenn transaktion existiert)
+          if (widget.transaction == null || widget.transaction!.accountId == null)
+            DropdownButtonFormField<String>(
+              value: _selectedAccount,
+              decoration: const InputDecoration(labelText: 'Konto auswählen'),
+              items: userAccounts
+                  .where((account) => account.forImport == false) // Filterung
+                  .map((account) {
+                final icon = account.accountType == "Bargeld"
+                    ? Icons.attach_money // Symbol für Bargeld
+                    : Icons.account_balance; // Symbol für Bankkonto
+
+                return DropdownMenuItem(
+                  value: account.id,
+                  child: Row(
+                    children: [
+                      Icon(icon, color: Colors.blue), // Füge das Symbol hinzu
+                      const SizedBox(width: 8),
+                      Text(account.accountName ?? 'Unbenanntes Konto'), // Kontoname
+                    ],
+                  ),
+                );
+              }).toList(),
+              onChanged: (value) => setState(() => _selectedAccount = value),
+            )
+          else
+          // Zeige das feste Bankkonto (Nicht änderbar)
+            TextFormField(
+              controller: TextEditingController(text: userAccounts.firstWhere((account) => account.id == _selectedAccount).accountName),
+              decoration: const InputDecoration(labelText: 'Konto'),
+              readOnly: true,  // Konto ist nicht editierbar
+            ),
 
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(

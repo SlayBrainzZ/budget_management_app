@@ -31,19 +31,21 @@ class _DashboardState extends State<Dashboard> {
     }
   }
 
-  Future<void> _createBankAccount(Map<String, String> accountData) async {
+  Future<void> _createBankAccount(Map<String, String> accountData, bool forImport) async {
     if (currentUser != null) {
       final account = BankAccount(
         userId: currentUser!.uid,
         accountName: accountData['name'],
         balance: double.tryParse(accountData['balance'] ?? '0') ?? 0.0,
-        accountType: accountData['type']!,
+        accountType: forImport ? 'Bankkonto' : accountData['type']!,
         exclude: false,
+        forImport: forImport,
       );
       await FirestoreService().createBankAccount(currentUser!.uid, account);
       _fetchBankAccounts();
     }
   }
+
 
   Widget _buildAccountCards(BuildContext context) {
     return SingleChildScrollView(
@@ -76,7 +78,7 @@ class _DashboardState extends State<Dashboard> {
                 },
                 child: Container(
                   width: 150,
-                  height: 120,
+                  height: 140,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(15),
@@ -121,6 +123,14 @@ class _DashboardState extends State<Dashboard> {
                           color: Colors.black54,
                         ),
                       ),
+                      const SizedBox(height: 5),
+                      Text(
+                        account.forImport ? 'For Imports' : '',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.green,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -133,8 +143,8 @@ class _DashboardState extends State<Dashboard> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => AccountCreation(
-                    onAccountCreated: (newAccount) {
-                      _createBankAccount(newAccount);
+                    onAccountCreated: (newAccount, forImport) {
+                      _createBankAccount(newAccount, forImport);
                     },
                   ),
                 ),
@@ -194,7 +204,7 @@ class _DashboardState extends State<Dashboard> {
 }
 
 class AccountCreation extends StatelessWidget {
-  final Function(Map<String, String>) onAccountCreated;
+  final Function(Map<String, String>, bool) onAccountCreated;
 
   const AccountCreation({super.key, required this.onAccountCreated});
 
@@ -219,8 +229,11 @@ class AccountCreation extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder: (context) => AccountDetailsScreen(
-                            type: 'Automatische Konfigurierung',
-                            onAccountCreated: onAccountCreated,
+                            type: 'Konfigurierung durch Import von CSV Dateien',
+                            onAccountCreated: (accountData) {
+                              accountData['type'] = 'Bankkonto'; // Typ wird festgelegt
+                              onAccountCreated(accountData, true);
+                            },
                             isNewAccount: true,
                           ),
                         ),
@@ -235,7 +248,7 @@ class AccountCreation extends StatelessWidget {
                       ),
                       child: const Center(
                         child: Text(
-                          "Automatische Konfigurierung",
+                          "Konfigurierung durch Import von CSV Dateien",
                           style: TextStyle(fontSize: 18, color: Colors.white),
                         ),
                       ),
@@ -249,8 +262,10 @@ class AccountCreation extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder: (context) => AccountDetailsScreen(
-                            type: 'Manuelle Eingabe',
-                            onAccountCreated: onAccountCreated,
+                            type: 'Manuelle Eingaben',
+                            onAccountCreated: (accountData) {
+                              onAccountCreated(accountData, false);
+                            },
                             isNewAccount: true,
                           ),
                         ),
@@ -265,7 +280,7 @@ class AccountCreation extends StatelessWidget {
                       ),
                       child: const Center(
                         child: Text(
-                          "Manuelle Eingabe",
+                          "Manuelle Eingaben",
                           style: TextStyle(fontSize: 18, color: Colors.white),
                         ),
                       ),
@@ -342,7 +357,12 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
           ListTile(
             leading: const Icon(Icons.account_balance, color: Colors.blue),
             title: const Text("Kontotyp"),
-            trailing: DropdownButton<String>(
+            trailing: widget.account?.forImport == true || widget.type.contains('CSV')
+                ? const Text(
+              "Bankkonto",
+              style: TextStyle(fontSize: 16),
+            )
+                : DropdownButton<String>(
               value: accountType,
               onChanged: (String? newValue) {
                 setState(() {
@@ -387,11 +407,11 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
                         balance: double.tryParse(accountBalance) ?? 0.0,
                         accountType: accountType,
                         exclude: widget.account!.exclude,
+                        forImport: widget.account!.forImport, // Behalte den ursprünglichen Wert bei
                         lastUpdated: DateTime.now(),
                       );
                       updatedAccount.id = widget.account!.id;
-                      await FirestoreService()
-                          .updateBankAccount(widget.account!.userId, updatedAccount);
+                      await FirestoreService().updateBankAccount(widget.account!.userId, updatedAccount);
                     } else {
                       widget.onAccountCreated(accountData);
                     }
@@ -403,6 +423,7 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
                       ),
                     );
                   },
+
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                   ),
