@@ -1,3 +1,5 @@
+import 'BankAccount.dart';
+
 class ImportedTransaction {
   
   String? id;
@@ -10,6 +12,7 @@ class ImportedTransaction {
   final double outflow;  // Amount for outgoing transactions (Ausgang)
   final double inflow;   // Amount for incoming transactions (Eingang)
   String? accountId;
+  BankAccount? linkedAccount;
 
   ImportedTransaction({
     required this.userId,
@@ -20,6 +23,7 @@ class ImportedTransaction {
     required this.outflow,
     required this.inflow,
     this.accountId, // Optional account link
+    this.linkedAccount,
   });
 
   // Map to Firestore representation
