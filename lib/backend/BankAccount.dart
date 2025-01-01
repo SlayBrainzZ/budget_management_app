@@ -14,6 +14,7 @@ class BankAccount {
   DateTime? lastUpdated;
   final String accountType;
   bool exclude;
+  bool forImport; // New field for import flag
   //String? importFilePath;
 
   BankAccount({
@@ -24,6 +25,7 @@ class BankAccount {
     this.lastUpdated,
     required this.accountType,
     this.exclude = false,
+    this.forImport = false,
     //this.importFilePath,
   });
 
@@ -36,6 +38,7 @@ class BankAccount {
       'lastUpdated': lastUpdated?.toIso8601String(),
       'accountType': accountType,
       'exclude': exclude,
+      'forImport': forImport,
       //'importFilePath': importFilePath,
     };
   }
@@ -53,6 +56,7 @@ class BankAccount {
           : 0.0,
       accountType: data['accountType'] ?? 'unknown', // Default account type
       exclude: data['exclude'] ?? false, // Default to `false` if missing
+      forImport: data['forImport'] ?? false,
     );
   }
 }
