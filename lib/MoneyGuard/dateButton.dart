@@ -148,19 +148,26 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
         // Reguläre Transaktionen abrufen
         List<Transaction> accountTransactions = await firestoreService.getUserTransactionsV2(userId, account.id!);
         for (var transaction in accountTransactions) {
+          /*
           if (transaction.categoryId != null) {
-            final category = await firestoreService.getCategory(userId, transaction.categoryId!);
+            final category = await firestoreService.getCategoryV2(
+              userId,
+              transaction.accountId!,
+              transaction.categoryId!,
+            );
             transaction.categoryData = category;
-          }
+            print('Jetzt Transaktion: ${transaction.id}, Kategorie: ${transaction.categoryId}, ${transaction.categoryData?.name}');
+
+          }*/
           transaction.bankAccount = account;
           transactions.add({'type': 'regular', 'data': transaction});
         }
 
-        // Importierte Transaktionen abrufen und BankAccount verknüpfen
+        // Importierte Transaktionen abrufen und verknüpfen
         List<ImportedTransaction> importedTransactions =
         await firestoreService.getImportedTransactionsV2(userId, account.id!);
         for (var importedTransaction in importedTransactions) {
-          importedTransaction.accountId = account.id; // Konto zuweisen
+          importedTransaction.accountId = account.id; // Konto-ID zuweisen
           importedTransaction.linkedAccount = account; // BankAccount verknüpfen
           transactions.add({'type': 'imported', 'data': importedTransaction});
         }
@@ -177,6 +184,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
       });
     }
   }
+
 
 
 
