@@ -1011,6 +1011,7 @@ class FirestoreService {
           .doc(documentId)
           .collection('bankAccounts')
           .doc(accountId);
+
       // Print detailed information about the transaction before adding it
       print('Transaktionsdetails:');
       print('UserID: ${transaction.userId}');
@@ -1025,13 +1026,15 @@ class FirestoreService {
       print('Map-Daten: ${transaction.toMap()}'); // Zeige die Map-Daten für die Transaktion
 
       if (categoryId != null) {
+        // Von Sofia erstellt zur prüfung **********
         final category = await getCategory(documentId, categoryId);
         if (category == null) {
           print("Kategorie konnte mit ID $categoryId nicht geladen werden.");
         } else {
           print("Geladene Kategorie: ${category.name}");
           transaction.categoryData = category;
-        }
+        } // ************
+
         final categoryTransactionsRef = accountRef
             .collection('Categories')
             .doc(categoryId)
