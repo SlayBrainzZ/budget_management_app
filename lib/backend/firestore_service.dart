@@ -1013,7 +1013,7 @@ class FirestoreService {
           .doc(accountId);
 
       // Print detailed information about the transaction before adding it
-      print('Transaktionsdetails:');
+      print('Transaktionsdetails: ');
       print('UserID: ${transaction.userId}');
       print('Betrag: ${transaction.amount}');
       print('Datum: ${transaction.date.toIso8601String()}');
