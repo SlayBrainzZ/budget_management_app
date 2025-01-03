@@ -1027,7 +1027,7 @@ class FirestoreService {
 
       if (categoryId != null) {
         // Von Sofia erstellt zur prüfung **********
-        final category = await getCategory(documentId, categoryId);
+        final category = await getCategoryV2(documentId, accountId, categoryId);
         if (category == null) {
           print("Kategorie konnte mit ID $categoryId nicht geladen werden.");
         } else {
