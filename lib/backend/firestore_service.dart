@@ -713,6 +713,114 @@ class FirestoreService {
     }
   }
 
+  Future<void> createDefaultCategoriesForAllAccounts(String userId) async {
+    final List<Map<String, dynamic>> defaultCategories = [
+      {'name': 'Einnahmen', 'icon': Icons.attach_money, 'color': Colors.green, 'budgetLimit': 0.0},
+      {'name': 'Unterhaltung', 'icon': Icons.movie, 'color': Colors.blue, 'budgetLimit': 0.0},
+      {'name': 'Lebensmittel', 'icon': Icons.restaurant, 'color': Colors.orange, 'budgetLimit': 0.0},
+      {'name': 'Haushalt', 'icon': Icons.home, 'color': Colors.teal, 'budgetLimit': 0.0},
+      {'name': 'Wohnen', 'icon': Icons.apartment, 'color': Colors.indigo, 'budgetLimit': 0.0},
+      {'name': 'Transport', 'icon': Icons.directions_car, 'color': Colors.purple, 'budgetLimit': 0.0},
+      {'name': 'Kleidung', 'icon': Icons.shopping_bag, 'color': Colors.pink, 'budgetLimit': 0.0},
+      {'name': 'Bildung', 'icon': Icons.school, 'color': Colors.amber, 'budgetLimit': 0.0},
+      {'name': 'Finanzen', 'icon': Icons.account_balance, 'color': Colors.lightGreen, 'budgetLimit': 0.0},
+      {'name': 'Gesundheit', 'icon': Icons.health_and_safety, 'color': Colors.red, 'budgetLimit': 0.0},
+    ];
+
+    try {
+      // Alle Bankkonten des Benutzers abrufen
+      final userBankAccountsRef = usersRef
+          .doc(userId)
+          .collection('bankAccounts');
+      final bankAccountsSnapshot = await userBankAccountsRef.get();
+
+      // Durch jedes Bankkonto des Benutzers iterieren
+      for (var accountDoc in bankAccountsSnapshot.docs) {
+        String accountId = accountDoc.id;  // Konto-ID des aktuellen Bankkontos
+
+        // Alle Standardkategorien für das Bankkonto erstellen
+        for (final categoryData in defaultCategories) {
+          Category category = Category(
+            userId: userId,
+            name: categoryData['name'],
+            budgetLimit: categoryData['budgetLimit'],
+            icon: categoryData['icon'],
+            color: categoryData['color'],
+            isDefault: true, // Kennzeichnet, dass es sich um eine Default-Kategorie handelt
+          );
+
+          // Überprüfen und Erstellen der Kategorie für jedes Konto
+          await createCategoryForAccount(userId, accountId, category);
+        }
+      }
+    } catch (e) {
+      print("Fehler beim Erstellen der Standardkategorien für alle Bankkonten: $e");
+    }
+  }
+
+// Methode zum Erstellen einer einzelnen Kategorie für alle Bankkonten eines Benutzers
+  Future<void> createCategoryForAllAccounts(String userId, Category category) async {
+    try {
+      // Alle Bankkonten des Benutzers abrufen
+      final userBankAccountsRef = usersRef
+          .doc(userId)
+          .collection('bankAccounts');
+      final bankAccountsSnapshot = await userBankAccountsRef.get();
+
+      // Durch jedes Bankkonto des Benutzers iterieren und die Kategorie für jedes Konto hinzufügen
+      for (var accountDoc in bankAccountsSnapshot.docs) {
+        String accountId = accountDoc.id;  // Konto-ID des aktuellen Bankkontos
+
+        // Überprüfen, ob die Kategorie schon existiert
+        final userCategoriesRef = usersRef
+            .doc(userId)
+            .collection('bankAccounts')
+            .doc(accountId)
+            .collection('Categories');
+
+        final query = await userCategoriesRef
+            .where('name', isEqualTo: category.name)
+            .where('isDefault', isEqualTo: true)
+            .get();
+
+        // Wenn die Kategorie nicht existiert, wird sie hinzugefügt
+        if (query.docs.isEmpty) {
+          final docRef = await userCategoriesRef.add(category.toMap());
+          await docRef.update({'id': docRef.id});
+          print("Kategorie '${category.name}' für Konto $accountId wurde erstellt.");
+        }
+      }
+    } catch (e) {
+      print("Fehler beim Erstellen der Kategorie '${category.name}' für alle Bankkonten: $e");
+    }
+  }
+
+  Future<void> createCategoryForAccount(String userId, String accountId, Category category) async {
+    try {
+      final userCategoriesRef = usersRef
+          .doc(userId)
+          .collection('bankAccounts')
+          .doc(accountId)
+          .collection('Categories');
+
+      // Überprüfen, ob die Kategorie schon existiert
+      final query = await userCategoriesRef
+          .where('name', isEqualTo: category.name)
+          .where('isDefault', isEqualTo: true)
+          .get();
+
+      // Wenn die Kategorie nicht existiert, wird sie hinzugefügt
+      if (query.docs.isEmpty) {
+        final docRef = await userCategoriesRef.add(category.toMap());
+        await docRef.update({'id': docRef.id});
+        print("Kategorie '${category.name}' für Konto $accountId wurde erstellt.");
+      }
+    } catch (e) {
+      print("Fehler beim Erstellen der Kategorie '${category.name}' für Konto $accountId: $e");
+    }
+  }
+
+
   //sortiert default nach oben und userdefined nach unten
   Future<List<Category>> getSortedUserCategories(String documentId) async {
     try {
@@ -742,6 +850,90 @@ class FirestoreService {
       return [];
     }
   }
+
+  Future<List<Category>> getSortedUserCategoriesV2(String documentId, String accountId) async {
+    try {
+      final userCategoriesRef = usersRef
+          .doc(documentId)
+          .collection('bankAccounts')
+          .doc(accountId)
+          .collection('Categories');
+
+      firestore.QuerySnapshot snapshot = await userCategoriesRef.get();
+
+      // Kategorien auslesen und sortieren
+      final categories = snapshot.docs.map((doc) {
+        try {
+          return Category.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+        } catch (e) {
+          print("Error parsing category: $e");
+          return null; // Handle gracefully
+        }
+      }).whereType<Category>().toList();
+
+      // Default-Kategorien zuerst sortieren
+      categories.sort((a, b) {
+        if (a.isDefault && !b.isDefault) return -1; // Default vor benutzerdefiniert
+        if (!a.isDefault && b.isDefault) return 1;
+        return 0; // Wenn beide gleich sind, Reihenfolge beibehalten
+      });
+
+      return categories;
+    } catch (e) {
+      print("Error getting user categories for account $accountId: $e");
+      return [];
+    }
+  }
+
+  Future<List<Category>> getSortedUserCategoriesV3(String userId) async {
+    try {
+      // Referenz auf die bankAccounts Collection des Nutzers
+      final bankAccountsRef = usersRef.doc(userId).collection('bankAccounts');
+
+      // Abrufen des ersten Bankkontos des Nutzers
+      final bankAccountsSnapshot = await bankAccountsRef.limit(1).get();
+
+      // Wenn kein Bankkonto vorhanden ist
+      if (bankAccountsSnapshot.docs.isEmpty) {
+        print("Kein Bankkonto gefunden.");
+        return [];
+      }
+
+      // Holen der accountId des ersten Bankkontos
+      String accountId = bankAccountsSnapshot.docs.first.id;
+
+      // Referenz auf die Kategorien dieses Bankkontos
+      final userCategoriesRef = bankAccountsRef
+          .doc(accountId)
+          .collection('Categories');
+
+      // Abrufen der Kategorien des ersten Bankkontos
+      firestore.QuerySnapshot snapshot = await userCategoriesRef.get();
+
+      // Kategorien auslesen und sortieren
+      final categories = snapshot.docs.map((doc) {
+        try {
+          return Category.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+        } catch (e) {
+          print("Error parsing category: $e");
+          return null; // Handle gracefully
+        }
+      }).whereType<Category>().toList();
+
+      // Default-Kategorien zuerst sortieren
+      categories.sort((a, b) {
+        if (a.isDefault && !b.isDefault) return -1; // Default vor benutzerdefiniert
+        if (!a.isDefault && b.isDefault) return 1;
+        return 0; // Wenn beide gleich sind, Reihenfolge beibehalten
+      });
+
+      return categories;
+    } catch (e) {
+      print("Error getting user categories: $e");
+      return [];
+    }
+  }
+
 
   Future<List<Category>> getDefaultCategories(String userId) async {
     try {
@@ -819,12 +1011,14 @@ class FirestoreService {
           .doc(documentId)
           .collection('bankAccounts')
           .doc(accountId);
+
       // Print detailed information about the transaction before adding it
-      print('Transaktionsdetails:');
+      print('Transaktionsdetails: ');
       print('UserID: ${transaction.userId}');
       print('Betrag: ${transaction.amount}');
       print('Datum: ${transaction.date.toIso8601String()}');
       print('KategorieID: ${transaction.categoryId}');
+      //print('Kategroeiname: ${transaction.categoryData!.name}');
       print('Typ: ${transaction.type}');
       print('Wichtigkeit: ${transaction.importance}');
       print('Notiz: ${transaction.note}');
@@ -832,6 +1026,15 @@ class FirestoreService {
       print('Map-Daten: ${transaction.toMap()}'); // Zeige die Map-Daten für die Transaktion
 
       if (categoryId != null) {
+        // Von Sofia erstellt zur prüfung **********
+        final category = await getCategoryV2(documentId, accountId, categoryId);
+        if (category == null) {
+          print("Kategorie konnte mit ID $categoryId nicht geladen werden.");
+        } else {
+          print("Geladene Kategorie: ${category.name}");
+          transaction.categoryData = category;
+        } // ************
+
         final categoryTransactionsRef = accountRef
             .collection('Categories')
             .doc(categoryId)
@@ -850,6 +1053,66 @@ class FirestoreService {
     }
   }
 
+  /* meins
+  Future<void> createTransactionV23(String documentId, String accountId, Transaction transaction, {String? categoryId}) async {
+    try {
+      final accountRef = usersRef
+          .doc(documentId)
+          .collection('bankAccounts')
+          .doc(accountId);
+
+      // Kategorie-Daten laden und verknüpfen
+
+      if (categoryId != null) {
+        final category = await getCategory(documentId, categoryId);
+        if (category == null) {
+          print("Kategorie konnte mit ID $categoryId nicht geladen werden.");
+        } else {
+          print("Geladene Kategorie: ${category.name}");
+          transaction.categoryData = category;
+        }
+      }
+
+      // Print detailed information about the transaction before adding it
+      print('Transaktionsdetails:');
+      print('UserID: ${transaction.userId}');
+      print('Betrag: ${transaction.amount}');
+      print('Datum: ${transaction.date.toIso8601String()}');
+      print('KategorieID: ${transaction.categoryId}');
+      if (transaction.categoryData != null) {
+        print('Kategoriename: ${transaction.categoryData!.name}');
+      } else {
+        print('Kategoriename: Keine Kategorie verknüpft.');
+      }
+      print('Typ: ${transaction.type}');
+      print('Wichtigkeit: ${transaction.importance}');
+      print('Notiz: ${transaction.note}');
+      print('KontoID: ${transaction.accountId}');
+      print('Map-Daten: ${transaction.toMap()}');
+
+      if (categoryId != null) {
+        final categoryTransactionsRef = accountRef
+            .collection('Categories')
+            .doc(categoryId)
+            .collection('Transactions');
+        firestore.DocumentReference docRef = await categoryTransactionsRef.add(transaction.toMap());
+        transaction.id = docRef.id;
+        await docRef.set(transaction.toMap());
+      } else {
+        final transactionsRef = accountRef.collection('Transactions');
+        firestore.DocumentReference docRef = await transactionsRef.add(transaction.toMap());
+        transaction.id = docRef.id;
+        await docRef.set(transaction.toMap());
+      }
+      print("Transaktion erfolgreich erstellt.");
+    } catch (e) {
+      print("Fehler beim Erstellen der Transaktion: $e");
+    }
+  }*/
+
+
+
+
   Future<List<Transaction>> getUserTransactionsV2(String documentId, String accountId) async {
     try {
       final transactionsRef = usersRef
@@ -860,7 +1123,13 @@ class FirestoreService {
 
       final snapshot = await transactionsRef.get();
       print('Transaktionen für Konto ${accountId}: ${snapshot.docs.map((doc) => doc.data()).toList()}');
-      print("Abgerufene Transaktionen: ${snapshot.docs.length}");
+      //print("Abgerufene Transaktionen: ${snapshot.docs.length}");
+      final transactions = snapshot.docs
+          .map((doc) => Transaction.fromMap(doc.data(), doc.id))
+          .toList();
+      for (var transaction in transactions) {
+        print(transaction.toPrettyString());
+      }
       return snapshot.docs
           .map((doc) => Transaction.fromMap(doc.data(), doc.id))
           .toList();

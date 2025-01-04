@@ -135,8 +135,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
       final userId = user.uid;
 
       // Erstellen und Laden der Kategorien
-      userCategories = FirestoreService().createDefaultCategories(userId).then((_) {
-        return FirestoreService().getSortedUserCategories(userId);
+      userCategories = FirestoreService().createDefaultCategoriesForAllAccounts(userId).then((_) {
+        return FirestoreService().getSortedUserCategoriesV3(userId);
       });
     } else {
       print("Kein Benutzer angemeldet.");
@@ -347,10 +347,10 @@ class _CategoryScreenState extends State<CategoryScreen> {
                     );
 
                     try {
-                      await FirestoreService().createCategory(userId, newCategory);
+                      await FirestoreService().createCategoryForAllAccounts(userId, newCategory);
 
                       setState(() {
-                        userCategories = FirestoreService().getSortedUserCategories(userId);
+                        userCategories = FirestoreService().getSortedUserCategoriesV3(userId);
                       });
 
                       Navigator.of(context).pop();
@@ -421,7 +421,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                     }
 
                     setState(() {
-                      userCategories = FirestoreService().getSortedUserCategories(user.uid);
+                      userCategories = FirestoreService().getSortedUserCategoriesV3(user.uid);
                     });
                     Navigator.of(context).pop();
                   },
@@ -466,7 +466,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                   await FirestoreService().deleteCategory(user.uid, category.id!);
 
                   setState(() {
-                    userCategories = FirestoreService().getSortedUserCategories(user.uid);
+                    userCategories = FirestoreService().getSortedUserCategoriesV3(user.uid);
                   });
                   Navigator.of(context).pop();
                 } catch (e) {

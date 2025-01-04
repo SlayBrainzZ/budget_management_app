@@ -47,6 +47,12 @@ void main() async {
       if (user != null) {
         print("User logged in: ${user.email}");
 
+        await FirestoreService().createUser(testUser.User(
+          userId: user.uid,
+          email: user.email!,
+          createdDate: DateTime.now(),
+        ));
+
         // Get user's bank accounts
         FirestoreService firestoreService = FirestoreService();
         List<BankAccount> accounts = await firestoreService.getUserBankAccounts2(user.uid);
