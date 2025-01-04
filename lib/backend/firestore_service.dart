@@ -1608,7 +1608,7 @@ class FirestoreService {
       netMap[monthKey] = cumulativeNetAmount;
 
       // Debug-Ausgabe
-      print("Monat: $monthKey, Einnahmen: $monthIncome, Ausgaben: $monthExpense, Kumuliertes Netto: $cumulativeNetAmount");
+      //print("Monat: $monthKey, Einnahmen: $monthIncome, Ausgaben: $monthExpense, Kumuliertes Netto: $cumulativeNetAmount");
     }
 
     print("Left calculateYearlySpendingByMonth2");
@@ -1974,7 +1974,7 @@ class FirestoreService {
     // Iterate through each day of the current month up to today
     for (int day = 1; day <= usableToday.day; day++) {
       DateTime currentDay = DateTime(usableToday.year, usableToday.month, day).subtract(Duration(microseconds: 1));
-      print("Der Tag innerhalb der iteration lautet: $currentDay");
+      //print("Der Tag innerhalb der iteration lautet: $currentDay");
       //print("Today Monat ist: ${currentDay.month}! Today Tag ist: ${currentDay.day}!");
 
       // Filter transactions for the current day
@@ -2018,12 +2018,12 @@ class FirestoreService {
       usableToday,
     );
 
-    print("Transaktionen der Woche: $transactions");
+    //print("Transaktionen der Woche: $transactions");
 
     // Iteriere durch die Tage von Montag bis heute
     for (int i = 0; i <= usableToday.difference(mondayOfWeek).inDays+1; i++) {
       DateTime currentDay = mondayOfWeek.add(Duration(days: i));
-      print("Der aktuelle Tag ist: $currentDay");
+      //print("Der aktuelle Tag ist: $currentDay");
 
       // Filtere Transaktionen für den aktuellen Tag
       List<Transaction> dayTransactions = transactions.where((transaction) {
