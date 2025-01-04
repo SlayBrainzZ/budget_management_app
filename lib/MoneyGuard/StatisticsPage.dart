@@ -16,6 +16,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
   String selectedAmountType = 'Gesamtbetrag';
 
   String selectedTimeCategory = 'Monat';
+  String selectedTimeImportance = 'Monat';
   String selectedYear = '2024'; // Standardwert für das Jahr
   String selectedMonth = 'Monat'; // Standardwert für den Monat
   final List<int> availableYears = List.generate(
@@ -24,8 +25,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   final ScrollController _scrollController = ScrollController();
   final FirestoreService _firestoreService = FirestoreService();
+  String selectedAccount = 'Gesamtübersicht'; // Standardmäßig "Gesamtübersicht"
 
-  List<LineChartBarData>? cachedLineChartData;
+
+  List<LineChartBarData>? cachedYearlyLineChartData;
+  List<double>? cachedImportantChartData;
   List<LineChartBarData>? cachedCategoryLineChartData;
 
   Map<String, LineChartData> chartCache = {};
@@ -191,7 +195,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
         // Zeige den Jahresverlauf
         if (chartCache.containsKey(chosenYear)) {
           setState(() {
-            cachedLineChartData = chartCache[chosenYear]?.lineBarsData;
+            cachedYearlyLineChartData = chartCache[chosenYear]?.lineBarsData;
           });
         } else {
           // Berechne die Jahresdaten
@@ -209,9 +213,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
 
           setState(() {
-            cachedLineChartData = [einnahmeDaten, ausgabeDaten, gesamtDaten];
+            cachedYearlyLineChartData = [einnahmeDaten, ausgabeDaten, gesamtDaten];
             chartCache[chosenYear] = LineChartData(
-              lineBarsData: cachedLineChartData!,
+              lineBarsData: cachedYearlyLineChartData!,
               gridData: FlGridData(show: true),
               borderData: FlBorderData(show: true),
               titlesData: FlTitlesData(),
@@ -223,7 +227,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
         // Zeige nur den Verlauf für den bestimmten Monat
         if (chartCache.containsKey('$chosenYear-$chosenMonth')) {
           setState(() {
-            cachedLineChartData =
+            cachedYearlyLineChartData =
                 chartCache['$chosenYear-$chosenMonth']?.lineBarsData;
           });
         } else {
@@ -242,9 +246,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
               Colors.blue, chosenYear, chosenMonth, "null", FlSpotlist3);
 
           setState(() {
-            cachedLineChartData = [einnahmeDaten, ausgabeDaten, gesamtDaten];
+            cachedYearlyLineChartData = [einnahmeDaten, ausgabeDaten, gesamtDaten];
             chartCache['$chosenYear-$chosenMonth'] = LineChartData(
-              lineBarsData: cachedLineChartData!,
+              lineBarsData: cachedYearlyLineChartData!,
               gridData: FlGridData(show: true),
               borderData: FlBorderData(show: true),
               titlesData: FlTitlesData(),
@@ -264,11 +268,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
 
   LineChartData get chartData {
-    if (cachedLineChartData == null) {
+    if (cachedYearlyLineChartData == null) {
       throw Exception("Daten müssen vorab geladen werden!");
     }
     return LineChartData(
-      lineBarsData: cachedLineChartData!,
+      lineBarsData: cachedYearlyLineChartData!,
       gridData: FlGridData(show: true),
       borderData: FlBorderData(show: true),
       titlesData: FlTitlesData(),
@@ -454,8 +458,32 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
 
+
+  void _updateDataForSelectedAccount() {
+    switch (selectedAccount) {
+      case 'Gesamtübersicht':
+        loadLineChartBarData(selectedYear, selectedMonth);
+        break;
+      case 'Konto 1':
+        loadLineChartBarDataForAccount('Konto 1');
+        break;
+      case 'Konto 2':
+        loadLineChartBarDataForAccount('Konto 2');
+        break;
+    }
+  }
+
+  Future<void> loadLineChartBarDataForAccount(String account) async {
+    // Implementiere hier die Logik zum Laden von Daten für das spezifische Konto
+    print('Daten für $account werden geladen.');
+    // Beispieldaten
+    // cachedYearlyLineChartData = await fetchDataForAccount(account);
+  }
+
+
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       body: SingleChildScrollView(
         child: Padding(
@@ -463,6 +491,46 @@ class _StatisticsPageState extends State<StatisticsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Statistiken für:',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  DropdownButton<String>(
+                    value: selectedAccount,
+                    items: [
+                      DropdownMenuItem(
+                        value: 'Gesamtübersicht',
+                        child: Text('Gesamtübersicht'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Konto 1',
+                        child: Text('Konto 1'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Konto 2',
+                        child: Text('Konto 2'),
+                      ),
+                    ],
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        selectedAccount = newValue!;
+                        _updateDataForSelectedAccount(); // Methode zum Aktualisieren der Daten
+                      });
+                    },
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+
               // Gesamtübersicht im Zeitraum (Jahr und Monat nebeneinander)
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
@@ -514,7 +582,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
               ),
               const SizedBox(height: 20),
               // Diagramm-Widget
-              cachedLineChartData == null
+              cachedYearlyLineChartData == null
                   ? Center(child: CircularProgressIndicator())
                   : Container(
                 width: double.infinity,
@@ -532,6 +600,83 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 ),
                 child: LineChart(chartData), // Diagramm anzeigen
               ),
+              const SizedBox(height: 40),
+
+              Row(
+                children: [
+                  const SizedBox(width: 30),
+                  Text(
+                    'Relevanz der Ausgabenverteilung:  ',
+                    style: TextStyle(fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black),
+                  ),
+                  const SizedBox(width: 20),
+                  GestureDetector(
+                    onTap: () => _showImportancePicker(context), // Klammer hinzufügen, um die Methode aufzurufen
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey),
+                      ),
+                      child: Text(
+                        selectedTimeImportance,
+                        style: TextStyle(fontSize: 16, color: Colors.black),
+                      ),
+                    ),
+                  ),
+
+
+                ],
+              ),
+              const SizedBox(height: 20),
+              cachedImportantChartData == [50.0,50.0]
+                  ? Center(child: CircularProgressIndicator())
+                  : Container(
+                width: double.infinity,
+                height: 300,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 45),
+                    Container(
+                      height: 220,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: PieChart(
+                        PieChartData(
+                            sections: [
+                              PieChartSectionData(title: "Dringend", value: 70, color: Colors.red),
+                              PieChartSectionData(title: "Nicht dringend",value: 30, color: Colors.blue)
+                            ]
+                        ),
+                        duration: Duration(milliseconds: 150), // Optional
+                        curve: Curves.linear, // Optional
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+
+
+
+
               const SizedBox(height: 40),
               // Kategorieübersicht (mit einem Picker zur Auswahl des Zeitraums)
               Row(
@@ -596,6 +741,38 @@ class _StatisticsPageState extends State<StatisticsPage> {
       ),
     );
   }
+  void _showImportancePicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          height: 220, // Höhe des Containers
+          child: CupertinoPicker(
+            backgroundColor: Colors.white,
+            itemExtent: 50.0, // Höhe jedes Elements
+            scrollController: FixedExtentScrollController(
+              initialItem: selectedTimeImportance == "Monat" ? 0 : 1, // Setzt den initialen Wert
+            ),
+            onSelectedItemChanged: (int index) {
+              setState(() {
+                selectedTimeImportance = index == 0 ? "Monat" : "Woche";
+                // Hier kannst du die Daten für "Relevanz der Ausgabenverteilung" neu laden
+                print('Zeitraum geändert: $selectedTimeImportance');
+              });
+            },
+            children: [
+              Center(
+                child: Text("Monat", style: TextStyle(fontSize: 18, color: Colors.black)),
+              ),
+              Center(
+                child: Text("Woche", style: TextStyle(fontSize: 18, color: Colors.black)),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   void _showCategoryPicker(BuildContext context) {
     showModalBottomSheet(
@@ -630,7 +807,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
       },
     );
   }
+
 }
+
 
 
   class CategoryStatWidget extends StatelessWidget {
@@ -654,7 +833,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
         return Container(
           padding: const EdgeInsets.all(12.0),
-          width: 450, // Responsive Anpassung
+          width: 410, // Responsive Anpassung
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(8),
