@@ -52,42 +52,17 @@ void main() async {
         List<BankAccount> accounts = await firestoreService.getUserBankAccounts2(user.uid);
 
         if (accounts.isNotEmpty) {
-          String? hardcodedAccountId = accounts[0].id;
+          for (var account in accounts) {
+            String? hardcodedAccountId = account.id;
 
-          // 1. Create one category
-          testCat.Category category = testCat.Category(
-            userId: user.uid,
-            name: "Nike",
-            budgetLimit: 999,
-            accountId: hardcodedAccountId,
-          );
-          String categoryId = await firestoreService.createCategoryV2(user.uid, hardcodedAccountId!, category);
-          print("Category created successfully on account $hardcodedAccountId");
-
-          // 2. Create one transaction with the created category
-          testTrans.Transaction transaction = testTrans.Transaction(
-            userId: user.uid,
-            amount: 100.0,
-            date: DateTime.now(),
-            type: 'expense',
-            importance: false,
-            categoryId: categoryId,
-            accountId: hardcodedAccountId,
-          );
-          await firestoreService.createTransactionV2(user.uid, hardcodedAccountId, transaction, categoryId: categoryId);
-          print("Transaction with category ${category.name} created successfully on account $hardcodedAccountId");
-
-          // 3. Create another transaction (without a category)
-          testTrans.Transaction transaction2 = testTrans.Transaction(
-            userId: user.uid,
-            amount: 50.0,
-            date: DateTime.now(),
-            type: 'income',
-            importance: false,
-            accountId: hardcodedAccountId,
-          );
-          await firestoreService.createTransactionV2(user.uid, hardcodedAccountId, transaction2);
-          print("Another transaction created successfully on account $hardcodedAccountId");
+            // Fetch all transactions (using the new function)
+            // Fetch all transactions (using the new function)
+            List<testTrans.Transaction> allTransactions = await firestoreService.getAllTransactionsV2(user.uid, hardcodedAccountId!);
+            print("All transactions on account $hardcodedAccountId:");
+            for (var transaction in allTransactions) {
+              print(transaction.toMap());
+            }
+          }
         } else {
           print("No bank accounts found for this user.");
         }
