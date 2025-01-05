@@ -52,15 +52,53 @@ void main() async {
         List<BankAccount> accounts = await firestoreService.getUserBankAccounts2(user.uid);
 
         if (accounts.isNotEmpty) {
-          for (var account in accounts) {
-            String? hardcodedAccountId = account.id;
+          // 1. Create 3 random transactions for all accounts
+          for (int i = 1; i <= 3; i++) {
+            for (var account in accounts) {
+              testTrans.Transaction transaction = testTrans.Transaction(
+                userId: user.uid,
+                amount: 100.0 * i,
+                date: DateTime.now(),
+                type: 'expense',
+                importance: false,
+                accountId: account.id!, // Assign the account ID
+              );
+              await firestoreService.createTransactionV2(user.uid, account.id!, transaction);
+              print("Transaction $i created successfully on account ${account.id}");
+            }
+          }
 
-            // Fetch all transactions (using the new function)
-            // Fetch all transactions (using the new function)
-            List<testTrans.Transaction> allTransactions = await firestoreService.getAllTransactionsV2(user.uid, hardcodedAccountId!);
-            print("All transactions on account $hardcodedAccountId:");
-            for (var transaction in allTransactions) {
-              print(transaction.toMap());
+          // 2. Create 3 random categories for all accounts
+          List<testCat.Category> createdCategories = []; // Store created categories
+          for (int i = 1; i <= 3; i++) {
+            for (var account in accounts) {
+              testCat.Category category = testCat.Category(
+                userId: user.uid,
+                name: "Category $i",
+                accountId: account.id!, // Assign the account ID
+              );
+              String categoryId = await firestoreService.createCategoryV2(user.uid, account.id!, category);
+              category.id = categoryId; // Assign the generated ID
+              createdCategories.add(category);
+              print("Category $i created successfully on account ${account.id}");
+            }
+          }
+
+          // 3. Create 3 transactions with random categories for all accounts
+          for (int i = 1; i <= 3; i++) {
+            for (var account in accounts) {
+              testCat.Category randomCategory = createdCategories[i % createdCategories.length];
+              testTrans.Transaction transaction = testTrans.Transaction(
+                userId: user.uid,
+                amount: 50.0 * i,
+                date: DateTime.now(),
+                type: 'expense',
+                importance: false,
+                categoryId: randomCategory.id, // Assign the category ID
+                accountId: account.id!, // Assign the account ID
+              );
+              await firestoreService.createTransactionV2(user.uid, account.id!, transaction, categoryId: randomCategory.id);
+              print("Transaction $i with category ${randomCategory.name} created successfully on account ${account.id}");
             }
           }
         } else {
