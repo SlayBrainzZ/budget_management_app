@@ -20,8 +20,7 @@ class _SavingPlanState extends State<SavingPlan> {
   double totalIncome = 0.0;
   List<Transaction> monthlyTransactionCategoryAll = [];
   List<double> remainingBudget = []; // Liste, um verbleibende Budgets für jede Kategorie zu speichern
-
-
+  Map<String, int> streakCounterDictionary = {};
 
   // Methode zum Laden der Kategorien und Benutzerinformationen
   Future<void> _loadUserAndCategories() async {
@@ -381,15 +380,28 @@ class _SavingPlanState extends State<SavingPlan> {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  statusMessage,
+                                  'x Monate in Folge',
                                   style: TextStyle(
-                                    fontSize: 12,
-                                    color: remaining < 0
-                                        ? Colors.red
-                                        : Colors.green,
+                                    fontSize: 14,
+                                    color: Colors.grey,
                                     fontFamily: 'Roboto',
                                   ),
                                 ),
+                                /*
+                                Text(
+                                  remaining < 0
+                                      ? 'Budget um ${(remaining * -1).toStringAsFixed(2)}€ überschritten'
+                                      : remaining == 0
+                                      ? "Budget optimal verwendet"
+                                      : '${remaining.toStringAsFixed(2)}€ von ${category.budgetLimit?.toStringAsFixed(2)}€ verfügbar',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: remaining < 0 ? Colors.red : Colors.green,
+                                    fontFamily: 'Roboto',
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                 */
                               ],
                             ),
                           ],
@@ -398,14 +410,40 @@ class _SavingPlanState extends State<SavingPlan> {
                         const SizedBox(height: 8),
 
                         // Anzeige der verbleibenden Budgetanzeige
-                        Text(
-                          '${remaining.toStringAsFixed(2)}€ von ${category.budgetLimit?.toStringAsFixed(2)}€ verfügbar',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: remaining < 0 ? Colors.red : Colors.green,
-                            fontFamily: 'Roboto',
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                remaining < 0
+                                    ? 'Budget um ${(remaining * -1).toStringAsFixed(2)}€ überschritten'
+                                    : remaining == 0
+                                    ? "Budget optimal verwendet"
+                                    : '${remaining.toStringAsFixed(2)}€ von ${category.budgetLimit?.toStringAsFixed(2)}€ verfügbar',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: remaining < 0 ? Colors.red : Colors.green,
+                                  fontFamily: 'Roboto',
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              statusMessage,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: remaining < 0
+                                    ? Colors.red
+                                    : Colors.green,
+                                fontFamily: 'Roboto',
+                              ),
+                            ),
+                          ],
                         ),
+
+
+
 
                         const SizedBox(height: 8),
 

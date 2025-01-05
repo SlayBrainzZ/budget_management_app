@@ -2,6 +2,7 @@ import 'package:budget_management_app/MoneyGuard/transaction.dart';
 import 'package:flutter/material.dart';
 import 'package:budget_management_app/backend/firestore_service.dart';
 import 'package:budget_management_app/backend/Transaction.dart';
+import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:budget_management_app/backend/Category.dart';
 import 'package:budget_management_app/backend/BankAccount.dart';
@@ -114,13 +115,19 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _fetchTransactions();
-    _fetchCategories();
+    //_fetchCategories();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  String _formatDate(DateTime date) {
+    final DateFormat dateFormat = DateFormat('dd.MM.yyyy');
+    final DateFormat timeFormat = DateFormat('HH:mm');
+    return '${dateFormat.format(date)} um ${timeFormat.format(date)}';
   }
 
   Future<void> _fetchTransactions() async {
@@ -148,23 +155,37 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
         // Reguläre Transaktionen abrufen
         List<Transaction> accountTransactions = await firestoreService.getUserTransactionsV2(userId, account.id!);
         for (var transaction in accountTransactions) {
+          /*
           if (transaction.categoryId != null) {
-            final category = await firestoreService.getCategory(userId, transaction.categoryId!);
+            final category = await firestoreService.getCategoryV2(
+              userId,
+              transaction.accountId!,
+              transaction.categoryId!,
+            );
             transaction.categoryData = category;
-          }
+            print('Jetzt Transaktion: ${transaction.id}, Kategorie: ${transaction.categoryId}, ${transaction.categoryData?.name}');
+
+          }*/
           transaction.bankAccount = account;
           transactions.add({'type': 'regular', 'data': transaction});
         }
 
-        // Importierte Transaktionen abrufen und BankAccount verknüpfen
+        // Importierte Transaktionen abrufen und verknüpfen
         List<ImportedTransaction> importedTransactions =
         await firestoreService.getImportedTransactionsV2(userId, account.id!);
         for (var importedTransaction in importedTransactions) {
-          importedTransaction.accountId = account.id; // Konto zuweisen
+          importedTransaction.accountId = account.id; // Konto-ID zuweisen
           importedTransaction.linkedAccount = account; // BankAccount verknüpfen
           transactions.add({'type': 'imported', 'data': importedTransaction});
         }
       }
+
+      // Transaktionen nach Datum sortieren
+      transactions.sort((a, b) {
+        final dateA = a['data'].date as DateTime;
+        final dateB = b['data'].date as DateTime;
+        return dateB.compareTo(dateA); // Absteigend sortieren
+      }); ///
 
       setState(() {
         dailyTransactions = transactions;
@@ -178,30 +199,17 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
     }
   }
 
-
-
-  Future<void> _fetchCategories() async {
-    try {
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser == null) {
-        throw Exception('Kein Benutzer angemeldet.');
-      }
-
-      final firestoreService = FirestoreService();
-      final userId = currentUser.uid;
-
-      final userCategories = await firestoreService.getUserCategories(userId);
-
-      setState(() {
-        categories = userCategories; // Vollständige Kategorie-Objekte speichern
-        selectedCategories = List.from(userCategories); // Standardmäßig alle wählen
-      });
-
-      _fetchTransactions(); // Lade Transaktionen basierend auf allen Kategorien
-    } catch (e) {
-      print('Fehler beim Abrufen der Kategorien: $e');
+  Future<List<Category>> _fetchSortedCategories() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      throw Exception('Kein Benutzer angemeldet.');
     }
+    final userId = currentUser.uid;
+    final firestoreService = FirestoreService();
+
+    return await firestoreService.getSortedUserCategoriesV3(userId);
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -274,127 +282,26 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
     required List<T> selectedItems,
     required Function(List<T>) onConfirm,
   }) {
-    return InkWell(
-      onTap: () async {
-        final List<T>? result = await showDialog<List<T>>(
-          context: context,
-          builder: (context) {
-            List<T> tempSelected = List.from(selectedItems);
-            final bool isCategory = items is List<Category>;
-
-            return StatefulBuilder(
-              builder: (context, setState) {
-                final bool isAllSelected = tempSelected.length == items.length;
-
-                void toggleAllSelection(bool isSelected) {
-                  setState(() {
-                    if (isSelected) {
-                      tempSelected = List.from(items); // Alle auswählen
-                    } else {
-                      tempSelected.clear(); // Alle abwählen
-                    }
-                  });
-                }
-
-                return AlertDialog(
-                  title: Text(title),
-                  content: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        CheckboxListTile(
-                          value: isAllSelected,
-                          title: Text("Alle"),
-                          onChanged: (isChecked) {
-                            toggleAllSelection(isChecked == true);
-                          },
-                        ),
-                        ...items.map((item) {
-                          final bool isSelected = tempSelected.contains(item);
-
-                          return CheckboxListTile(
-                            value: isSelected,
-                            title: Row(
-                              children: [
-                                if (isCategory)
-                                  Icon(
-                                    (item as Category).icon ?? Icons.category,
-                                    color: item.color ?? Colors.grey,
-                                  ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    isCategory
-                                        ? (item as Category).name
-                                        : item.toString(),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            onChanged: (isChecked) {
-                              setState(() {
-                                if (isChecked == true) {
-                                  tempSelected.add(item);
-                                } else {
-                                  tempSelected.remove(item);
-                                }
-                              });
-                            },
-                          );
-                        }).toList(),
-                      ],
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      child: const Text("Abbrechen"),
-                      onPressed: () {
-                        Navigator.pop(context, null);
-                      },
-                    ),
-                    ElevatedButton(
-                      child: const Text("Bestätigen"),
-                      onPressed: () {
-                        Navigator.pop(context, tempSelected);
-                      },
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-        );
-
-        if (result != null) {
-          onConfirm(result);
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              selectedItems.isEmpty
-                  ? title
-                  : (selectedItems.length == items.length
-                  ? 'Alle' // Zeige "Alle" an, wenn alle Kategorien ausgewählt sind
-                  : selectedItems
-                  .map((e) => e is Category ? e.name : e.toString())
-                  .join(', ')),
-              style: const TextStyle(color: Colors.black),
-              overflow: TextOverflow.ellipsis,
-            ),
-            const Icon(Icons.arrow_drop_down, color: Colors.grey),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(color: Colors.black),
+            overflow: TextOverflow.ellipsis,
+          ),
+          const Icon(Icons.arrow_drop_down, color: Colors.grey),
+        ],
       ),
     );
   }
+
 
   Widget _buildDailyTransactionList() {
     if (dailyTransactions.isEmpty) {
@@ -419,61 +326,65 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
           final bankAccount = transaction.bankAccount;
 
           return ListTile(
-            leading: _buildLeadingIcon(transaction.type),
-            title: Row(
-              children: [
-                if (category != null) ...[
-                  Icon(
-                    category.icon ?? Icons.category,
-                    color: category.color ?? Colors.grey,
-                    size: 24,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      category.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                      overflow: TextOverflow.ellipsis,
+              leading: _buildLeadingIcon(transaction.type),
+              title: Row(
+                children: [
+                  if (category != null) ...[
+                    Icon(
+                      category.icon ?? Icons.category,
+                      color: category.color ?? Colors.grey,
+                      size: 24,
                     ),
-                  ),
-                ] else
-                  const Text(
-                    'Keine Kategorie',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
-                  ),
-              ],
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(transaction.note ?? 'Keine Notiz'),
-                if (bankAccount != null)
-                  Row(
-                    children: [
-                      _buildAccountLogo(bankAccount.accountType),
-                      const SizedBox(width: 10),
-                      Text(
-                        '${bankAccount.accountName}',
-                        style: const TextStyle(color: Colors.black, fontSize: 13),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        category.name,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ],
-                  )
-                else
-                  const Text('Konto: Unbekannt', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                Text(
+                    ),
+                  ] else
+                    const Text(
+                      'Keine Kategorie',
+                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+                    ),
+                ],
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(transaction.note ?? 'Keine Notiz'),
+                  if (bankAccount != null)
+                    Row(
+                      children: [
+                        _buildAccountLogo(bankAccount.accountType),
+                        const SizedBox(width: 10),
+                        Text(
+                          '${bankAccount.accountName}',
+                          style: const TextStyle(color: Colors.black, fontSize: 13),
+                        ),
+                      ],
+                    )
+                  else
+                    const Text('Konto: Unbekannt', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  /*Text(
                   'Datum: ${transaction.date.toLocal().toIso8601String()}',
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
-            ),
-            trailing: Text(
-              '${transaction.amount.toStringAsFixed(2)} €',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: transaction.type == 'Einnahme' ? Colors.green : Colors.red,
+                ),*/
+                  Text(
+                    'Datum: ${_formatDate(transaction.date)}',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
               ),
-            ),
+              trailing: Text(
+                '${transaction.amount.toStringAsFixed(2)} €',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: transaction.type == 'Einnahme' ? Colors.green : Colors.red,
+                ),
+              ),
               onTap: () {
                 Navigator.push(
                   context,
@@ -487,7 +398,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
           );
         } else if (type == 'imported') {
           final importedTransaction = data as ImportedTransaction;
-          final bankAccount = importedTransaction.linkedAccount; // Verwende den verknüpften BankAccount
+          final bankAccount = importedTransaction.linkedAccount;
 
           return ListTile(
             leading: _buildLeadingIcon(importedTransaction.inflow > 0 ? 'Einnahme' : 'Ausgabe'),
@@ -511,26 +422,106 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                       ),
                     ],
                   ),
-                Text(
+                /*Text(
                   'Datum: ${importedTransaction.date.toLocal().toIso8601String()}',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),*/
+                Text(
+                  'Datum: ${_formatDate(importedTransaction.date)}',
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),
-            trailing: Text(
-              '${importedTransaction.amount.toStringAsFixed(2)} €',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: importedTransaction.inflow > 0 ? Colors.green : Colors.red,
-              ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Imp',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 200), // Großer Abstand zwischen "Imp" und Betrag
+                Text(
+                  '${importedTransaction.amount.toStringAsFixed(2)} €',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: importedTransaction.inflow > 0 ? Colors.green : Colors.red,
+                  ),
+                ),
+              ],
             ),
+            onTap: () {
+              _showCategoryAssignDialog(context, importedTransaction);
+            },
           );
         }
 
         return SizedBox.shrink();
       },
     );
+  }
+
+  Future<void> _showCategoryAssignDialog(
+      BuildContext context, ImportedTransaction transaction) async {
+    List<Category> categories = await _fetchSortedCategories();
+    Category? selectedCategory;
+
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Kategorie zuweisen'),
+          content: DropdownButton<Category>(
+            isExpanded: true,
+            value: selectedCategory,
+            hint: const Text('Kategorie auswählen'),
+            items: categories.map((category) {
+              return DropdownMenuItem<Category>(
+                value: category,
+                child: Row(
+                  children: [
+                    Icon(
+                      category.icon ?? Icons.category,
+                      color: category.color ?? Colors.grey,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(category.name),
+                  ],
+                ),
+              );
+            }).toList(),
+            onChanged: (Category? newValue) {
+              setState(() {
+                selectedCategory = newValue;
+              });
+            },
+          ),
+          actions: [
+            TextButton(
+              child: const Text('Abbrechen'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            ElevatedButton(
+              child: const Text('Speichern'),
+              onPressed: () async {
+                if (selectedCategory != null) {
+                  // Hier könntest du die Kategorie der Transaktion zuweisen
+                  // await _assignCategoryToTransaction(transaction, selectedCategory!);
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+
+    // Aktualisiere die Transaktionsliste nach dem Speichern
+    _fetchTransactions();
   }
 
 

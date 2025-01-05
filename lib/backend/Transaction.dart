@@ -86,5 +86,22 @@ class Transaction {
       accountId: data['accountId'],
     )..id = documentId;
   }
+
+  String toPrettyString() {
+    return '''
+Transaction Details:
+ID: ${id ?? "N/A"}
+User ID: $userId
+Amount: $amount
+Date: ${date.toIso8601String()}
+Category ID: ${categoryId ?? "N/A"}
+Type: $type
+Importance: $importance
+Note: ${note ?? "N/A"}
+Account ID: ${accountId ?? "N/A"}
+Category Data: ${categoryData?.toString() ?? "N/A"}
+Bank Account: ${bankAccount?.toString() ?? "N/A"}
+''';
+  }
 }
 

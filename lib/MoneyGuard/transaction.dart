@@ -1,3 +1,4 @@
+import 'package:budget_management_app/MoneyGuard/dateButton.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
@@ -61,7 +62,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
-        final userCategories = await _firestoreService.getUserCategories(user.uid);
+        final userCategories = await _firestoreService.getSortedUserCategoriesV3(user.uid);
         final userBankAccounts = await _firestoreService.getUserBankAccounts(user.uid);
 
         setState(() {
@@ -145,10 +146,10 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     if (widget.transaction == null) return;
 
     _firestoreService
-        .deleteTransaction(_userId!, widget.transaction!.id!)
+        .deleteTransactionV2(_userId!, _selectedAccount!, widget.transaction!.id!)
         .then((_) {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => MyHomePage(title: 'MoneyGuard')),
+        MaterialPageRoute(builder: (context) => MyApp()),
             (Route<dynamic> route) => false,
       );
     });
