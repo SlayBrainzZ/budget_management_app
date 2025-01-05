@@ -241,14 +241,15 @@ class FirestoreService {
   /// TEST PHASE!
   /// TEST PHASE!
 
-  Future<void> importCsvTransactionsV2(String userId, String accountId) async {
+  Future<int> importCsvTransactionsV2(String userId, String accountId) async {
+    int importedCount = 0;
     try {
       print("Select a CSV file for import...");
       List<Map<String, dynamic>> csvData = await pickAndReadCsvWeb();
 
       if (csvData.isEmpty) {
         print("No data found in the CSV file.");
-        return;
+        //return;
       }
 
       List<ImportedTransaction> transactions = convertCsvDataToImportedTransactionsV2(csvData, userId, accountId);
@@ -257,6 +258,7 @@ class FirestoreService {
 
       for (var transaction in transactions) {
         await createImportedTransactionV2(userId, accountId, transaction);
+        importedCount++;
         print("Saved transaction: ${transaction.toMap()}");
       }
 
@@ -264,6 +266,7 @@ class FirestoreService {
     } catch (e) {
       print("Error importing transactions: $e");
     }
+    return importedCount;
   }
 
 // Function to convert CSV data into ImportedTransactions (V2)
