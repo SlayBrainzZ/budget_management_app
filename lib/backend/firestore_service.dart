@@ -850,6 +850,39 @@ class FirestoreService {
     }
   }
 
+  Future<List<Transaction>> getAllTransactionsV2(String documentId, String accountId) async {
+    List<Transaction> allTransactions = [];
+
+    try {
+      // 1. Fetch transactions outside categories
+      final transactionsRef = usersRef
+          .doc(documentId)
+          .collection('bankAccounts')
+          .doc(accountId)
+          .collection('Transactions');
+      final snapshot = await transactionsRef.get();
+      allTransactions.addAll(snapshot.docs.map((doc) => Transaction.fromMap(doc.data(), doc.id)).toList());
+
+      // 2. Fetch transactions within categories
+      final categoriesRef = usersRef
+          .doc(documentId)
+          .collection('bankAccounts')
+          .doc(accountId)
+          .collection('Categories');
+      final categoriesSnapshot = await categoriesRef.get();
+
+      for (var categoryDoc in categoriesSnapshot.docs) {
+        final categoryTransactionsRef = categoriesRef.doc(categoryDoc.id).collection('Transactions');
+        final categoryTransactionsSnapshot = await categoryTransactionsRef.get();
+        allTransactions.addAll(categoryTransactionsSnapshot.docs.map((doc) => Transaction.fromMap(doc.data(), doc.id)).toList());
+      }
+    } catch (e) {
+      print("Error fetching all transactions: $e");
+    }
+
+    return allTransactions;
+  }
+
   Future<List<Transaction>> getUserTransactionsV2(String documentId, String accountId) async {
     try {
       final transactionsRef = usersRef
