@@ -1124,6 +1124,7 @@ class FirestoreService {
           .collection('bankAccounts')
           .doc(accountId)
           .collection('Transactions');
+
       final snapshot = await transactionsRef.get();
       allTransactions.addAll(snapshot.docs.map((doc) => Transaction.fromMap(doc.data(), doc.id)).toList());
       // 2. Fetch transactions within categories

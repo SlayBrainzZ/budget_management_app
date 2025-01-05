@@ -153,9 +153,9 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
 
       for (final account in filteredBankAccounts) {
         // Reguläre Transaktionen abrufen
-        List<Transaction> accountTransactions = await firestoreService.getUserTransactionsV2(userId, account.id!);
+        List<Transaction> accountTransactions = await firestoreService.getAllTransactionsV2(userId, account.id!);
         for (var transaction in accountTransactions) {
-          /*
+
           if (transaction.categoryId != null) {
             final category = await firestoreService.getCategoryV2(
               userId,
@@ -165,7 +165,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
             transaction.categoryData = category;
             print('Jetzt Transaktion: ${transaction.id}, Kategorie: ${transaction.categoryId}, ${transaction.categoryData?.name}');
 
-          }*/
+          }
           transaction.bankAccount = account;
           transactions.add({'type': 'regular', 'data': transaction});
         }
@@ -207,7 +207,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
     final userId = currentUser.uid;
     final firestoreService = FirestoreService();
 
-    return await firestoreService.getSortedUserCategoriesV3(userId);
+    return await firestoreService.getSortedUserCategories(userId);
   }
 
 
