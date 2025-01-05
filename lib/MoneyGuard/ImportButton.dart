@@ -168,7 +168,7 @@ class ImportButton extends StatelessWidget {
                       );
 
                       // Importiere die Transaktionen
-                      await firestoreService.importCsvTransactionsV2(
+                      int importedCount = await firestoreService.importCsvTransactionsV2(
                         userId,
                         selectedAccount!,
                       );
@@ -176,10 +176,27 @@ class ImportButton extends StatelessWidget {
                       // Schließe das Ladefenster und Dialog
                       Navigator.pop(context);
 
-                      // Rufe das Callback auf, wenn der Import abgeschlossen ist
-                      onImportCompleted(); // Dies lädt den Bildschirm neu
-                      Navigator.pop(context); // Schließt das Kontoauswahl-Dialog
-                    } else {
+                      if (importedCount > 0) {
+                        // Erfolgsmeldung und Callback
+                        onImportCompleted();
+                        Navigator.pop(context); // Schließt das Kontoauswahl-Dialog
+                      } else {
+                        // Zeige eine Fehlermeldung an, wenn nichts importiert wurde
+                        showDialog(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: Text('Keine Transaktionen importiert'),
+                            content: Text('Die CSV-Datei enthält keine geeigneten Transaktionen.'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: Text('Schließen'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    }  else {
                       print("Fehler: Kein Benutzer angemeldet oder kein Konto ausgewählt.");
                     }
                   },
