@@ -415,7 +415,10 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
                     } else {
                       widget.onAccountCreated(accountData);
                     }
-
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => CategoryScreen()),
+                    );
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
