@@ -471,20 +471,30 @@ class FirestoreService {
   /// TEST PHASE!
   /// TEST PHASE!
 
-  Future<String> createCategoryV2(String documentId, String accountId, Category category) async {
+  Future<void> createCategoryV2(String documentId, Category category) async {
     try {
-      final userCategoriesRef = usersRef
-          .doc(documentId)
-          .collection('bankAccounts')
-          .doc(accountId)
-          .collection('Categories');
+      // 1. Generiere eine neue categoryId
+      final categoryId = usersRef.doc(documentId).collection('Categories').doc().id;
 
-      final docRef = await userCategoriesRef.add(category.toMap());
-      await docRef.update({'id': docRef.id});
-      return docRef.id;
+      // 2. Hole alle Bankkonten des Benutzers
+      final accountsRef = usersRef.doc(documentId).collection('bankAccounts');
+      final snapshot = await accountsRef.get();
+      List<BankAccount> accounts = snapshot.docs.map((doc) => BankAccount.fromMap(doc.data(), doc.id)).toList();
+
+      // 3. Erstelle die Kategorie mit der gleichen categoryId für jedes Konto
+      for (var account in accounts) {
+        final userCategoriesRef = usersRef
+            .doc(documentId)
+            .collection('bankAccounts')
+            .doc(account.id)
+            .collection('Categories')
+            .doc(categoryId); // Use the generated categoryId
+
+        await userCategoriesRef.set(category.toMap());
+        print("Kategorie ${category.name} mit ID $categoryId erfolgreich unter Konto-ID ${account.id} erstellt");
+      }
     } catch (e) {
-      print("Error creating category: $e");
-      rethrow;
+      print("Fehler beim Erstellen der Kategorie auf allen Konten mit der gleichen ID: $e");
     }
   }
 
