@@ -483,6 +483,7 @@ class FirestoreService {
 
       // 3. Erstelle die Kategorie mit der gleichen categoryId für jedes Konto
       for (var account in accounts) {
+        category.accountId = account.id;
         final userCategoriesRef = usersRef
             .doc(documentId)
             .collection('bankAccounts')
@@ -1401,6 +1402,7 @@ class FirestoreService {
           .doc(accountId)
           .collection('Transactions')
           .doc(transactionId);
+
 
       final docSnapshot = await userTransactionsRef.get();
       if (!docSnapshot.exists) {

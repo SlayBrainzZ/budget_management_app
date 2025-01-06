@@ -51,8 +51,8 @@ void main() async {
           userId: user.uid,
           email: user.email!,
           createdDate: DateTime.now(),
-        ));
-
+        ));}
+        /*
         // Get user's bank accounts
         FirestoreService firestoreService = FirestoreService();
         List<BankAccount> accounts = await firestoreService.getUserBankAccounts2(user.uid);
@@ -110,7 +110,7 @@ void main() async {
         } else {
           print("No bank accounts found for this user.");
         }
-      } else {
+      } */else {
         print("No user logged in. Please log in.");
       }
     });
