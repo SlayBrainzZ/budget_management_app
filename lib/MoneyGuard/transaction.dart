@@ -37,7 +37,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadUserAndData();
+    //_loadUserAndData();
 
     if (widget.transaction != null) {
       final transaction = widget.transaction!;
@@ -54,6 +54,8 @@ class _AddTransactionPageState extends State<AddTransactionPage>
         _tabController.index = 0;
       }
     }
+
+    _loadUserAndData();
 
   }
 

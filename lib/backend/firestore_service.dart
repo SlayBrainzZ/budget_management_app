@@ -519,24 +519,43 @@ class FirestoreService {
       final snapshot = await accountsRef.get();
       List<BankAccount> accounts = snapshot.docs.map((doc) => BankAccount.fromMap(doc.data(), doc.id)).toList();
 
-      // 3. Für jedes Bankkonto die Standardkategorien mit createCategoryV2 erstellen
-      for (final categoryData in defaultCategories) {
-        Category category = Category(
-          userId: userId,
-          name: categoryData['name'],
-          budgetLimit: categoryData['budgetLimit'],
-          icon: categoryData['icon'],
-          color: categoryData['color'],
-          isDefault: true, // Kennzeichnet, dass es sich um eine Default-Kategorie handelt
-        );
+      // 3. Iteriere durch jedes Konto und überprüfe, ob Standardkategorien existieren
+      for (var account in accounts) {
+        final userCategoriesRef = usersRef
+            .doc(userId)
+            .collection('bankAccounts')
+            .doc(account.id)
+            .collection('Categories');
 
-        // createCategoryV2 wird für jede Standardkategorie aufgerufen
-        await createCategoryV2(userId, category);
+        for (final categoryData in defaultCategories) {
+          final query = await userCategoriesRef
+              .where('name', isEqualTo: categoryData['name'])
+              .where('isDefault', isEqualTo: true)
+              .get();
+
+          // Wenn die Kategorie noch nicht existiert, erstelle sie
+          if (query.docs.isEmpty) {
+            Category category = Category(
+              userId: userId,
+              name: categoryData['name'],
+              budgetLimit: categoryData['budgetLimit'],
+              icon: categoryData['icon'],
+              color: categoryData['color'],
+              isDefault: true, // Kennzeichnet, dass es sich um eine Default-Kategorie handelt
+            );
+
+            // Kategorie erstellen
+            await createCategoryV2(userId, category);
+          } else {
+            print("Kategorie '${categoryData['name']}' existiert bereits für Konto '${account.id}'");
+          }
+        }
       }
     } catch (e) {
       print("Fehler beim Erstellen der Standardkategorien: $e");
     }
   }
+
 
   Future<List<Category>> getUserCategoriesV2(String documentId, String accountId) async {
     try {
@@ -574,7 +593,7 @@ class FirestoreService {
       return null;
     }
   }
-
+/*
   Future<void> updateCategoryV2(String documentId, String accountId, String categoryId, Category category) async {
     try {
       final userCategoriesRef = usersRef
@@ -595,8 +614,38 @@ class FirestoreService {
     } catch (e) {
       print("Error updating category: $e");
     }
+  }*/
+
+  Future<void> updateCategoryV2(String documentId, String categoryId, Category category) async {
+    try {
+      // 1. Hole alle Bankkonten des Benutzers
+      final accountsRef = usersRef.doc(documentId).collection('bankAccounts');
+      final snapshot = await accountsRef.get();
+      List<BankAccount> accounts = snapshot.docs.map((doc) => BankAccount.fromMap(doc.data(), doc.id)).toList();
+
+      // 2. Aktualisiere die Kategorie in jedem Konto
+      for (var account in accounts) {
+        final userCategoriesRef = usersRef
+            .doc(documentId)
+            .collection('bankAccounts')
+            .doc(account.id)
+            .collection('Categories')
+            .doc(categoryId);
+
+        final docSnapshot = await userCategoriesRef.get();
+        if (docSnapshot.exists) {
+          await userCategoriesRef.update(category.toMap());
+          print("Kategorie ${category.name} mit ID $categoryId erfolgreich unter Konto-ID ${account.id} aktualisiert");
+        } else {
+          print("Kategorie mit ID $categoryId nicht unter Konto-ID ${account.id} gefunden.");
+        }
+      }
+    } catch (e) {
+      print("Fehler beim Aktualisieren der Kategorie in allen Konten: $e");
+    }
   }
 
+/*
   Future<void> deleteCategoryV2(String documentId, String accountId, String categoryId) async {
     try {
       final userCategoriesRef = usersRef
@@ -609,7 +658,36 @@ class FirestoreService {
     } catch (e) {
       print("Error deleting category: $e");
     }
+  }*/
+  Future<void> deleteCategoryV2(String documentId, String categoryId) async {
+    try {
+      // 1. Hole alle Bankkonten des Benutzers
+      final accountsRef = usersRef.doc(documentId).collection('bankAccounts');
+      final snapshot = await accountsRef.get();
+      List<BankAccount> accounts = snapshot.docs.map((doc) => BankAccount.fromMap(doc.data(), doc.id)).toList();
+
+      // 2. Lösche die Kategorie aus jedem Konto
+      for (var account in accounts) {
+        final userCategoriesRef = usersRef
+            .doc(documentId)
+            .collection('bankAccounts')
+            .doc(account.id)
+            .collection('Categories')
+            .doc(categoryId);
+
+        final categoryDoc = await userCategoriesRef.get();
+        if (categoryDoc.exists) {
+          await userCategoriesRef.delete();
+          print("Kategorie mit ID $categoryId erfolgreich unter Konto-ID ${account.id} gelöscht");
+        } else {
+          print("Kategorie mit ID $categoryId nicht unter Konto-ID ${account.id} gefunden.");
+        }
+      }
+    } catch (e) {
+      print("Fehler beim Löschen der Kategorie in allen Konten: $e");
+    }
   }
+
 
   /// TEST PHASE!
   /// TEST PHASE!

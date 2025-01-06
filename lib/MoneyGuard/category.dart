@@ -415,7 +415,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
                     if (category.userId != "system") {
                       // Benutzerdefinierte Kategorien in Firestore aktualisieren
-                      await FirestoreService().updateCategory(user.uid, category);
+                      await FirestoreService().updateCategoryV2(user.uid, category.id!, category);
                     } else {
                       // Standardkategorien: Budgetlimit aktualisieren
                       await FirestoreService()
@@ -465,7 +465,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 }
 
                 try {
-                  await FirestoreService().deleteCategory(user.uid, category.id!);
+                  await FirestoreService().deleteCategoryV2(user.uid, category.id!);
 
                   setState(() {
                     userCategories = FirestoreService().getSortedUserCategoriesV3(user.uid);

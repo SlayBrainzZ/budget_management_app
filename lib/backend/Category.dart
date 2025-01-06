@@ -23,7 +23,7 @@ class Category {
     this.budgetLimit,
     this.icon,
     this.color,
-    this.isDefault = true,  // Default is false for user-defined categories
+    this.isDefault = false,  // Default is false for user-defined categories
     this.accountId, // Optional account link
   });
 
