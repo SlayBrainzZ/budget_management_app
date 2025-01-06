@@ -207,7 +207,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
     final userId = currentUser.uid;
     final firestoreService = FirestoreService();
 
-    return await firestoreService.getSortedUserCategories(userId);
+    return await firestoreService.getSortedUserCategoriesV3(userId);
   }
 
 

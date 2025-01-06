@@ -498,6 +498,46 @@ class FirestoreService {
     }
   }
 
+  Future<void> createDefaultCategoriesV2(String userId) async {
+    try {
+      // 1. Definiere die Standardkategorien
+      final List<Map<String, dynamic>> defaultCategories = [
+        {'name': 'Einnahmen', 'icon': Icons.attach_money, 'color': Colors.green, 'budgetLimit': 0.0},
+        {'name': 'Unterhaltung', 'icon': Icons.movie, 'color': Colors.blue, 'budgetLimit': 0.0},
+        {'name': 'Lebensmittel', 'icon': Icons.restaurant, 'color': Colors.orange, 'budgetLimit': 0.0},
+        {'name': 'Haushalt', 'icon': Icons.home, 'color': Colors.teal, 'budgetLimit': 0.0},
+        {'name': 'Wohnen', 'icon': Icons.apartment, 'color': Colors.indigo, 'budgetLimit': 0.0},
+        {'name': 'Transport', 'icon': Icons.directions_car, 'color': Colors.purple, 'budgetLimit': 0.0},
+        {'name': 'Kleidung', 'icon': Icons.shopping_bag, 'color': Colors.pink, 'budgetLimit': 0.0},
+        {'name': 'Bildung', 'icon': Icons.school, 'color': Colors.amber, 'budgetLimit': 0.0},
+        {'name': 'Finanzen', 'icon': Icons.account_balance, 'color': Colors.lightGreen, 'budgetLimit': 0.0},
+        {'name': 'Gesundheit', 'icon': Icons.health_and_safety, 'color': Colors.red, 'budgetLimit': 0.0},
+      ];
+
+      // 2. Hole alle Bankkonten des Benutzers
+      final accountsRef = usersRef.doc(userId).collection('bankAccounts');
+      final snapshot = await accountsRef.get();
+      List<BankAccount> accounts = snapshot.docs.map((doc) => BankAccount.fromMap(doc.data(), doc.id)).toList();
+
+      // 3. Für jedes Bankkonto die Standardkategorien mit createCategoryV2 erstellen
+      for (final categoryData in defaultCategories) {
+        Category category = Category(
+          userId: userId,
+          name: categoryData['name'],
+          budgetLimit: categoryData['budgetLimit'],
+          icon: categoryData['icon'],
+          color: categoryData['color'],
+          isDefault: true, // Kennzeichnet, dass es sich um eine Default-Kategorie handelt
+        );
+
+        // createCategoryV2 wird für jede Standardkategorie aufgerufen
+        await createCategoryV2(userId, category);
+      }
+    } catch (e) {
+      print("Fehler beim Erstellen der Standardkategorien: $e");
+    }
+  }
+
   Future<List<Category>> getUserCategoriesV2(String documentId, String accountId) async {
     try {
       final categoriesRef = usersRef
@@ -684,7 +724,7 @@ class FirestoreService {
     }
   }
 
-
+  /*
   Future<void> createDefaultCategories(String userId) async {
     final List<Map<String, dynamic>> defaultCategories = [
       {'name': 'Einnahmen', 'icon': Icons.attach_money, 'color': Colors.green, 'budgetLimit': 0.0},
@@ -896,7 +936,7 @@ class FirestoreService {
       print("Error getting user categories for account $accountId: $e");
       return [];
     }
-  }
+  }*/
 
   Future<List<Category>> getSortedUserCategoriesV3(String userId) async {
     try {
@@ -2119,12 +2159,3 @@ class FirestoreService {
       return [];
     }
   }}
-
-
-
-
-
-
-
-
-

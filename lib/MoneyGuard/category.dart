@@ -107,7 +107,7 @@ class CategoryScreen extends StatefulWidget {
 
 class _CategoryScreenState extends State<CategoryScreen> {
   late Future<List<Category>> userCategories;
-
+/*
   @override
   void initState() {
     super.initState();
@@ -124,9 +124,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
       // Falls kein Benutzer angemeldet ist, handle diesen Fall
       print("Kein Benutzer angemeldet.");
     }
-  }
+  }*/
 
- /*
+
   @override
   void initState() {
     super.initState();
@@ -137,13 +137,13 @@ class _CategoryScreenState extends State<CategoryScreen> {
       final userId = user.uid;
 
       // Erstellen und Laden der Kategorien
-      userCategories = FirestoreService().createDefaultCategoriesForAllAccounts(userId).then((_) {
+      userCategories = FirestoreService().createDefaultCategoriesV2(userId).then((_) {
         return FirestoreService().getSortedUserCategoriesV3(userId);
       });
     } else {
       print("Kein Benutzer angemeldet.");
     }
-  }*/
+  }
 
 
   @override
@@ -349,10 +349,10 @@ class _CategoryScreenState extends State<CategoryScreen> {
                     );
 
                     try {
-                      await FirestoreService().createCategory(userId, newCategory);
+                      await FirestoreService().createCategoryV2(userId, newCategory);
 
                       setState(() {
-                        userCategories = FirestoreService().getSortedUserCategories(userId);
+                        userCategories = FirestoreService().getSortedUserCategoriesV3(userId);
                       });
 
                       Navigator.of(context).pop();
@@ -423,7 +423,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                     }
 
                     setState(() {
-                      userCategories = FirestoreService().getSortedUserCategories(user.uid);
+                      userCategories = FirestoreService().getSortedUserCategoriesV3(user.uid);
                     });
                     Navigator.of(context).pop();
                   },
@@ -468,7 +468,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                   await FirestoreService().deleteCategory(user.uid, category.id!);
 
                   setState(() {
-                    userCategories = FirestoreService().getSortedUserCategories(user.uid);
+                    userCategories = FirestoreService().getSortedUserCategoriesV3(user.uid);
                   });
                   Navigator.of(context).pop();
                 } catch (e) {
