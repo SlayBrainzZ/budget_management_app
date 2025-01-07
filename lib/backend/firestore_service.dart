@@ -498,7 +498,7 @@ class FirestoreService {
       print("Fehler beim Erstellen der Kategorie auf allen Konten mit der gleichen ID: $e");
     }
   }
-
+/*
   Future<void> createDefaultCategoriesV2(String userId) async {
     try {
       // 1. Definiere die Standardkategorien
@@ -555,7 +555,95 @@ class FirestoreService {
     } catch (e) {
       print("Fehler beim Erstellen der Standardkategorien: $e");
     }
+  }*/
+  Future<void> createDefaultCategoriesV2(String userId) async {
+    try {
+      // 1. Definiere die Standardkategorien
+      final List<Map<String, dynamic>> defaultCategories = [
+        {'name': 'Einnahmen', 'icon': Icons.attach_money, 'color': Colors.green, 'budgetLimit': 0.0},
+        {'name': 'Unterhaltung', 'icon': Icons.movie, 'color': Colors.blue, 'budgetLimit': 0.0},
+        {'name': 'Lebensmittel', 'icon': Icons.restaurant, 'color': Colors.orange, 'budgetLimit': 0.0},
+        {'name': 'Haushalt', 'icon': Icons.home, 'color': Colors.teal, 'budgetLimit': 0.0},
+        {'name': 'Wohnen', 'icon': Icons.apartment, 'color': Colors.indigo, 'budgetLimit': 0.0},
+        {'name': 'Transport', 'icon': Icons.directions_car, 'color': Colors.purple, 'budgetLimit': 0.0},
+        {'name': 'Kleidung', 'icon': Icons.shopping_bag, 'color': Colors.pink, 'budgetLimit': 0.0},
+        {'name': 'Bildung', 'icon': Icons.school, 'color': Colors.amber, 'budgetLimit': 0.0},
+        {'name': 'Finanzen', 'icon': Icons.account_balance, 'color': Colors.lightGreen, 'budgetLimit': 0.0},
+        {'name': 'Gesundheit', 'icon': Icons.health_and_safety, 'color': Colors.red, 'budgetLimit': 0.0},
+      ];
+
+      // 2. Hole alle Bankkonten des Benutzers
+      final accountsRef = usersRef.doc(userId).collection('bankAccounts');
+      final snapshot = await accountsRef.get();
+      List<BankAccount> accounts = snapshot.docs.map((doc) => BankAccount.fromMap(doc.data(), doc.id)).toList();
+
+      // 3. Iteriere durch jede Standardkategorie
+      for (final categoryData in defaultCategories) {
+        // Generiere eine globale Kategorie-ID für die Standardkategorie
+        final globalCategoryId = usersRef.doc(userId).collection('Categories').doc().id;
+
+        for (var account in accounts) {
+          final userCategoriesRef = usersRef
+              .doc(userId)
+              .collection('bankAccounts')
+              .doc(account.id)
+              .collection('Categories');
+
+          // Überprüfe, ob die Kategorie bereits existiert
+          final query = await userCategoriesRef
+              .where('name', isEqualTo: categoryData['name'])
+              .where('isDefault', isEqualTo: true)
+              .get();
+
+          if (query.docs.isEmpty) {
+            // Wenn die Kategorie nicht existiert, erstellen
+            Category category = Category(
+              userId: userId,
+              name: categoryData['name'],
+              budgetLimit: categoryData['budgetLimit'],
+              icon: categoryData['icon'],
+              color: categoryData['color'],
+              isDefault: true,
+              id: globalCategoryId,
+            );
+
+            await createCategoryV3(userId, category, account.id!);
+            print("Kategorie '${category.name}' wurde für Konto '${account.id}' erstellt.");
+          } else {
+            // Wenn die Kategorie existiert, alte IDs überprüfen
+            for (var doc in query.docs) {
+              if (doc.id != globalCategoryId) {
+                // Alte Kategorie mit falscher ID entfernen
+                await userCategoriesRef.doc(doc.id).delete();
+                print("Alte Kategorie '${doc.data()['name']}' mit ID '${doc.id}' wurde gelöscht.");
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print("Fehler beim Erstellen der Standardkategorien: $e");
+    }
   }
+  Future<void> createCategoryV3(String userId, Category category, String accountId) async {
+    try {
+      // 1. Verwende die angegebene Kategorie-ID
+      final userCategoriesRef = usersRef
+          .doc(userId)
+          .collection('bankAccounts')
+          .doc(accountId)
+          .collection('Categories')
+          .doc(category.id);
+
+      // 2. Speichere die Kategorie
+      await userCategoriesRef.set(category.toMap());
+      print("Kategorie ${category.name} erfolgreich für Konto-ID $accountId gespeichert.");
+    } catch (e) {
+      print("Fehler beim Erstellen der Kategorie für Konto $accountId: $e");
+    }
+  }
+
+
 
 
   Future<List<Category>> getUserCategoriesV2(String documentId, String accountId) async {
