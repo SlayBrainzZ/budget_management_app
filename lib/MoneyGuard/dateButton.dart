@@ -1,6 +1,6 @@
 import 'package:budget_management_app/MoneyGuard/transaction.dart';
 import 'package:flutter/material.dart';
-import 'package:budget_management_app/backend/firestore_service.dart';
+import 'package:budget_management_app/backend/firestore_serviceB.dart';
 import 'package:budget_management_app/backend/Transaction.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -129,7 +129,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
     final DateFormat timeFormat = DateFormat('HH:mm');
     return '${dateFormat.format(date)} um ${timeFormat.format(date)}';
   }
-
+/*
   Future<void> _fetchTransactions() async {
     setState(() {
       isLoading = true;
@@ -197,6 +197,159 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
         isLoading = false;
       });
     }
+  }*/
+
+
+/*
+  Future<void> _fetchTransactions() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        throw Exception('Kein Benutzer angemeldet.');
+      }
+
+      final firestoreService = FirestoreService();
+      final userId = currentUser.uid;
+
+      final bankAccounts = await firestoreService.getUserBankAccounts(userId);
+      final filteredBankAccounts = selectedAccounts.isEmpty
+          ? bankAccounts
+          : bankAccounts.where((account) => selectedAccounts.contains(account.accountName)).toList();
+
+      List<Map<String, dynamic>> transactions = [];
+
+      for (final account in filteredBankAccounts) {
+        // Retrieve regular transactions using the older method
+        List<Transaction> accountTransactions = await firestoreService.getUserTransactions(account.id!);
+        for (var transaction in accountTransactions) {
+          if (transaction.categoryId != null) {
+            final category = await firestoreService.getCategory(
+              userId,
+              transaction.categoryId!,
+            );
+            transaction.categoryData = category;
+          }
+          transaction.bankAccount = account;
+          transactions.add({'type': 'regular', 'data': transaction});
+        }
+
+        // Retrieve imported transactions using the older method
+        List<ImportedTransaction> importedTransactions =
+        await firestoreService.getImportedTransactions(userId);
+        for (var importedTransaction in importedTransactions) {
+          importedTransaction.accountId = account.id; // Assign account ID
+          importedTransaction.linkedAccount = account; // Link to BankAccount
+          transactions.add({'type': 'imported', 'data': importedTransaction});
+        }
+      }
+
+      // Sort transactions by date in descending order
+      transactions.sort((a, b) {
+        final dateA = a['data'].date as DateTime;
+        final dateB = b['data'].date as DateTime;
+        return dateB.compareTo(dateA); // Descending
+      });
+
+      setState(() {
+        dailyTransactions = transactions;
+      });
+    } catch (e) {
+      print('Fehler beim Abrufen der Transaktionen: $e');
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }*/
+  Future<void> _fetchTransactions() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        throw Exception('Kein Benutzer angemeldet.');
+      }
+
+      final firestoreService = FirestoreService();
+      final userId = currentUser.uid;
+
+      // Hole reguläre Transaktionen
+      List<Transaction> transactions;
+      if (selectedCategories.isEmpty || selectedCategories.length == categories.length) {
+        transactions = await firestoreService.getUserTransactions(userId);
+      } else {
+        transactions = [];
+        for (final category in selectedCategories) {
+          final filteredTransactions = await firestoreService.getTransactionsByCategory(
+            userId,
+            category.id!,
+          );
+          transactions.addAll(filteredTransactions);
+        }
+      }
+
+      // Kategorie-Daten für jede Transaktion laden
+      for (var transaction in transactions) {
+        if(transaction.accountId != null){
+          final bankAccount = await firestoreService.getBankAccount(userId, transaction.accountId!);
+          transaction.bankAccount = bankAccount;
+        }
+        if (transaction.categoryId != null) {
+          final category = await firestoreService.getCategory(userId, transaction.categoryId!);
+          transaction.categoryData = category;
+        }
+      }
+
+      // Hole importierte Transaktionen
+      final importedTransactions = await firestoreService.getImportedTransactions(userId);
+      for (var importedTransaction in importedTransactions) {
+        if(importedTransaction.accountId != null){
+          final bankAccount = await firestoreService.getBankAccount(userId, importedTransaction.accountId!);
+          importedTransaction.linkedAccount = bankAccount;
+        } /*
+        if (importedTransaction.categoryId != null) {
+          final category = await firestoreService.getCategory(userId, transaction.categoryId!);
+          transaction.categoryData = category;
+        }*/
+      }
+      final combinedTransactions = [
+        ...transactions.map((t) => {
+          'type': 'regular',
+          'data': t,
+        }),
+        ...importedTransactions.map((t) => {
+          'type': 'imported',
+          'data': t,
+        }),
+      ];
+
+      // Sortiere die Transaktionen nach Datum
+      combinedTransactions.sort((a, b) {
+        final aDate = a['type'] == 'regular'
+            ? (a['data'] as Transaction).date
+            : (a['data'] as ImportedTransaction).date;
+        final bDate = b['type'] == 'regular'
+            ? (b['data'] as Transaction).date
+            : (b['data'] as ImportedTransaction).date;
+        return bDate.compareTo(aDate);
+      });
+
+      setState(() {
+        dailyTransactions = combinedTransactions;
+      });
+    } catch (e) {
+      print('Fehler beim Abrufen der Transaktionen: $e');
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   Future<List<Category>> _fetchSortedCategories() async {
@@ -207,7 +360,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
     final userId = currentUser.uid;
     final firestoreService = FirestoreService();
 
-    return await firestoreService.getSortedUserCategoriesV3(userId);
+    return await firestoreService.getSortedUserCategories(userId);
   }
 
 

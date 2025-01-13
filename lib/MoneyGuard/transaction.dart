@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:budget_management_app/backend/Transaction.dart';
 import 'package:budget_management_app/backend/Category.dart';
-import 'package:budget_management_app/backend/firestore_service.dart';
+import 'package:budget_management_app/backend/firestore_serviceB.dart';
 import 'home_page.dart';
 import 'package:budget_management_app/backend/BankAccount.dart';
 
@@ -64,7 +64,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
-        final userCategories = await _firestoreService.getSortedUserCategoriesV3(user.uid);
+        final userCategories = await _firestoreService.getSortedUserCategories(user.uid);
         final userBankAccounts = await _firestoreService.getUserBankAccounts(user.uid);
 
         setState(() {
@@ -125,8 +125,9 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       accountId: _selectedAccount,
     );
 
+    print(transaction.userId!);
     _firestoreService
-        .createTransactionV2(_userId!, _selectedAccount!, transaction, categoryId: _selectedCategory)
+        .createTransaction2(_userId!, transaction, categoryId: _selectedCategory)
         .then((_) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => MyHomePage(title: 'MoneyGuard')),
@@ -148,7 +149,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     if (widget.transaction == null) return;
 
     _firestoreService
-        .deleteTransactionV2(_userId!, _selectedAccount!, widget.transaction!.id!)
+        .deleteTransaction(_userId!, widget.transaction!.id!)
         .then((_) {
       Navigator.of(context).pop();
       /*Navigator.of(context).pushAndRemoveUntil(
@@ -162,7 +163,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     if (_selectedAccount == null || _selectedCategory == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Bitte wählen Sie ein Konto aus.'),
+          content: Text('Bitte wählen Sie eine Kategorie und ein Bankkonto aus.'),
           backgroundColor: Colors.grey,
         ),
       );
@@ -183,7 +184,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       print("Updated Transaction: ${updatedTransaction.toString()}");
 
       _firestoreService
-          .updateTransactionV2(_userId!, _selectedAccount!, widget.transaction!.id!, updatedTransaction)
+          .updateTransaction(_userId!, widget.transaction!.id!, updatedTransaction)
           .then((_) {
         Navigator.of(context).pop();
       }).catchError((e) {

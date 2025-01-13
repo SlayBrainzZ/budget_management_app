@@ -81,7 +81,7 @@ void main() async {
             note: "XO",
             accountId: accountId, // Linking to the first bank account
           );
-
+/*
           // Add transactions to the account
           await firestoreService.createTransaction2(user.uid, transaction1, accountId: accountId);
           await firestoreService.createTransaction2(user.uid, transaction2, accountId: accountId);
@@ -115,7 +115,7 @@ void main() async {
             });
           } else {
             print("\nNo multiple accounts found for this user to test fetching transactions for multiple accountIds.");
-          }
+          }*/
         } else {
           print("No bank accounts found for this user.");
         }
