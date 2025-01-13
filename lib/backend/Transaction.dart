@@ -103,5 +103,11 @@ Category Data: ${categoryData?.toString() ?? "N/A"}
 Bank Account: ${bankAccount?.toString() ?? "N/A"}
 ''';
   }
+  @override
+  String toString() {
+    return 'Update Transaction(id: $id, amount: $amount, date: $date, '
+        'categoryId: $categoryId, type: $type, importance: $importance, note: $note, accountId: $accountId)';
+  }
+
 }
 

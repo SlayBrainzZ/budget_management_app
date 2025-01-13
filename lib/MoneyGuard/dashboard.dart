@@ -46,7 +46,6 @@ class _DashboardState extends State<Dashboard> {
     }
   }
 
-
   Widget _buildAccountCards(BuildContext context) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -67,11 +66,11 @@ class _DashboardState extends State<Dashboard> {
                         onAccountCreated: (updatedAccount) {
                           _fetchBankAccounts();
                         },
-                        onAccountDeleted: () async {
+                        onAccountDeleted: bankAccounts.length > 1 ? () async {
                           await FirestoreService()
                               .deleteBankAccount(currentUser!.uid, account.id!);
                           _fetchBankAccounts();
-                        },
+                        } : null,
                       ),
                     ),
                   );
@@ -415,7 +414,19 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
                     } else {
                       widget.onAccountCreated(accountData);
                     }
-
+                    /*
+                    //Navigator.pop(context);
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MyApp(),
+                      ),
+                    );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => CategoryScreen()),
+                    );*/
+                    //Navigator.pop(context);
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
@@ -423,7 +434,6 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
                       ),
                     );
                   },
-
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                   ),

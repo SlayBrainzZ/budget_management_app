@@ -432,27 +432,30 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                 ),
               ],
             ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Imp',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
+            trailing: SizedBox(
+              width: 300, // Feste Breite für die gesamte trailing-Spalte
+              child: Row(
+                mainAxisSize: MainAxisSize.max,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Imp',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 200), // Großer Abstand zwischen "Imp" und Betrag
-                Text(
-                  '${importedTransaction.amount.toStringAsFixed(2)} €',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: importedTransaction.inflow > 0 ? Colors.green : Colors.red,
+                  Text(
+                    '${importedTransaction.amount.toStringAsFixed(2)} €',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: importedTransaction.inflow > 0 ? Colors.green : Colors.red,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             onTap: () {
               _showCategoryAssignDialog(context, importedTransaction);

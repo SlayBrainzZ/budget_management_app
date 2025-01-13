@@ -25,6 +25,7 @@ class Category {
     this.color,
     this.isDefault = false,  // Default is false for user-defined categories
     this.accountId, // Optional account link
+    this.id,
   });
 
   Map<String, dynamic> toMap() {
@@ -36,6 +37,7 @@ class Category {
       'color': color?.value,
       'isDefault': isDefault, // Save isDefault field
       'accountId': accountId,
+      'id' : id,
     };
   }
 
