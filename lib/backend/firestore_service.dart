@@ -889,6 +889,45 @@ class FirestoreService {
     }
   }
 
+  Future<void> createTransaction2( String documentId, Transaction transaction,
+      {String? categoryId, String? accountId}) async {
+    try {
+      final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
+
+      if (categoryId != null) {
+        final categoryRef = usersRef
+            .doc(documentId)
+            .collection('Categories')
+            .doc(categoryId);
+        final categorySnapshot = await categoryRef.get();
+        if (!categorySnapshot.exists) {
+          throw Exception('Category not found!');
+        }
+        transaction.categoryId = categoryId;
+      }
+
+      // Validate accountId if provided
+      if (accountId != null) {
+        final accountRef = usersRef
+            .doc(documentId)
+            .collection('bankAccounts')
+            .doc(accountId);
+        final accountSnapshot = await accountRef.get();
+        if (!accountSnapshot.exists) {
+          throw Exception('Account not found!');
+        }
+        transaction.accountId = accountId;
+      }
+
+      // Create the transaction
+      firestore.DocumentReference docRef = await userTransactionsRef.add(transaction.toMap());
+      transaction.id = docRef.id;
+      await docRef.set(transaction.toMap());
+    } catch (e) {
+      print("Error creating transaction: $e");
+    }
+  }
+
 
   ///TEST
   ///update: Test successfully done. This function does exactly what it's named.
