@@ -1467,6 +1467,45 @@ class FirestoreService {
     }
   }
 
+  Future<void> createTransaction2( String documentId, Transaction transaction,
+      {String? categoryId, String? accountId}) async {
+    try {
+      final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
+
+      if (categoryId != null) {
+        final categoryRef = usersRef
+            .doc(documentId)
+            .collection('Categories')
+            .doc(categoryId);
+        final categorySnapshot = await categoryRef.get();
+        if (!categorySnapshot.exists) {
+          throw Exception('Category not found!');
+        }
+        transaction.categoryId = categoryId;
+      }
+
+      // Validate accountId if provided
+      if (accountId != null) {
+        final accountRef = usersRef
+            .doc(documentId)
+            .collection('bankAccounts')
+            .doc(accountId);
+        final accountSnapshot = await accountRef.get();
+        if (!accountSnapshot.exists) {
+          throw Exception('Account not found!');
+        }
+        transaction.accountId = accountId;
+      }
+
+      // Create the transaction
+      firestore.DocumentReference docRef = await userTransactionsRef.add(transaction.toMap());
+      transaction.id = docRef.id;
+      await docRef.set(transaction.toMap());
+    } catch (e) {
+      print("Error creating transaction: $e");
+    }
+  }
+
 
   ///TEST
   ///update: Test successfully done. This function does exactly what it's named.
@@ -1506,6 +1545,21 @@ class FirestoreService {
     }
   }
 
+  Future<List<Transaction>> getTransactionsByAccountIds(String documentId, List<String> accountIds) async {
+    try {
+      final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
+      firestore.QuerySnapshot snapshot = await userTransactionsRef
+          .where('accountId', whereIn: accountIds)
+          .orderBy('date', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) => Transaction.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+    } catch (e) {
+      print("Error getting transactions for accountIds: $e");
+      return [];
+    }
+  }
+
   ///TEST
   Future<List<Transaction>> getCategoryTransactions(String userId, String categoryId) async {
     try {
@@ -1528,7 +1582,7 @@ class FirestoreService {
   ///
   /// This function takes the user's `documentId` and the `transactionId` as input,
   /// and retrieves the corresponding transaction document from the user's `Transactions` subcollection.
-  Future<Transaction?> getTransaction(String documentId, String transactionId) async {
+  Future<Transaction?> getTransaction(String documentId, String transactionId, String? accountId) async {
     try {
       final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
       final docSnapshot = await userTransactionsRef.doc(transactionId).get();
@@ -1543,6 +1597,8 @@ class FirestoreService {
       return null;
     }
   }
+
+
 
   /// Retrieves all transactions for a specific user and category, ordered by date (latest first).
   ///
