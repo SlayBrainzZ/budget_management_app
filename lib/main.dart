@@ -58,58 +58,68 @@ void main() async {
         List<BankAccount> accounts = await firestoreService.getUserBankAccounts2(user.uid);
 
         if (accounts.isNotEmpty) {
-          // 1. Create 3 random transactions for all accounts
-          for (int i = 1; i <= 3; i++) {
-            for (var account in accounts) {
-              testTrans.Transaction transaction = testTrans.Transaction(
-                userId: user.uid,
-                amount: 100.0 * i,
-                date: DateTime.now(),
-                type: 'expense',
-                importance: false,
-                accountId: account.id!, // Assign the account ID
-              );
-              await firestoreService.createTransactionV2(user.uid, account.id!, transaction);
-              print("Transaction $i created successfully on account ${account.id}");
-            }
-          }
+          // Use the first bank account for testing
+          String? accountId = accounts[1].id;
 
-          // 2. Create 3 random categories for all accounts
-          List<testCat.Category> createdCategories = []; // Store created categories
-          for (int i = 1; i <= 3; i++) {
-            for (var account in accounts) {
-              testCat.Category category = testCat.Category(
-                userId: user.uid,
-                name: "Category $i",
-                accountId: account.id!, // Assign the account ID
-              );
-              String categoryId = await firestoreService.createCategoryV2(user.uid, account.id!, category);
-              category.id = categoryId; // Assign the generated ID
-              createdCategories.add(category);
-              print("Category $i created successfully on account ${account.id}");
-            }
-          }
+          // Create test transactions
+          testTrans.Transaction transaction1 = testTrans.Transaction(
+            userId: user.uid,
+            amount: 21323.55,
+            date: DateTime.now(),
+            type: "YYYYYY",
+            importance: true,
+            note: "12-01",
+            accountId: accountId, // Linking to the first bank account
+          );
 
-          // 3. Create 3 transactions with random categories for all accounts
-          for (int i = 1; i <= 3; i++) {
-            for (var account in accounts) {
-              testCat.Category randomCategory = createdCategories[i % createdCategories.length];
-              testTrans.Transaction transaction = testTrans.Transaction(
-                userId: user.uid,
-                amount: 50.0 * i,
-                date: DateTime.now(),
-                type: 'expense',
-                importance: false,
-                categoryId: randomCategory.id, // Assign the category ID
-                accountId: account.id!, // Assign the account ID
-              );
-              await firestoreService.createTransactionV2(user.uid, account.id!, transaction, categoryId: randomCategory.id);
-              print("Transaction $i with category ${randomCategory.name} created successfully on account ${account.id}");
-            }
+          testTrans.Transaction transaction2 = testTrans.Transaction(
+            userId: user.uid,
+            amount: 21131.5,
+            date: DateTime.now(),
+            type: "XXXXXX",
+            importance: false,
+            note: "XO",
+            accountId: accountId, // Linking to the first bank account
+          );
+
+          // Add transactions to the account
+          await firestoreService.createTransaction2(user.uid, transaction1, accountId: accountId);
+          await firestoreService.createTransaction2(user.uid, transaction2, accountId: accountId);
+
+          print("Transactions created successfully.");
+
+          // Test 1: Fetch all user transactions
+          print("\nFetching all transactions for the user...");
+          List<testTrans.Transaction> allUserTransactions = await firestoreService.getUserTransactions(user.uid);
+          allUserTransactions.forEach((transaction) {
+            print(
+                "Transaction ID: ${transaction.id}, Amount: ${transaction.amount}, Type: ${transaction.type}, AccountId: ${transaction.accountId}, Note: ${transaction.note}");
+          });
+
+          // Test 2: Fetch transactions for a specific accountId
+          print("\nFetching transactions for accountId: $accountId...");
+          List<testTrans.Transaction> transactionsForAccount = await firestoreService.getTransactionsByAccountIds(user.uid, [accountId!]);
+          transactionsForAccount.forEach((transaction) {
+            print(
+                "Transaction ID: ${transaction.id}, Amount: ${transaction.amount}, Type: ${transaction.type}, AccountId: ${transaction.accountId}, Note: ${transaction.note}");
+          });
+
+          // Test 3: Fetch transactions for multiple accountIds
+          if (accounts.length > 1) {
+            print("\nFetching transactions for multiple accountIds...");
+            List<String> accountIds = accounts.map((account) => account.id!).toList();
+            List<testTrans.Transaction> transactionsForMultipleAccounts = await firestoreService.getTransactionsByAccountIds(user.uid, accountIds);
+            transactionsForMultipleAccounts.forEach((transaction) {
+              print(
+                  "Transaction ID: ${transaction.id}, Amount: ${transaction.amount}, Type: ${transaction.type}, AccountId: ${transaction.accountId}, Note: ${transaction.note}");
+            });
+          } else {
+            print("\nNo multiple accounts found for this user to test fetching transactions for multiple accountIds.");
           }
         } else {
           print("No bank accounts found for this user.");
         }
+
       } else {
         print("No user logged in. Please log in.");
       }
