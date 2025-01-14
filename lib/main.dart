@@ -61,7 +61,7 @@ void main() async {
           // Use the first bank account for testing
           String? accountId = accounts[1].id;
 
-          // Create test transactions
+          /* // Create test transactions
           testTrans.Transaction transaction1 = testTrans.Transaction(
             userId: user.uid,
             amount: 21323.55,
@@ -80,11 +80,11 @@ void main() async {
             importance: false,
             note: "XO",
             accountId: accountId, // Linking to the first bank account
-          );
+          ); */
 
           // Add transactions to the account
-          await firestoreService.createTransaction2(user.uid, transaction1, accountId: accountId);
-          await firestoreService.createTransaction2(user.uid, transaction2, accountId: accountId);
+          //await firestoreService.createTransaction2(user.uid, transaction1, accountId: accountId);
+          //await firestoreService.createTransaction2(user.uid, transaction2, accountId: accountId);
 
           print("Transactions created successfully.");
 
