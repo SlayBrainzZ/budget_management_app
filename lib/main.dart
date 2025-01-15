@@ -58,17 +58,16 @@ void main() async {
         List<BankAccount> accounts = await firestoreService.getUserBankAccounts2(user.uid);
 
         if (accounts.isNotEmpty) {
-          String firstAccountId = accounts[0].id!; // Use ! to assert that firstAccountId is not null
+          String? firstAccountId = accounts[0].id;
 
-          // 1. Fetch the first two categories
+          // 1. Fetch the first five categories
           List<testCat.Category> allCategories = await firestoreService.getUserCategories(user.uid);
-          List<String> firstTwoCategoryIds = allCategories.sublist(0, 2).map((category) => category.id!).toList();
+          List<String> firstFiveCategoryIds = allCategories.sublist(0, 5).map((category) => category.id!).toList();
 
           // 2. Fetch transactions with the filters
           List<testTrans.Transaction> filteredTransactions = await firestoreService.getFilteredTransactions(
             user.uid,
-            categoryIds: firstTwoCategoryIds,
-            accountIds: [firstAccountId], // Now firstAccountId is non-nullable
+            categoryIds: firstFiveCategoryIds,
           );
 
           // 3. Print the filtered transactions
