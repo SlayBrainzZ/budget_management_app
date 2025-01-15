@@ -58,64 +58,47 @@ void main() async {
         List<BankAccount> accounts = await firestoreService.getUserBankAccounts2(user.uid);
 
         if (accounts.isNotEmpty) {
-          // Use the first bank account for testing
+          // Use the second bank account for testing
           String? accountId = accounts[1].id;
 
-          /* // Create test transactions
-          testTrans.Transaction transaction1 = testTrans.Transaction(
-            userId: user.uid,
-            amount: 21323.55,
-            date: DateTime.now(),
-            type: "YYYYYY",
-            importance: true,
-            note: "12-01",
-            accountId: accountId, // Linking to the first bank account
-          );
+          // Get the current month and year
+          final now = DateTime.now();
+          final currentMonth = now.month;
+          final currentYear = now.year;
 
-          testTrans.Transaction transaction2 = testTrans.Transaction(
-            userId: user.uid,
-            amount: 21131.5,
-            date: DateTime.now(),
-            type: "XXXXXX",
-            importance: false,
-            note: "XO",
-            accountId: accountId, // Linking to the first bank account
-          ); */
+          // Test 1: Fetch all user transactions for the current month
+          print("\nFetching all transactions for the user for the current month...");
+          List<testTrans.Transaction> allUserTransactions =
+          await firestoreService.getUserTransactionsByMonth(user.uid, currentYear, currentMonth);
 
-          // Add transactions to the account
-          //await firestoreService.createTransaction2(user.uid, transaction1, accountId: accountId);
-          //await firestoreService.createTransaction2(user.uid, transaction2, accountId: accountId);
-
-          print("Transactions created successfully.");
-
-          // Test 1: Fetch all user transactions
-          print("\nFetching all transactions for the user...");
-          List<testTrans.Transaction> allUserTransactions = await firestoreService.getUserTransactions(user.uid);
-          allUserTransactions.forEach((transaction) {
-            print(
-                "Transaction ID: ${transaction.id}, Amount: ${transaction.amount}, Type: ${transaction.type}, AccountId: ${transaction.accountId}, Note: ${transaction.note}");
-          });
-
-          // Test 2: Fetch transactions for a specific accountId
-          print("\nFetching transactions for accountId: $accountId...");
-          List<testTrans.Transaction> transactionsForAccount = await firestoreService.getTransactionsByAccountIds(user.uid, [accountId!]);
-          transactionsForAccount.forEach((transaction) {
-            print(
-                "Transaction ID: ${transaction.id}, Amount: ${transaction.amount}, Type: ${transaction.type}, AccountId: ${transaction.accountId}, Note: ${transaction.note}");
-          });
-
-          // Test 3: Fetch transactions for multiple accountIds
-          if (accounts.length > 1) {
-            print("\nFetching transactions for multiple accountIds...");
-            List<String> accountIds = accounts.map((account) => account.id!).toList();
-            List<testTrans.Transaction> transactionsForMultipleAccounts = await firestoreService.getTransactionsByAccountIds(user.uid, accountIds);
-            transactionsForMultipleAccounts.forEach((transaction) {
-              print(
-                  "Transaction ID: ${transaction.id}, Amount: ${transaction.amount}, Type: ${transaction.type}, AccountId: ${transaction.accountId}, Note: ${transaction.note}");
-            });
+          if (allUserTransactions.isEmpty) {
+            print("No transactions found for the current month.");
           } else {
-            print("\nNo multiple accounts found for this user to test fetching transactions for multiple accountIds.");
+            allUserTransactions.forEach((transaction) {
+              print(
+                  "Transaction ID: ${transaction.id}, Date: ${transaction.date}, Amount: ${transaction.amount}, "
+                      "Type: ${transaction.type}, AccountId: ${transaction.accountId}, "
+                      "Note: ${transaction.note}");
+            });
           }
+
+          // Test 2: Fetch transactions for a specific accountId for the current month
+          print("\nFetching transactions for accountId: $accountId for the current month...");
+          List<testTrans.Transaction> transactionsForAccount =
+          await firestoreService.getTransactionsByAccountIdsAndMonth(
+              user.uid, [accountId!], currentYear, currentMonth);
+
+          if (transactionsForAccount.isEmpty) {
+            print("No transactions found for accountId: $accountId in the current month.");
+          } else {
+            transactionsForAccount.forEach((transaction) {
+              print(
+                  "Transaction ID: ${transaction.id}, Date: ${transaction.date}, Amount: ${transaction.amount}, "
+                      "Type: ${transaction.type}, AccountId: ${transaction.accountId}, "
+                      "Note: ${transaction.note}");
+            });
+          }
+
         } else {
           print("No bank accounts found for this user.");
         }
