@@ -61,42 +61,24 @@ void main() async {
           // Use the second bank account for testing
           String? accountId = accounts[1].id;
 
-          // Get the current month and year
-          final now = DateTime.now();
-          final currentMonth = now.month;
-          final currentYear = now.year;
+          // 1. Fetch all categories
+          List<testCat.Category> allCategories = await firestoreService.getUserCategories(user.uid);
 
-          // Test 1: Fetch all user transactions for the current month
-          print("\nFetching all transactions for the user for the current month...");
-          List<testTrans.Transaction> allUserTransactions =
-          await firestoreService.getUserTransactionsByMonth(user.uid, currentYear, currentMonth);
+          // 2. Fetch all imported transactions
+          List<ImportedTransaction> importedTransactions = await firestoreService.getImportedTransactions(user.uid);
 
-          if (allUserTransactions.isEmpty) {
-            print("No transactions found for the current month.");
+          if (importedTransactions.isNotEmpty && allCategories.isNotEmpty) {
+            // 3. Choose a random imported transaction and a random category
+            ImportedTransaction transactionToUpdate = importedTransactions[0]; // Choose the first one for simplicity
+            testCat.Category randomCategory = allCategories[0]; // Choose the first one for simplicity
+
+            // 4. Update the transaction with the categoryId
+            transactionToUpdate.categoryId = randomCategory.id;
+            await firestoreService.updateImportedTransaction(user.uid, transactionToUpdate.id!, transactionToUpdate);
+
+            print("Imported transaction updated with categoryId ${randomCategory.id}");
           } else {
-            allUserTransactions.forEach((transaction) {
-              print(
-                  "Transaction ID: ${transaction.id}, Date: ${transaction.date}, Amount: ${transaction.amount}, "
-                      "Type: ${transaction.type}, AccountId: ${transaction.accountId}, "
-                      "Note: ${transaction.note}");
-            });
-          }
-
-          // Test 2: Fetch transactions for a specific accountId for the current month
-          print("\nFetching transactions for accountId: $accountId for the current month...");
-          List<testTrans.Transaction> transactionsForAccount =
-          await firestoreService.getTransactionsByAccountIdsAndMonth(
-              user.uid, [accountId!], currentYear, currentMonth);
-
-          if (transactionsForAccount.isEmpty) {
-            print("No transactions found for accountId: $accountId in the current month.");
-          } else {
-            transactionsForAccount.forEach((transaction) {
-              print(
-                  "Transaction ID: ${transaction.id}, Date: ${transaction.date}, Amount: ${transaction.amount}, "
-                      "Type: ${transaction.type}, AccountId: ${transaction.accountId}, "
-                      "Note: ${transaction.note}");
-            });
+            print("No imported transactions or categories found.");
           }
 
         } else {
