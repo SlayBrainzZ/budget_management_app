@@ -1518,56 +1518,7 @@ class FirestoreService {
 
 
 
-  Future<Map<String, double>> calculateYearlySpendingByWeek(String documentId, String type) async {
-    Map<String, double> yearlySpending = {}; // Initialisiere das Dictionary
-    double cumulativeNetAmount = 0.0; // Netto-Wert, der sich über Wochen hinweg summiert
 
-    // Erster Tag des Jahres
-    DateTime startOfYear = DateTime.utc(DateTime.now().year, 1, 1);
-    DateTime endOfYear = DateTime.utc(DateTime.now().year, 12, 31);
-
-    // Iteriere über alle Wochen im Jahr
-    DateTime currentWeekStart = startOfYear;
-    while (currentWeekStart.isBefore(endOfYear)) {
-      // Ende der Woche berechnen (Sonntag)
-      DateTime currentWeekEnd = currentWeekStart.add(const Duration(days: 7));
-
-      // Hole die Transaktionen für die aktuelle Woche
-      List<Transaction> weekTransactions = await getSpecificTransactionByDateRange(documentId, type, currentWeekStart, currentWeekEnd);
-
-      // Berechne die Einnahmen und Ausgaben für die Woche
-      double weekIncome = 0.0;
-      double weekExpense = 0.0;
-
-      for (var transaction in weekTransactions) {
-        if (transaction.type == "Einnahme") {
-          weekIncome += transaction.amount;
-        } else if (transaction.type == "Ausgabe") {
-          weekExpense += transaction.amount;
-        }
-      }
-
-      // Berechne den Netto-Wert für diese Woche und füge ihn zum Dictionary hinzu
-      String weekKey = "${currentWeekStart.year}-KW${_getWeekNumber(currentWeekStart)}";
-      if (type == "null") {
-        // Netto-Wert ist die Differenz zwischen den Einnahmen und Ausgaben
-        cumulativeNetAmount += (weekIncome - weekExpense);
-        yearlySpending[weekKey] = cumulativeNetAmount; // Speichere den kumulierten Netto-Wert
-      } else if (type == "Einnahme") {
-        yearlySpending[weekKey] = weekIncome; // Speichere nur die Einnahmen
-      } else if (type == "Ausgabe") {
-        yearlySpending[weekKey] = weekExpense; // Speichere nur die Ausgaben
-      }
-
-      // Debug-Ausgabe für jede Woche
-      print("Woche: $weekKey, Einnahmen: $weekIncome, Ausgaben: $weekExpense, Kumuliertes Netto: $cumulativeNetAmount");
-
-      // Zur nächsten Woche springen
-      currentWeekStart = currentWeekStart.add(const Duration(days: 7));
-    }
-
-    return yearlySpending;
-  }
 
 // Hilfsfunktion zur Berechnung der Kalenderwoche
   int _getWeekNumber(DateTime date) {
@@ -1579,75 +1530,13 @@ class FirestoreService {
 
 
 
-
-
-  Future<Map<String, double>> calculateYearlySpendingByDay(String documentId, String type) async {
-    Map<String, double> yearlySpending = {}; // Initialisiere das Dictionary
-    double cumulativeNetAmount = 0.0; // Netto-Wert, der sich über Tage hinweg summiert
-
-    // Erster Tag des Jahres
-    DateTime startOfYear = DateTime.utc(DateTime.now().year, 1, 1);
-    DateTime endOfYear = DateTime.utc(DateTime.now().year, 12, 31);
-
-    // Iteriere über alle Tage im Jahr
-    DateTime currentDate = startOfYear;
-    while (currentDate.isBefore(endOfYear)) {
-      // Hole die Transaktionen für den aktuellen Tag
-      List<Transaction> dayTransactions = await getSpecificTransactionByDateRange(documentId, type, currentDate, currentDate.add(Duration(days: 1)));
-
-      // Berechne die Einnahmen und Ausgaben für den Tag
-      double dayIncome = 0.0;
-      double dayExpense = 0.0;
-
-      for (var transaction in dayTransactions) {
-        if (transaction.type == "Einnahme") {
-          dayIncome += transaction.amount;
-        } else if (transaction.type == "Ausgabe") {
-          dayExpense += transaction.amount;
-        }
-      }
-
-      // Berechne den Netto-Wert für diesen Tag und füge ihn zum Dictionary hinzu
-      String dayKey = "${currentDate.year}-${currentDate.month.toString().padLeft(2, '0')}-${currentDate.day.toString().padLeft(2, '0')}";
-      if (type == "null") {
-        // Netto-Wert ist die Differenz zwischen den Einnahmen und Ausgaben
-        cumulativeNetAmount += (dayIncome - dayExpense);
-        yearlySpending[dayKey] = cumulativeNetAmount; // Speichere den kumulierten Netto-Wert
-      } else if (type == "Einnahme") {
-        yearlySpending[dayKey] = dayIncome; // Speichere nur die Einnahmen
-      } else if (type == "Ausgabe") {
-        yearlySpending[dayKey] = dayExpense; // Speichere nur die Ausgaben
-      }
-
-      // Debug-Ausgabe für jeden Tag
-      print("Tag: $dayKey, Einnahmen: $dayIncome, Ausgaben: $dayExpense, Kumuliertes Netto: $cumulativeNetAmount");
-
-      // Zum nächsten Tag wechseln
-      currentDate = currentDate.add(Duration(days: 1));
-    }
-
-    return yearlySpending;
-  }
-
-
-
-
-
-
-
-
-
-
-
-
-
   Future<List<double>> calculateWeeklySpendingByDay(String documentId, String type) async {
     List<double> weeklySpending = List.filled(7, 0.0); // Initialisierung der Liste für die Wochentage
     double cumulativeNetAmount = 0.0; // Netto-Wert, der sich über die Woche hinweg summiert
 
     // Bestimme die aktuelle Woche (Montag bis Sonntag)
     DateTime now = DateTime.now();
-    DateTime startOfWeek = now.subtract(Duration(days: now.weekday - 1)); // Montag dieser Woche
+    DateTime startOfWeek = now.subtract(Duration(days: now.weekday)); // Montag dieser Woche
     DateTime endOfWeek = startOfWeek.add(Duration(days: 6)); // Sonntag dieser Woche
     print("WEEKLY: Start Date: $startOfWeek, End Date: $endOfWeek");
 
@@ -1737,7 +1626,7 @@ class FirestoreService {
   Future<Map<int, double>> getCurrentMonthTransactionsByDateRangeAndCategory(String documentId, String categoryId) async {
     Map<int, double> monthlyCategoryValues = {};
     DateTime today = DateTime.now();
-    DateTime usableToday = DateTime(today.year, today.month, today.day);
+    DateTime usableToday = DateTime(today.year, today.month, today.day+1);
     print("DAYTIME NOW IST: ${today} ODER AUCH $today");
     DateTime startDate = DateTime(today.year, today.month, 1);
 
@@ -1822,6 +1711,58 @@ class FirestoreService {
 
     return weeklyCategoryValues;
   }
+
+
+  Future<Map<String, double>> fetchWeeklyUrgentAndNonUrgentExpenses(
+      String documentId, DateTime startDate, DateTime endDate) async {
+    try {
+      // Hole alle Transaktionen im gegebenen Datumsbereich
+      List<Transaction> transactions =
+      await getSpecificTransactionByDateRange(documentId, "null", startDate, endDate);
+
+      // Initialisiere Summen
+      double urgentTotal = 0.0;
+      double nonUrgentTotal = 0.0;
+
+      // Lokales Filtern nach "Ausgabe" und Summieren der Beträge
+      List<Transaction> expenseTransactions =
+      transactions.where((transaction) => transaction.type == "Ausgabe").toList();
+
+      for (var transaction in expenseTransactions) {
+        if (transaction.importance) {
+          urgentTotal += transaction.amount; // Dringend
+        } else {
+          nonUrgentTotal += transaction.amount; // Nicht dringend
+        }
+      }
+
+      // Ergebnisse zurückgeben
+      return {
+        "Dringend": urgentTotal,
+        "Nicht dringend": nonUrgentTotal,
+      };
+    } catch (e) {
+      print("Fehler beim Abrufen und Filtern der Transaktionen: $e");
+      return {
+        "Dringend": 0.0,
+        "Nicht dringend": 0.0,
+      };
+    }
+  }
+
+  void fetchThisWeeksExpenses(String documentId) async {
+    // Berechne den Montag und Sonntag der aktuellen Woche
+    DateTime today = DateTime.now();
+    DateTime monday = today.subtract(Duration(days: today.weekday - 1)); // Montag
+    DateTime sunday = monday.add(Duration(days: 6)); // Sonntag
+
+    // Hole die summierten Ausgaben für die Woche
+    Map<String, double> expenses = await fetchWeeklyUrgentAndNonUrgentExpenses(documentId, monday, sunday);
+
+    print("Dringende Ausgaben: ${expenses['Dringend']} €");
+    print("Nicht dringende Ausgaben: ${expenses['Nicht dringend']} €");
+  }
+
 
 
 

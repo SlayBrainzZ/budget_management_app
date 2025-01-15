@@ -17,11 +17,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   String selectedTimeCategory = 'Monat';
   String selectedTimeImportance = 'Monat';
-  String selectedYear = '2024'; // Standardwert für das Jahr
+  String selectedYear = '2025'; // Standardwert für das Jahr
   String selectedMonth = 'Monat'; // Standardwert für den Monat
   final List<int> availableYears = List.generate(
       100, (index) => 2000 + index); // letze 20 und nächste 80 jare
 
+  double urgentExpenses = 0.0;
+  double nonUrgentExpenses = 0.0;
 
   final ScrollController _scrollController = ScrollController();
   final FirestoreService _firestoreService = FirestoreService();
@@ -47,9 +49,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
     super.initState();
     _loadCategories();
     if (monthlyBalanceList.isEmpty) {
-      loadLineChartBarData('2024', 'Monat');
+      loadLineChartBarData('2025', 'Monat');
     }
+    _loadWeeklyExpenses(); // Ausgaben für diese Woche laden
   }
+
 
   Future<User?> _loadUser() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -94,6 +98,31 @@ class _StatisticsPageState extends State<StatisticsPage> {
         SnackBar(content: Text("Fehler beim Laden der Daten")),
       );
     }
+  }
+  Future<void> _loadWeeklyExpenses() async {
+    final user = await _loadUser(); // Aktuellen Benutzer abrufen
+    if (user == null) {
+      print("Kein Benutzer gefunden.");
+      return;
+    }
+
+    DateTime today = DateTime.now();
+    DateTime monday = today.subtract(Duration(days: today.weekday - 1)); // Montag
+    DateTime sunday = monday.add(Duration(days: 6)); // Sonntag
+
+    // Rufe die summierten Ausgaben ab
+    Map<String, double> expenses = await _firestoreService.fetchWeeklyUrgentAndNonUrgentExpenses(
+      user.uid,
+      monday,
+      sunday,
+    );
+
+    setState(() {
+      urgentExpenses = expenses["Dringend"] ?? 0.0;
+      nonUrgentExpenses = expenses["Nicht dringend"] ?? 0.0;
+      //print("HALLLLLLLLLLLOOOOOOO: $urgentExpenses");
+      //print("HALLLLLLLLLLLOOOOOOO: $nonUrgentExpenses");
+    });
   }
 
 
@@ -602,6 +631,64 @@ class _StatisticsPageState extends State<StatisticsPage> {
               ),
               const SizedBox(height: 40),
 
+              // Kategorieübersicht (mit einem Picker zur Auswahl des Zeitraums)
+              Row(
+                children: [
+                  const SizedBox(width: 30),
+                  Text(
+                    'Kategorieübersicht im Zeitraum:  ',
+                    style: TextStyle(fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black),
+                  ),
+                  const SizedBox(width: 20),
+                  GestureDetector(
+                    onTap: () => _showCategoryPicker(context),
+                    // Picker anzeigen
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey),
+                      ),
+                      child: Text(
+                        selectedTimeCategory, // Zeigt "Monat" oder "Woche" an
+                        style: TextStyle(fontSize: 16, color: Colors.black),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              categories.isEmpty
+                  ? Center(child: CircularProgressIndicator())
+                  : Scrollbar(
+                controller: _scrollController,
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  scrollDirection: Axis.horizontal,
+                  physics: CustomScrollPhysics(),
+                  child: Row(
+                    children: categories.map((category) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        child: CategoryStatWidget(
+                          category: category,
+                          chartDataFuture: categoryChartData(
+                            category.id!,
+                            selectedTimeCategory,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 40),
               Row(
                 children: [
                   const SizedBox(width: 30),
@@ -661,8 +748,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
                       child: PieChart(
                         PieChartData(
                             sections: [
-                              PieChartSectionData(title: "Dringend", value: 70, color: Colors.red),
-                              PieChartSectionData(title: "Nicht dringend",value: 30, color: Colors.blue)
+                              PieChartSectionData(title: "Dringend", value: urgentExpenses, color: Colors.red),
+                              PieChartSectionData(title: "Nicht dringend",value: nonUrgentExpenses, color: Colors.blue)
                             ]
                         ),
                         duration: Duration(milliseconds: 150), // Optional
@@ -677,64 +764,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
 
 
-              const SizedBox(height: 40),
-              // Kategorieübersicht (mit einem Picker zur Auswahl des Zeitraums)
-              Row(
-                children: [
-                  const SizedBox(width: 30),
-                  Text(
-                    'Kategorieübersicht im Zeitraum:  ',
-                    style: TextStyle(fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black),
-                  ),
-                  const SizedBox(width: 20),
-                  GestureDetector(
-                    onTap: () => _showCategoryPicker(context),
-                    // Picker anzeigen
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey),
-                      ),
-                      child: Text(
-                        selectedTimeCategory, // Zeigt "Monat" oder "Woche" an
-                        style: TextStyle(fontSize: 16, color: Colors.black),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              categories.isEmpty
-                  ? Center(child: CircularProgressIndicator())
-                  : Scrollbar(
-                controller: _scrollController,
-                thumbVisibility: true,
-                child: SingleChildScrollView(
-                  controller: _scrollController,
-                  scrollDirection: Axis.horizontal,
-                  physics: CustomScrollPhysics(),
-                  child: Row(
-                    children: categories.map((category) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                        child: CategoryStatWidget(
-                          category: category,
-                          chartDataFuture: categoryChartData(
-                            category.id!,
-                            selectedTimeCategory,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
             ],
           ),
         ),

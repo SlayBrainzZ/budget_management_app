@@ -3,6 +3,8 @@ import 'dashboard.dart';
 import 'saving_plan.dart';
 import 'StatisticsPage.dart';
 import 'transaction.dart';
+import 'settings.dart';
+
 import 'package:flutter_localizations/flutter_localizations.dart'; // Dieser Import ist notwendig
 
 
@@ -59,7 +61,7 @@ class _MyHomePageState extends State<MyHomePage> {
     StatisticsPage(),
     AddTransactionPage(),
     SavingPlan(),
-    const Center(child: Text('Einstellungen')),
+    SettingsPage(),
   ];
 
   @override
