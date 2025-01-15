@@ -58,27 +58,23 @@ void main() async {
         List<BankAccount> accounts = await firestoreService.getUserBankAccounts2(user.uid);
 
         if (accounts.isNotEmpty) {
-          // Use the second bank account for testing
-          String? accountId = accounts[1].id;
+          String firstAccountId = accounts[0].id!; // Use ! to assert that firstAccountId is not null
 
-          // 1. Fetch all categories
+          // 1. Fetch the first two categories
           List<testCat.Category> allCategories = await firestoreService.getUserCategories(user.uid);
+          List<String> firstTwoCategoryIds = allCategories.sublist(0, 2).map((category) => category.id!).toList();
 
-          // 2. Fetch all imported transactions
-          List<ImportedTransaction> importedTransactions = await firestoreService.getImportedTransactions(user.uid);
+          // 2. Fetch transactions with the filters
+          List<testTrans.Transaction> filteredTransactions = await firestoreService.getFilteredTransactions(
+            user.uid,
+            categoryIds: firstTwoCategoryIds,
+            accountIds: [firstAccountId], // Now firstAccountId is non-nullable
+          );
 
-          if (importedTransactions.isNotEmpty && allCategories.isNotEmpty) {
-            // 3. Choose a random imported transaction and a random category
-            ImportedTransaction transactionToUpdate = importedTransactions[0]; // Choose the first one for simplicity
-            testCat.Category randomCategory = allCategories[0]; // Choose the first one for simplicity
-
-            // 4. Update the transaction with the categoryId
-            transactionToUpdate.categoryId = randomCategory.id;
-            await firestoreService.updateImportedTransaction(user.uid, transactionToUpdate.id!, transactionToUpdate);
-
-            print("Imported transaction updated with categoryId ${randomCategory.id}");
-          } else {
-            print("No imported transactions or categories found.");
+          // 3. Print the filtered transactions
+          print("Filtered transactions:");
+          for (var transaction in filteredTransactions) {
+            print(transaction.toMap());
           }
 
         } else {
