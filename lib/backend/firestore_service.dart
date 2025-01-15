@@ -143,7 +143,7 @@ class FirestoreService {
 
 // Function to convert CSV data into ImportedTransactions
   List<ImportedTransaction> convertCsvDataToImportedTransactions(
-      List<Map<String, dynamic>> csvData, String userId) {
+      List<Map<String, dynamic>> csvData, String userId, String accountId) {
     return csvData.map((row) {
       double outflow = 0.0;
       double inflow = 0.0;
@@ -171,28 +171,31 @@ class FirestoreService {
         description: row['Buchungstext']?.toString() ?? '',
         outflow: outflow,
         inflow: inflow,
+        accountId: accountId, // Add selected accountId
       );
     }).toList();
   }
 
 // Function to import CSV transactions into Firestore
-  Future<void> importCsvTransactions(String userId) async {
+  Future<int> importCsvTransactions(String userId, String accountId) async {
+    int importedCount = 0;
     try {
       print("Select a CSV file for import...");
       List<Map<String, dynamic>> csvData = await pickAndReadCsvWeb();
 
       if (csvData.isEmpty) {
         print("No data found in the CSV file.");
-        return;
+        return 0;
       }
 
       List<ImportedTransaction> transactions =
-      convertCsvDataToImportedTransactions(csvData, userId);
+      convertCsvDataToImportedTransactions(csvData, userId, accountId);
 
       print("Saving transactions to Firestore...");
       FirestoreService firestoreService = FirestoreService();
 
       for (var transaction in transactions) {
+        importedCount++;
         await firestoreService.createImportedTransaction(userId, transaction);
         print("Saved transaction: ${transaction.toMap()}");
       }
@@ -201,6 +204,7 @@ class FirestoreService {
     } catch (e) {
       print("Error importing transactions: $e");
     }
+    return importedCount;
   }
 
   /// Function to create an imported transaction
@@ -467,7 +471,7 @@ class FirestoreService {
     }
   }
 
-  /*
+
   Future<void> createDefaultCategories(String userId) async {
     final List<Map<String, dynamic>> defaultCategories = [
       {'name': 'Einnahmen', 'icon': Icons.attach_money, 'color': Colors.green, 'budgetLimit': 0.0},
@@ -508,7 +512,7 @@ class FirestoreService {
       print("Fehler beim Erstellen der Standardkategorien: $e");
     }
   }
-
+/*
   Future<void> createDefaultCategoriesForAllAccounts(String userId) async {
     final List<Map<String, dynamic>> defaultCategories = [
       {'name': 'Einnahmen', 'icon': Icons.attach_money, 'color': Colors.green, 'budgetLimit': 0.0},
@@ -614,7 +618,7 @@ class FirestoreService {
     } catch (e) {
       print("Fehler beim Erstellen der Kategorie '${category.name}' für Konto $accountId: $e");
     }
-  }
+  }*/
 
 
   //sortiert default nach oben und userdefined nach unten
@@ -647,6 +651,7 @@ class FirestoreService {
     }
   }
 
+  /*
   Future<List<Category>> getSortedUserCategoriesV2(String documentId, String accountId) async {
     try {
       final userCategoriesRef = usersRef
@@ -982,6 +987,50 @@ class FirestoreService {
     }
   }
 
+  Future<List<Transaction>> getUserTransactionsByMonth(String documentId, int year, int month) async {
+    try {
+      final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
+
+      final startOfMonth = DateTime(year, month, 1);
+      final endOfMonth = DateTime(year, month + 1, 1).subtract(const Duration(days: 1));
+
+      firestore.QuerySnapshot snapshot = await userTransactionsRef
+          .where('date', isGreaterThanOrEqualTo: startOfMonth.toIso8601String()) // Compare as strings
+          .where('date', isLessThanOrEqualTo: endOfMonth.toIso8601String()) // Compare as strings
+          .orderBy('date', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) => Transaction.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+    } catch (e) {
+      print("Error getting user transactions by month: $e");
+      return [];
+    }
+  }
+
+
+  Future<List<Transaction>> getTransactionsByAccountIdsAndMonth(
+      String documentId, List<String> accountIds, int year, int month) async {
+    try {
+      final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
+
+      final startOfMonth = DateTime(year, month, 1);
+      final endOfMonth = DateTime(year, month + 1, 1).subtract(const Duration(days: 1));
+
+      firestore.QuerySnapshot snapshot = await userTransactionsRef
+          .where('accountId', whereIn: accountIds)
+          .where('date', isGreaterThanOrEqualTo: startOfMonth.toIso8601String()) // Compare as strings
+          .where('date', isLessThanOrEqualTo: endOfMonth.toIso8601String()) // Compare as strings
+          .orderBy('date', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) => Transaction.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+    } catch (e) {
+      print("Error getting transactions by accountIds and month: $e");
+      return [];
+    }
+  }
+
+
   ///TEST
   Future<List<Transaction>> getCategoryTransactions(String userId, String categoryId) async {
     try {
@@ -1078,6 +1127,40 @@ class FirestoreService {
       await userTransactionsRef.doc(transactionId).delete();
     } catch (e) {
       print("Error deleting transaction: $e");
+    }
+  }
+
+
+
+
+  Future<double> calculateBankAccountBalance(String documentId, BankAccount bankAccount) async {
+    try {
+      // Starten mit dem aktuellen Kontostand im Bankkonto
+      double totalBalance = bankAccount.balance ?? 0.0;
+
+      // Abrufen aller Transaktionen für das spezifische Konto
+      List<Transaction> transactions = await getTransactionsByAccountIds(documentId, [bankAccount.id!]);
+
+      // Berechnung des Gesamtguthabens basierend auf den Transaktionen
+      for (var transaction in transactions) {
+        // Einnahmen addieren
+        if (transaction.type.toLowerCase() == 'income') {
+          totalBalance += transaction.amount;
+        }
+        // Ausgaben subtrahieren
+        else if (transaction.type.toLowerCase() == 'expense') {
+          totalBalance -= transaction.amount;
+        }
+      }
+
+      // Optional: Aktualisiere den Kontostand im `BankAccount`-Objekt
+      bankAccount.balance = totalBalance;
+      bankAccount.lastUpdated = DateTime.now();
+
+      return totalBalance;
+    } catch (e) {
+      print("Error calculating balance for bank account: $e");
+      return bankAccount.balance ?? 0.0;
     }
   }
 
