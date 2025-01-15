@@ -4,6 +4,7 @@ class ImportedTransaction {
   
   String? id;
   final String userId;
+  String? categoryId;
   double amount;
   final DateTime date;
   //String? categoryId;
@@ -23,6 +24,7 @@ class ImportedTransaction {
     required this.outflow,
     required this.inflow,
     this.accountId, // Optional account link
+    this.categoryId, // Optional category link
     this.linkedAccount, //
   });
 
@@ -32,7 +34,7 @@ class ImportedTransaction {
       'userId': userId,
       'amount': amount.toString(),
       'date': date.toIso8601String(),
-      //'categoryId': categoryId ?? null, // Pass null if undefined
+      'categoryId': categoryId ?? null, // Pass null if undefined
       'description': description,
       'payerOrRecipient': payerOrRecipient,
       'outflow': outflow,
@@ -53,6 +55,7 @@ class ImportedTransaction {
       outflow: double.tryParse(data['outflow']?.toString() ?? '0.0') ?? 0.0,
       inflow: double.tryParse(data['inflow']?.toString() ?? '0.0') ?? 0.0,
       accountId: data['accountId'],
+      categoryId: data['categoryId'],
     )..id = documentId;
   }
 
