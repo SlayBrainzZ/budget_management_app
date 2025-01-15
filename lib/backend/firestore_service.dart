@@ -1116,6 +1116,27 @@ class FirestoreService {
     }
   }
 
+  Future<void> updateImportedTransaction(String userId, String transactionId, ImportedTransaction transaction) async {
+    try {
+      final userImportedTransactionsRef = usersRef
+          .doc(userId) // Benutzer-ID
+          .collection('ImportedTransactions') // Changed to 'ImportedTransactions'
+          .doc(transactionId); // Transaktions-ID
+      final docSnapshot = await userImportedTransactionsRef.get();
+
+      // Überprüfen, ob das Dokument existiert
+      if (!docSnapshot.exists) {
+        print("Imported transaction not found for userId: $userId, transactionId: $transactionId");
+        return;
+      }
+
+      await userImportedTransactionsRef.update(transaction.toMap());
+      print("Imported transaction successfully updated!");
+    } catch (e) {
+      print("Error updating imported transaction: $e");
+    }
+  }
+
 
   /// Deletes a transaction from Firestore for a specific user.
   ///
