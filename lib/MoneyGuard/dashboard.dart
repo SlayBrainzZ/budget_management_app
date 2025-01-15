@@ -5,6 +5,7 @@ import 'dateButton.dart';
 import 'category.dart';
 import 'package:budget_management_app/backend/firestore_service.dart';
 import 'package:budget_management_app/backend/BankAccount.dart';
+import 'package:budget_management_app/backend/Transaction.dart';
 
 class Dashboard extends StatefulWidget {
   @override
@@ -478,7 +479,7 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
       },
     );
   }
-
+/*
   void _showDeleteConfirmationDialog() {
     showDialog(
       context: context,
@@ -507,5 +508,153 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
         );
       },
     );
+  }*/
+  /*
+  void _showDeleteConfirmationDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Konto löschen"),
+          content: const Text("Möchten Sie dieses Konto wirklich löschen?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Abbrechen"),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (widget.account?.forImport == false) {
+                  // Check for transactions associated with this account
+                  List<Transaction> transactions = await FirestoreService()
+                      .getTransactionsByAccountIds(widget.account!.userId, [widget.account!.id!]);
+
+                  if (transactions.isNotEmpty) {
+                    _showCannotDeleteMessage();
+                    // Display an error message if transactions exist
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Konto kann nicht gelöscht werden, da Transaktionen existieren.')),
+                    );
+                    Navigator.pop(context); // Close the dialog
+                    return;
+                  }
+                }
+
+                // Proceed with deletion
+                widget.onAccountDeleted?.call();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MyApp(),
+                  ),
+                );
+              },
+              child: const Text("Löschen"),
+            ),
+          ],
+        );
+      },
+    );
   }
+  void _showCannotDeleteMessage() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Löschen nicht möglich"),
+          content: const Text("Dieses Konto kann nicht gelöscht werden, da es Transaktionen besitzt."),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MyApp(),
+                  ),
+                );
+              },
+              child: const Text("Abbrechen"),
+            ),
+          ],
+        );
+      },
+    );
+  }*/
+  void _showDeleteConfirmationDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Konto löschen"),
+          content: widget.account != null
+              ? FutureBuilder<List<Transaction>>(
+            future: FirestoreService().getTransactionsByAccountIds(
+                widget.account!.userId, [widget.account!.id!]),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Text("Prüfe, ob Transaktionen vorhanden sind...");
+              }
+
+              if (snapshot.hasError) {
+                return const Text("Fehler beim Abrufen der Transaktionen.");
+              }
+
+              final transactions = snapshot.data ?? [];
+
+              if (transactions.isNotEmpty) {
+                return Text(
+                  "Dieses Konto hat ${transactions.length} Transaktionen. "
+                      "Wenn Sie das Konto löschen, werden diese Transaktionen ebenfalls gelöscht. "
+                      "Möchten Sie fortfahren?",
+                );
+              } else {
+                return const Text(
+                  "Sind Sie sicher, dass Sie dieses Konto löschen möchten? "
+                      "Es gibt keine zugehörigen Transaktionen.",
+                );
+              }
+            },
+          )
+              : const Text(
+              "Sind Sie sicher, dass Sie dieses Konto löschen möchten?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Abbrechen"),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (widget.account != null) {
+                  // Lösche alle Transaktionen, die mit diesem Konto verknüpft sind
+                  List<Transaction> transactions = await FirestoreService()
+                      .getTransactionsByAccountIds(widget.account!.userId, [widget.account!.id!]);
+
+                  for (var transaction in transactions) {
+                    await FirestoreService()
+                        .deleteTransaction(widget.account!.userId, transaction.id!);
+                  }
+
+                  // Lösche das Konto
+                  await FirestoreService()
+                      .deleteBankAccount(widget.account!.userId, widget.account!.id!);
+
+                  // Aktualisiere die Ansicht oder navigiere zurück
+                  widget.onAccountDeleted?.call();
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MyApp(),
+                    ),
+                  );
+                }
+              },
+              child: const Text("Löschen"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
 }

@@ -168,7 +168,7 @@ class ImportButton extends StatelessWidget {
                       );
 
                       // Importiere die Transaktionen
-                      int importedCount = await firestoreService.importCsvTransactionsV2(
+                      int importedCount = await firestoreService.importCsvTransactions(
                         userId,
                         selectedAccount!,
                       );

@@ -5,6 +5,8 @@ import 'package:budget_management_app/backend/firestore_service.dart';
 import 'package:budget_management_app/backend/Category.dart';
 import 'package:budget_management_app/backend/User.dart';
 
+import '../backend/Transaction.dart';
+
 
 final List<Map<String, dynamic>> defaultCategories = [
   {'name': 'Einnahmen', 'icon': Icons.attach_money, 'color': Colors.green, 'budgetLimit': 0.0},
@@ -137,8 +139,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
       final userId = user.uid;
 
       // Erstellen und Laden der Kategorien
-      userCategories = FirestoreService().createDefaultCategoriesV2(userId).then((_) {
-        return FirestoreService().getSortedUserCategoriesV3(userId);
+      userCategories = FirestoreService().createDefaultCategories(userId).then((_) {
+        return FirestoreService().getSortedUserCategories(userId);
       });
     } else {
       print("Kein Benutzer angemeldet.");
@@ -349,10 +351,10 @@ class _CategoryScreenState extends State<CategoryScreen> {
                     );
 
                     try {
-                      await FirestoreService().createCategoryV2(userId, newCategory);
+                      await FirestoreService().createCategory(userId, newCategory);
 
                       setState(() {
-                        userCategories = FirestoreService().getSortedUserCategoriesV3(userId);
+                        userCategories = FirestoreService().getSortedUserCategories(userId);
                       });
 
                       Navigator.of(context).pop();
@@ -415,7 +417,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
                     if (category.userId != "system") {
                       // Benutzerdefinierte Kategorien in Firestore aktualisieren
-                      await FirestoreService().updateCategoryV2(user.uid, category.id!, category);
+                      await FirestoreService().updateCategoryBudgetLimit(user.uid, category.id!, category.budgetLimit!);
                     } else {
                       // Standardkategorien: Budgetlimit aktualisieren
                       await FirestoreService()
@@ -423,7 +425,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                     }
 
                     setState(() {
-                      userCategories = FirestoreService().getSortedUserCategoriesV3(user.uid);
+                      userCategories = FirestoreService().getSortedUserCategories(user.uid);
                     });
                     Navigator.of(context).pop();
                   },
@@ -440,7 +442,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
 
 
-
+/*
   void _confirmDeleteCategory(Category category) {
     showDialog(
       context: context,
@@ -465,10 +467,76 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 }
 
                 try {
-                  await FirestoreService().deleteCategoryV2(user.uid, category.id!);
+                  await FirestoreService().deleteCategory(user.uid, category.id!);
 
                   setState(() {
-                    userCategories = FirestoreService().getSortedUserCategoriesV3(user.uid);
+                    userCategories = FirestoreService().getSortedUserCategories(user.uid);
+                  });
+                  Navigator.of(context).pop();
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Fehler beim Löschen der Kategorie: $e')),
+                  );
+                }
+              },
+              child: Text('Löschen'),
+            ),
+          ],
+        );
+      },
+    );
+  }*/
+  void _confirmDeleteCategory(Category category) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Kategorie löschen'),
+          content: FutureBuilder<List<Transaction>>(
+            future: FirestoreService().getTransactionsByCategory(FirebaseAuth.instance.currentUser!.uid, category.id!),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return CircularProgressIndicator();
+              } else if (snapshot.hasError) {
+                return Text('Fehler beim Abrufen der Transaktionen.');
+              } else {
+                final transactions = snapshot.data ?? [];
+                return Text(transactions.isNotEmpty
+                    ? 'Die Kategorie "${category.name}" hat ${transactions.length} zugehörige Transaktionen. Wenn Sie die Kategorie löschen, werden diese ebenfalls entfernt. Möchten Sie fortfahren?'
+                    : 'Möchten Sie die Kategorie "${category.name}" wirklich löschen?');
+              }
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Abbrechen'),
+            ),
+            TextButton(
+              onPressed: () async {
+                final user = FirebaseAuth.instance.currentUser;
+
+                if (user == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Kein Benutzer angemeldet.')),
+                  );
+                  return;
+                }
+
+                try {
+                  // Hole Transaktionen zur Kategorie
+                  final transactions = await FirestoreService().getTransactionsByCategory(user.uid, category.id!);
+
+                  // Lösche alle Transaktionen der Kategorie
+                  for (var transaction in transactions) {
+                    await FirestoreService().deleteTransaction(user.uid, transaction.id!);
+                  }
+
+                  // Lösche die Kategorie
+                  await FirestoreService().deleteCategory(user.uid, category.id!);
+
+                  setState(() {
+                    userCategories = FirestoreService().getSortedUserCategories(user.uid);
                   });
                   Navigator.of(context).pop();
                 } catch (e) {
