@@ -951,14 +951,47 @@ class FirestoreService {
       print("Error creating transaction under category: $e");
     }
   }
-  ///TEST
 
+  Future<List<Transaction>> getFilteredTransactions(
+      String documentId, {
+        List<String>? categoryIds,
+        List<String>? accountIds,
+        int? month,
+        int? year,
+      }) async {
+    try {
+      List<Transaction> filteredTransactions = [];
+      final transactionsRef = usersRef.doc(documentId).collection('Transactions');
 
-  /// Retrieves all transactions for a specific user, ordered by date (latest first).
-  ///
-  /// This function takes the user's `documentId` as input and retrieves all transaction documents
-  /// from the user's `Transactions` subcollection. The results are ordered by date with the latest
-  /// transaction appearing first.
+      // Fetch all transactions first
+      final snapshot = await transactionsRef.get();
+      List<Transaction> allTransactions = snapshot.docs.map((doc) => Transaction.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+
+      // Apply filters
+      if (categoryIds != null) {
+        allTransactions = allTransactions.where((transaction) => categoryIds.contains(transaction.categoryId)).toList();
+      }
+
+      if (accountIds != null) {
+        allTransactions = allTransactions.where((transaction) => accountIds.contains(transaction.accountId)).toList();
+      }
+
+      if (month != null && year != null) {
+        allTransactions = allTransactions.where((transaction) {
+          final transactionDate = transaction.date;
+          return transactionDate.month == month && transactionDate.year == year;
+        }).toList();
+      }
+
+      filteredTransactions = allTransactions;
+
+      return filteredTransactions;
+    } catch (e) {
+      print("Error fetching filtered transactions: $e");
+      return [];
+    }
+  }
+
   Future<List<Transaction>> getUserTransactions(String documentId) async {
     try {
       final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
