@@ -369,6 +369,12 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
     return Scaffold(
       appBar: AppBar(
         title: const Text('Einnahmen und Ausgaben'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context); // Zurück zum vorherigen Bildschirm
+          },
+        ),
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(120.0), // Platz für Dropdowns
           child: Column(

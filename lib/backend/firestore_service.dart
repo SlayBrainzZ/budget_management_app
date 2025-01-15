@@ -177,8 +177,10 @@ class FirestoreService {
   }
 
 // Function to import CSV transactions into Firestore
-  Future<int> importCsvTransactions(String userId, String accountId) async {
+  Future<int> importCsvTransactions(BuildContext context,String userId, String accountId) async {
     int importedCount = 0;
+    bool dialogShown = false;
+
     try {
       print("Select a CSV file for import...");
       List<Map<String, dynamic>> csvData = await pickAndReadCsvWeb();
@@ -195,9 +197,29 @@ class FirestoreService {
       FirestoreService firestoreService = FirestoreService();
 
       for (var transaction in transactions) {
+
+        if (!dialogShown) {
+          dialogShown = true;
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => AlertDialog(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 10),
+                  Text('Importiere Transaktionen...'),
+                ],
+              ),
+            ),
+          );
+        }
+
         importedCount++;
         await firestoreService.createImportedTransaction(userId, transaction);
         print("Saved transaction: ${transaction.toMap()}");
+
       }
 
       print("All transactions imported successfully!");
@@ -1020,6 +1042,25 @@ class FirestoreService {
     }
   }
 
+
+
+  Future<List<ImportedTransaction>> getImportedTransactionsByAccountIds(String documentId, List<String> accountIds) async {
+    try {
+      final userTransactionsRef = usersRef.doc(documentId).collection('ImportedTransactions');
+      firestore.QuerySnapshot snapshot = await userTransactionsRef
+          .where('accountId', whereIn: accountIds)
+          //.orderBy('date', descending: true)
+          .get();
+
+      // Hier sollte `ImportedTransaction.fromMap` verwendet werden
+      return snapshot.docs.map((doc) => ImportedTransaction.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+    } catch (e) {
+      print("Error getting imported transactions for accountIds: $e");
+      return [];
+    }
+  }
+
+
   Future<List<Transaction>> getUserTransactionsByMonth(String documentId, int year, int month) async {
     try {
       final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
@@ -1184,7 +1225,14 @@ class FirestoreService {
     }
   }
 
-
+  Future<void> deleteImportedTransaction(String documentId, String transactionId) async {
+    try {
+      final userTransactionsRef = usersRef.doc(documentId).collection('ImportedTransactions');
+      await userTransactionsRef.doc(transactionId).delete();
+    } catch (e) {
+      print("Error deleting transaction: $e");
+    }
+  }
 
 
   Future<double> calculateBankAccountBalance(String documentId, BankAccount bankAccount) async {
@@ -1193,21 +1241,24 @@ class FirestoreService {
       double totalBalance = bankAccount.balance ?? 0.0;
 
       // Abrufen aller Transaktionen für das spezifische Konto
-      List<Transaction> transactions = await getTransactionsByAccountIds(documentId, [bankAccount.id!]);
+      List<Transaction> transactions = await FirestoreService()
+          .getTransactionsByAccountIds(documentId, [bankAccount.id!]);
 
       // Berechnung des Gesamtguthabens basierend auf den Transaktionen
       for (var transaction in transactions) {
         // Einnahmen addieren
-        if (transaction.type.toLowerCase() == 'income') {
+        if (transaction.type == 'Einnahme') {
           totalBalance += transaction.amount;
         }
         // Ausgaben subtrahieren
-        else if (transaction.type.toLowerCase() == 'expense') {
+        else if (transaction.type == 'Ausgabe') {
           totalBalance -= transaction.amount;
         }
       }
 
-      // Optional: Aktualisiere den Kontostand im `BankAccount`-Objekt
+      print('balance ${bankAccount.balance}');
+
+      // Optional: Aktualisiere den Kontostand im BankAccount-Objekt
       bankAccount.balance = totalBalance;
       bankAccount.lastUpdated = DateTime.now();
 
@@ -1217,6 +1268,41 @@ class FirestoreService {
       return bankAccount.balance ?? 0.0;
     }
   }
+
+  Future<double> calculateImportBankAccountBalance(String documentId, BankAccount bankAccount) async {
+    try {
+      // Starten mit dem aktuellen Kontostand im Bankkonto
+      double totalBalance = bankAccount.balance ?? 0.0;
+
+      // Abrufen aller Transaktionen für das spezifische Konto
+      List<ImportedTransaction> transactions = await FirestoreService()
+          .getImportedTransactionsByAccountIds(documentId, [bankAccount.id!]);
+
+      // Berechnung des Gesamtguthabens basierend auf den Transaktionen
+      for (var transaction in transactions) {
+        // Einnahmen addieren (inflow)
+        if (transaction.inflow > 0) {
+          totalBalance += transaction.inflow;
+        }
+        // Ausgaben subtrahieren (outflow)
+        if (transaction.outflow > 0) {
+          totalBalance -= transaction.outflow;
+        }
+      }
+
+      print('balance ${bankAccount.balance}');
+
+      // Optional: Aktualisiere den Kontostand im BankAccount-Objekt
+      bankAccount.balance = totalBalance;
+      bankAccount.lastUpdated = DateTime.now();
+
+      return totalBalance;
+    } catch (e) {
+      print("Error calculating balance for bank account: $e");
+      return bankAccount.balance ?? 0.0;
+    }
+  }
+
 
 
   // =======================

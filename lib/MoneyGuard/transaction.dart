@@ -60,6 +60,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
   }
 
 
+
   Future<void> _loadUserAndData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -77,6 +78,29 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       }
     }
   }
+
+  /*
+  Future<void> _Balance() async {
+    if (FirebaseAuth.instance.currentUser != null) {
+      List<BankAccount> accounts =
+      await FirestoreService().getUserBankAccounts(FirebaseAuth.instance.currentUser!.uid);
+
+      for (BankAccount account in accounts) {
+        // Überprüfe, ob das Konto für den Import vorgesehen ist
+        if (account.forImport) {
+          // Berechne den Kontostand für importierte Konten
+          await FirestoreService().calculateImportBankAccountBalance(FirebaseAuth.instance.currentUser!.uid, account);
+        } else {
+          // Berechne den Kontostand für normale Konten
+          await FirestoreService().calculateBankAccountBalance(FirebaseAuth.instance.currentUser!.uid, account);
+        }
+      }
+
+      setState(() {
+
+      });
+    }
+  }*/
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
