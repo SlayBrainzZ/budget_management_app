@@ -531,7 +531,11 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              title,
+              selectedItems.isEmpty
+                  ? title // Wenn keine Konten ausgewählt sind, zeige den Titel
+                  : selectedItems
+                  .map((e) => e.accountName ?? "Unbenannt")
+                  .join(", "), // Wenn Konten ausgewählt sind, zeige deren Namen
               style: const TextStyle(color: Colors.black),
               overflow: TextOverflow.ellipsis,
             ),
@@ -541,6 +545,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
       ),
     );
   }
+
 
 
 
