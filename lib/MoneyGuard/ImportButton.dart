@@ -147,10 +147,17 @@ class ImportButton extends StatelessWidget {
                     backgroundColor: Colors.blue, // Buttonfarbe
                   ),
                   onPressed: () async {
+/*
+                    FirestoreService firestoreService = FirestoreService();
+                    List<Map<String, dynamic>> csvData = await firestoreService.pickAndReadCsvWeb();
+                    if (csvData.isEmpty) {
+                      print("Abbruch: Keine Datei ausgewählt");
+                    }
+*/
                     final userId = FirebaseAuth.instance.currentUser?.uid;
                     if (userId != null && selectedAccount != null) {
                       FirestoreService firestoreService = FirestoreService();
-
+/*
                       // Zeige Ladefenster an
                       showDialog(
                         context: context,
@@ -166,9 +173,15 @@ class ImportButton extends StatelessWidget {
                           ),
                         ),
                       );
-
+*//*
                       // Importiere die Transaktionen
                       int importedCount = await firestoreService.importCsvTransactions(
+                        userId,
+                        selectedAccount!,
+                      );*/
+
+                      int importedCount = await firestoreService.importCsvTransactions(
+                        context, // Kontext übergeben
                         userId,
                         selectedAccount!,
                       );

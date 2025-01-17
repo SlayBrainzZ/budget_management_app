@@ -1,4 +1,5 @@
 import 'BankAccount.dart';
+import 'Category.dart';
 
 class ImportedTransaction {
   
@@ -14,6 +15,8 @@ class ImportedTransaction {
   final double inflow;   // Amount for incoming transactions (Eingang)
   String? accountId;
   BankAccount? linkedAccount;
+  Category? categoryData;
+
 
   ImportedTransaction({
     required this.userId,
@@ -26,6 +29,7 @@ class ImportedTransaction {
     this.accountId, // Optional account link
     this.categoryId, // Optional category link
     this.linkedAccount, //
+    this.categoryData,
   });
 
   // Map to Firestore representation

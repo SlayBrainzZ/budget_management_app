@@ -7,6 +7,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:budget_management_app/backend/Category.dart';
 import 'package:budget_management_app/backend/BankAccount.dart';
 import 'package:budget_management_app/backend/ImportedTransaction.dart';
+import 'package:multi_select_flutter/multi_select_flutter.dart';
+
 
 
 import 'ImportButton.dart';
@@ -104,16 +106,24 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
 
 // Dropdown-Werte
   List<Category> selectedCategories = []; // Vollständige Category-Objekte
-  List<String> selectedAccounts = [];
+  List<BankAccount> selectedAccounts = [];
 
 // Kategorien und Konten
   List<Category> categories = [];
-  List<String> accounts = ['Konto 1', 'Konto 2', 'Konto 3'];
+  List<BankAccount> bankAccounts = [];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.index == 1) { // Monatlich ausgewählt
+        setState(() {
+          _generateMonthlyData(); // Daten berechnen
+        });
+      }
+    });
+    _fetchBankAccounts();
     _fetchTransactions();
     //_fetchCategories();
   }
@@ -265,6 +275,65 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
       });
     }
   }*/
+//Monthly ##########################
+  Map<int, Map<String, double>> _generateMonthlyData() {
+    Map<int, Map<String, double>> monthlyData = {};
+
+    for (var transaction in dailyTransactions) {
+      final type = transaction['type'];
+      final data = transaction['data'];
+      final date = type == 'regular'
+          ? (data as Transaction).date
+          : (data as ImportedTransaction).date;
+      final amount = type == 'regular'
+          ? (data as Transaction).amount
+          : (data as ImportedTransaction).amount;
+      final inflow = type == 'regular'
+          ? (data as Transaction).type == 'Einnahme'
+          : (data as ImportedTransaction).inflow > 0;
+
+      final month = date.month;
+      if (!monthlyData.containsKey(month)) {
+        monthlyData[month] = {'einnahmen': 0.0, 'ausgaben': 0.0, 'gesamt': 0.0};
+      }
+
+      if (inflow) {
+        monthlyData[month]!['einnahmen'] =
+            monthlyData[month]!['einnahmen']! + amount;
+      } else {
+        monthlyData[month]!['ausgaben'] =
+            monthlyData[month]!['ausgaben']! + amount.abs();
+      }
+
+      monthlyData[month]!['gesamt'] =
+          monthlyData[month]!['einnahmen']! - monthlyData[month]!['ausgaben']!;
+    }
+
+    return monthlyData;
+  }
+
+// Für multiselect
+  Future<void> _fetchBankAccounts() async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        throw Exception('Kein Benutzer angemeldet.');
+      }
+
+      final firestoreService = FirestoreService();
+      final userId = currentUser.uid;
+
+      // Hier rufst du die Bankkonten ab
+      final accounts = await firestoreService.getUserBankAccounts(userId);
+      setState(() {
+        bankAccounts = accounts;
+      });
+    } catch (e) {
+      print('Fehler beim Abrufen der Bankkonten: $e');
+    }
+  }
+//##################################
+  /*
   Future<void> _fetchTransactions() async {
     setState(() {
       isLoading = true;
@@ -350,7 +419,96 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
         isLoading = false;
       });
     }
+  }*/
+  Future<void> _fetchTransactions() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        throw Exception('Kein Benutzer angemeldet.');
+      }
+
+      final firestoreService = FirestoreService();
+      final userId = currentUser.uid;
+
+      // Extrahiere die IDs der ausgewählten Konten
+      List<String> selectedAccountIds =
+      selectedAccounts.map((account) => account.id!).toList();
+
+      List<Transaction> transactions = [];
+      List<ImportedTransaction> importedTransactions = [];
+
+      if (selectedAccounts.isEmpty) {
+        // Falls keine Konten ausgewählt sind, lade alle Transaktionen
+        transactions = await firestoreService.getUserTransactions(userId);
+        importedTransactions = await firestoreService.getImportedTransactions(userId);
+      } else {
+        // Falls Konten ausgewählt sind, filtere nach diesen
+        transactions = await firestoreService.getTransactionsByAccountIds(userId, selectedAccountIds);
+        importedTransactions = await firestoreService.getImportedTransactionsByAccountIds(userId, selectedAccountIds);
+      }
+
+      // Kategorie- und Kontodaten für jede Transaktion laden
+      for (var transaction in transactions) {
+        if (transaction.accountId != null) {
+          final bankAccount = await firestoreService.getBankAccount(userId, transaction.accountId!);
+          transaction.bankAccount = bankAccount;
+        }
+        if (transaction.categoryId != null) {
+          final category = await firestoreService.getCategory(userId, transaction.categoryId!);
+          transaction.categoryData = category;
+        }
+      }
+
+      // Importierte Transaktionen verarbeiten
+      for (var importedTransaction in importedTransactions) {
+        if (importedTransaction.accountId != null) {
+          final bankAccount = await firestoreService.getBankAccount(userId, importedTransaction.accountId!);
+          importedTransaction.linkedAccount = bankAccount;
+        }
+        if (importedTransaction.categoryId != null) {
+          final category = await firestoreService.getCategory(userId, importedTransaction.categoryId!);
+          importedTransaction.categoryData = category;
+        }
+      }
+
+      final combinedTransactions = [
+        ...transactions.map((t) => {
+          'type': 'regular',
+          'data': t,
+        }),
+        ...importedTransactions.map((t) => {
+          'type': 'imported',
+          'data': t,
+        }),
+      ];
+
+      // Sortiere die Transaktionen nach Datum
+      combinedTransactions.sort((a, b) {
+        final aDate = a['type'] == 'regular'
+            ? (a['data'] as Transaction).date
+            : (a['data'] as ImportedTransaction).date;
+        final bDate = b['type'] == 'regular'
+            ? (b['data'] as Transaction).date
+            : (b['data'] as ImportedTransaction).date;
+        return bDate.compareTo(aDate);
+      });
+
+      setState(() {
+        dailyTransactions = combinedTransactions;
+      });
+    } catch (e) {
+      print('Fehler beim Abrufen der Transaktionen: $e');
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
+
 
   Future<List<Category>> _fetchSortedCategories() async {
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -369,29 +527,25 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
     return Scaffold(
       appBar: AppBar(
         title: const Text('Einnahmen und Ausgaben'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context); // Zurück zum vorherigen Bildschirm
+          },
+        ),
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(120.0), // Platz für Dropdowns
           child: Column(
             children: [
+              if (_tabController.index == 0) ...[
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _buildMultiSelectDropdown(
-                      title: "Kategorie wählen",
-                      items: categories,
-                      selectedItems: selectedCategories,
-                      onConfirm: (selected) {
-                        setState(() {
-                          selectedCategories = selected;
-                        });
-                        _fetchTransactions();
-                      },
-                    ),
-                    _buildMultiSelectDropdown(
                       title: "Konto wählen",
-                      items: accounts,
+                      items: bankAccounts,
                       selectedItems: selectedAccounts,
                       onConfirm: (selected) {
                         setState(() {
@@ -405,7 +559,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                     ),
                   ],
                 ),
-              ),
+              ),],
               TabBar(
                 controller: _tabController,
                 tabs: const [
@@ -423,37 +577,67 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
         controller: _tabController,
         children: [
           _buildDailyTransactionList(),
-          _buildEmptyMonthlyView(),
+          _buildMonthlyView(_generateMonthlyData()),
         ],
       ),
     );
   }
 
-  Widget _buildMultiSelectDropdown<T>({
+  Widget _buildMultiSelectDropdown({
     required String title,
-    required List<T> items,
-    required List<T> selectedItems,
-    required Function(List<T>) onConfirm,
+    required List<BankAccount> items,
+    required List<BankAccount> selectedItems,
+    required Function(List<BankAccount>) onConfirm,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(color: Colors.black),
-            overflow: TextOverflow.ellipsis,
-          ),
-          const Icon(Icons.arrow_drop_down, color: Colors.grey),
-        ],
+    return GestureDetector(
+      onTap: () async {
+        final selected = await showDialog<List<BankAccount>>(
+          context: context,
+          builder: (BuildContext context) {
+            return MultiSelectDialog(
+              items: items.map((e) {
+                // Titel mit Icon vorbereiten
+                final String displayTitle =
+                    '${e.accountType == "Bargeld" ? "💵" : "🏦"} ${e.accountName ?? "Unbenannt"}';
+                return MultiSelectItem(e, displayTitle);
+              }).toList(),
+              initialValue: selectedItems,
+              title: Text(title),
+            );
+          },
+        );
+
+        if (selected != null) {
+          onConfirm(selected);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              selectedItems.isEmpty
+                  ? title // Wenn keine Konten ausgewählt sind, zeige den Titel
+                  : selectedItems
+                  .map((e) => e.accountName ?? "Unbenannt")
+                  .join(", "), // Wenn Konten ausgewählt sind, zeige deren Namen
+              style: const TextStyle(color: Colors.black),
+              overflow: TextOverflow.ellipsis,
+            ),
+            const Icon(Icons.arrow_drop_down, color: Colors.grey),
+          ],
+        ),
       ),
     );
-  }
+  } //mu
+
+
+
 
 
   Widget _buildDailyTransactionList() {
@@ -506,7 +690,29 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(transaction.note ?? 'Keine Notiz'),
+                  if (transaction.note?.isNotEmpty ?? false)
+                    RichText(
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: 'Notiz: ',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12, // Kleinere Schriftgröße für das Label
+                              color: Colors.blueGrey,
+                            ),
+                          ),
+                          TextSpan(
+                            text: transaction.note!,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.normal,
+                              fontSize: 12, // Gleiche Schriftgröße für den Inhalt
+                              color: Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   if (bankAccount != null)
                     Row(
                       children: [
@@ -526,7 +732,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                 ),*/
                   Text(
                     'Datum: ${_formatDate(transaction.date)}',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[700]!),
                   ),
                 ],
               ),
@@ -549,6 +755,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                 });
               }
           );
+          /*
         } else if (type == 'imported') {
           final importedTransaction = data as ImportedTransaction;
           final bankAccount = importedTransaction.linkedAccount;
@@ -614,13 +821,109 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
               _showCategoryAssignDialog(context, importedTransaction);
             },
           );
+        }*/
+        } else if (type == 'imported') {
+          final importedTransaction = data as ImportedTransaction;
+          final bankAccount = importedTransaction.linkedAccount;
+          final category = importedTransaction.categoryData; // Kategorie-Daten
+
+          return ListTile(
+            leading: _buildLeadingIcon(importedTransaction.inflow > 0 ? 'Einnahme' : 'Ausgabe'),
+            title: Text(
+              importedTransaction.description,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+               // Text('Empfänger: ${importedTransaction.payerOrRecipient}'),
+                RichText(
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text: 'Empfänger: ',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12, // Kleinere Schriftgröße für das Label
+                          color: Colors.blueGrey,
+                        ),
+                      ),
+                      TextSpan(
+                        text: importedTransaction.payerOrRecipient ?? '',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.normal,
+                          fontSize: 12, // Gleiche Schriftgröße für den Inhalt
+                          color: Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (category != null)
+                  Row(
+                    children: [
+                      Icon(
+                        category?.icon ?? Icons.help_outline, // Standard-Icon für keine Kategorie
+                        color: category?.color ?? Colors.grey, // Standard-Farbe für keine Kategorie
+                        size: 24,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(category?.name ?? 'Keine Kategorie'), // Standard-Text für keine Kategorie
+                    ],
+                  ),
+                if (bankAccount != null)
+                  Row(
+                    children: [
+                      _buildAccountLogo(bankAccount.accountType),
+                      const SizedBox(width: 10),
+                      Text(
+                        '${bankAccount.accountName ?? 'Unbekannt'}',
+                        style: const TextStyle(color: Colors.black, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                Text(
+                  'Datum: ${_formatDate(importedTransaction.date)}',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[700]!),
+                ),
+              ],
+            ),
+            trailing: SizedBox(
+              width: 300,
+              child: Row(
+                mainAxisSize: MainAxisSize.max,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Imp',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    '${importedTransaction.amount.toStringAsFixed(2)} €',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: importedTransaction.inflow > 0 ? Colors.green : Colors.red,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            onTap: () {
+              _showCategoryAssignDialog(context, importedTransaction);
+            },
+          );
         }
 
         return SizedBox.shrink();
       },
     );
   }
-
+/*
   Future<void> _showCategoryAssignDialog(
       BuildContext context, ImportedTransaction transaction) async {
     List<Category> categories = await _fetchSortedCategories();
@@ -678,7 +981,91 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
 
     // Aktualisiere die Transaktionsliste nach dem Speichern
     _fetchTransactions();
+  }*/
+
+  Future<void> _showCategoryAssignDialog(
+      BuildContext context, ImportedTransaction transaction) async {
+    List<Category> categories = await _fetchSortedCategories();
+    Category? selectedCategory;
+
+    if (transaction.categoryId != null) {
+      selectedCategory = categories.firstWhere(
+            (category) => category.id == transaction.categoryId,
+        //orElse: () => null,
+      );
+    }
+
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder( // Nutze StatefulBuilder, um den Dialog dynamisch zu aktualisieren
+          builder: (BuildContext context, StateSetter setState) {
+            return AlertDialog(
+              title: const Text('Kategorie zuweisen'),
+              content: DropdownButton<Category>(
+                isExpanded: true,
+                value: selectedCategory,
+                hint: const Text('Kategorie auswählen'),
+                items: categories.map((category) {
+                  return DropdownMenuItem<Category>(
+                    value: category,
+                    child: Row(
+                      children: [
+                        Icon(
+                          category.icon ?? Icons.category,
+                          color: category.color ?? Colors.grey,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(category.name),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                onChanged: (Category? newValue) {
+                  setState(() {
+                    selectedCategory = newValue; // Aktualisiere die Auswahl im Dialog
+                  });
+                },
+              ),
+              actions: [
+                TextButton(
+                  child: const Text('Abbrechen'),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                ElevatedButton(
+                  child: const Text('Speichern'),
+                  onPressed: () async {
+                    if (selectedCategory != null) {
+                      try {
+                        // Aktualisiere die Kategorie in der Transaktion
+                        transaction.categoryId = selectedCategory!.id;
+
+                        // Speichere die Transaktion in Firestore
+                        final currentUser = FirebaseAuth.instance.currentUser;
+                        if (currentUser != null && transaction.id != null) {
+                          await FirestoreService().updateImportedTransaction(
+                            currentUser.uid,
+                            transaction.id!,
+                            transaction,
+                          );
+                        }
+
+                        Navigator.of(context).pop();
+                        _fetchTransactions(); // Aktualisiere die Liste der Transaktionen
+                      } catch (e) {
+                        print('Fehler beim Speichern der Kategorie: $e');
+                      }
+                    }
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
+
 
 
 
@@ -719,7 +1106,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
       ),
     );
   }
-
+/*
   Widget _buildEmptyMonthlyView() {
     return Center(
       child: const Text(
@@ -727,5 +1114,84 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
         style: TextStyle(fontSize: 16, color: Colors.grey),
       ),
     );
+  }*/
+  Widget _buildMonthlyView(Map<int, Map<String, double>> monthlyData) {
+    if (monthlyData.isEmpty) {
+      return _buildEmptyMonthlyView();
+    }
+
+    return ListView.builder(
+      itemCount: monthlyData.length,
+      itemBuilder: (context, index) {
+        final month = monthlyData.keys.elementAt(index);
+        final data = monthlyData[month]!;
+
+        final String monthName = _getMonthName(month); // Helper to get month name
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+          child: Card(
+            elevation: 3,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Monat: $monthName',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Einnahmen: ${data['einnahmen']!.toStringAsFixed(2)} €',
+                    style: const TextStyle(fontSize: 16, color: Colors.green),
+                  ),
+                  Text(
+                    'Ausgaben: ${data['ausgaben']!.toStringAsFixed(2)} €',
+                    style: const TextStyle(fontSize: 16, color: Colors.red),
+                  ),
+                  Text(
+                    'Gesamt: ${data['gesamt']!.toStringAsFixed(2)} €',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
+
+  String _getMonthName(int month) {
+    const months = [
+      "Januar",
+      "Februar",
+      "März",
+      "April",
+      "Mai",
+      "Juni",
+      "Juli",
+      "August",
+      "September",
+      "Oktober",
+      "November",
+      "Dezember"
+    ];
+    return months[month - 1];
+  }
+
+  Widget _buildEmptyMonthlyView() {
+    return const Center(
+      child: Text(
+        'Keine Daten für die monatliche Ansicht.',
+        style: TextStyle(fontSize: 16, color: Colors.grey),
+      ),
+    );
+  }
+
 }
