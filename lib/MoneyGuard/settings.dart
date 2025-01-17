@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SettingsPage extends StatefulWidget {
   @override
@@ -9,16 +10,38 @@ class _SettingsPageState extends State<SettingsPage> {
   bool isDarkMode = false; // Zustand für den Dark Mode
   bool notificationsEnabled = true; // Zustand für Benachrichtigungen
 
-  void _logout() {
-    // Logout-Logik hier einfügen
-    print("User ausgeloggt");
-    // Zur Login-Seite navigieren (falls implementiert)
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  void _logout() async {
+    try {
+      await _auth.signOut();
+      print("User ausgeloggt");
+      // Navigiere zur Login-Seite (ersetze 'LoginPage' mit deiner Login-Seite)
+      Navigator.of(context).pushReplacementNamed('/login');
+    } catch (e) {
+      print("Fehler beim Logout: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Logout fehlgeschlagen. Bitte erneut versuchen.")),
+      );
+    }
   }
 
-  void _deleteAccount() {
-    // Account-Löschlogik hier einfügen
-    print("Account gelöscht");
-    // Eventuell zur Login-Seite navigieren
+  void _deleteAccount() async {
+    try {
+      User? user = _auth.currentUser;
+      if (user != null) {
+        await user.delete();
+        print("Account gelöscht");
+        Navigator.of(context).pushReplacementNamed('/login');
+      } else {
+        print("Kein eingeloggter Nutzer gefunden.");
+      }
+    } catch (e) {
+      print("Fehler beim Löschen des Accounts: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Account-Löschung fehlgeschlagen. Bitte erneut versuchen.")),
+      );
+    }
   }
 
   void _changeLanguage() {

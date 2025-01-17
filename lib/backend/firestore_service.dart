@@ -1590,20 +1590,29 @@ class FirestoreService {
 
 
 
-// Hilfsmethode, um den Montag der Woche zu berechnen
   DateTime _getMondayOfWeek(DateTime date) {
     int weekday = date.weekday;
     int daysToSubtract = weekday - DateTime.monday;
-    DateTime mondayOfWeek = date.subtract(Duration(days: daysToSubtract));
-    return mondayOfWeek.toUtc(); // Umwandeln in UTC
+
+    // Subtrahiere die benötigte Anzahl an Tagen und setze die Zeit auf Mitternacht
+    DateTime mondayOfWeek = DateTime.utc(
+      date.year,
+      date.month,
+      date.day - daysToSubtract, // Subtrahiere die Tage
+    );
+
+    print("IST DER MONTag korrekt? ${mondayOfWeek}");
+    return mondayOfWeek; // Montag um 00:00:00 UTC
   }
+
 
 
 
 
   Future<List<Transaction>> getTransactionsByDateRangeAndCategory(String documentId, String categoryId, DateTime startDate, DateTime endDate) async {
     startDate = DateTime.utc(startDate.year, startDate.month, startDate.day, 0, 0, 0).subtract(Duration(microseconds: 1)); // Setze die Zeit auf 00:00
-    endDate = DateTime(endDate.year, endDate.month, endDate.day).subtract(Duration(microseconds: 1));
+    endDate = DateTime(endDate.year, endDate.month, endDate.day+1).subtract(Duration(microseconds: 1));
+    //print("START $startDate UND ENDE $endDate");
     try {
       final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
       firestore.QuerySnapshot snapshot = await userTransactionsRef
@@ -1626,7 +1635,7 @@ class FirestoreService {
   Future<Map<int, double>> getCurrentMonthTransactionsByDateRangeAndCategory(String documentId, String categoryId) async {
     Map<int, double> monthlyCategoryValues = {};
     DateTime today = DateTime.now();
-    DateTime usableToday = DateTime(today.year, today.month, today.day+1);
+    DateTime usableToday = DateTime(today.year, today.month, today.day);
     print("DAYTIME NOW IST: ${today} ODER AUCH $today");
     DateTime startDate = DateTime(today.year, today.month, 1);
 
@@ -1713,7 +1722,7 @@ class FirestoreService {
   }
 
 
-  Future<Map<String, double>> fetchWeeklyUrgentAndNonUrgentExpenses(
+  Future<Map<String, double>> fetchUrgentAndNonUrgentExpenses(
       String documentId, DateTime startDate, DateTime endDate) async {
     try {
       // Hole alle Transaktionen im gegebenen Datumsbereich
@@ -1750,18 +1759,6 @@ class FirestoreService {
     }
   }
 
-  void fetchThisWeeksExpenses(String documentId) async {
-    // Berechne den Montag und Sonntag der aktuellen Woche
-    DateTime today = DateTime.now();
-    DateTime monday = today.subtract(Duration(days: today.weekday - 1)); // Montag
-    DateTime sunday = monday.add(Duration(days: 6)); // Sonntag
-
-    // Hole die summierten Ausgaben für die Woche
-    Map<String, double> expenses = await fetchWeeklyUrgentAndNonUrgentExpenses(documentId, monday, sunday);
-
-    print("Dringende Ausgaben: ${expenses['Dringend']} €");
-    print("Nicht dringende Ausgaben: ${expenses['Nicht dringend']} €");
-  }
 
 
 

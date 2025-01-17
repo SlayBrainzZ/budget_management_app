@@ -47,12 +47,15 @@ class _StatisticsPageState extends State<StatisticsPage> {
   @override
   void initState() {
     super.initState();
-    _loadCategories();
-    if (monthlyBalanceList.isEmpty) {
-      loadLineChartBarData('2025', 'Monat');
-    }
-    _loadWeeklyExpenses(); // Ausgaben für diese Woche laden
+    _initializeData();
   }
+
+  Future<void> _initializeData() async {
+    await _loadCategories();
+    await _loadAndSetExpenses(selectedTimeImportance);
+    loadLineChartBarData(selectedYear, selectedMonth);
+  }
+
 
 
   Future<User?> _loadUser() async {
@@ -99,31 +102,48 @@ class _StatisticsPageState extends State<StatisticsPage> {
       );
     }
   }
-  Future<void> _loadWeeklyExpenses() async {
-    final user = await _loadUser(); // Aktuellen Benutzer abrufen
+
+  Future<void> _loadExpenses(String chosenTime) async {
+    final user = await _loadUser();
     if (user == null) {
       print("Kein Benutzer gefunden.");
       return;
     }
 
     DateTime today = DateTime.now();
-    DateTime monday = today.subtract(Duration(days: today.weekday - 1)); // Montag
-    DateTime sunday = monday.add(Duration(days: 6)); // Sonntag
+    DateTime startdate;
+    DateTime enddate;
 
-    // Rufe die summierten Ausgaben ab
-    Map<String, double> expenses = await _firestoreService.fetchWeeklyUrgentAndNonUrgentExpenses(
-      user.uid,
-      monday,
-      sunday,
-    );
+    if (chosenTime == "Woche") {
+      startdate = today.subtract(Duration(days: today.weekday - 1)); // Montag
+      enddate = startdate.add(Duration(days: 6)); // Sonntag
+    } else if (chosenTime == "Monat") {
+      startdate = DateTime(today.year, today.month, 1); // Erster Tag des Monats
+      enddate = DateTime(today.year, today.month + 1, 0); // Letzter Tag des Monats
+    } else {
+      print("Ungültiger Zeitraum angegeben.");
+      return;
+    }
 
-    setState(() {
-      urgentExpenses = expenses["Dringend"] ?? 0.0;
-      nonUrgentExpenses = expenses["Nicht dringend"] ?? 0.0;
-      //print("HALLLLLLLLLLLOOOOOOO: $urgentExpenses");
-      //print("HALLLLLLLLLLLOOOOOOO: $nonUrgentExpenses");
-    });
+    try {
+      // Rufe die summierten Ausgaben ab
+      Map<String, double> expenses = await _firestoreService.fetchUrgentAndNonUrgentExpenses(
+        user.uid,
+        startdate,
+        enddate,
+      );
+
+      setState(() {
+        urgentExpenses = expenses["Dringend"] ?? 0.0;
+        nonUrgentExpenses = expenses["Nicht dringend"] ?? 0.0;
+      });
+    } catch (e) {
+      print("Fehler beim Laden der Ausgaben: $e");
+    }
+
   }
+
+
 
 
   Future<List<FlSpot>> generateSpotsforMonth(String chosenYear, chosenMonth,
@@ -293,7 +313,51 @@ class _StatisticsPageState extends State<StatisticsPage> {
     }
   }
 
-  //Future<void> loadCategoryLineChartBarData(String chosenYear, String chosenMonth) async {}
+  Future<void> _loadAndSetExpenses(String chosenTime) async {
+    await _loadExpenses(chosenTime);
+    setState(() {}); // Aktualisiert den Zustand nach dem Laden
+  }
+
+  Map<String, dynamic> calculateExpenseSummary() {
+    double totalExpenses = urgentExpenses + nonUrgentExpenses;
+
+    double urgentPercentage =
+    totalExpenses == 0 ? 0 : (urgentExpenses / totalExpenses) * 100;
+    double nonUrgentPercentage =
+    totalExpenses == 0 ? 0 : (nonUrgentExpenses / totalExpenses) * 100;
+
+    return {
+      'totalExpenses': totalExpenses,
+      'urgentPercentage': urgentPercentage,
+      'nonUrgentPercentage': nonUrgentPercentage,
+    };
+  }
+
+  PieChartData createPiechartData() {
+    final summary = calculateExpenseSummary();
+    return PieChartData(
+      sections: [
+        PieChartSectionData(
+          title:
+          "Dringend (${summary['urgentPercentage'].toStringAsFixed(1)}%)",
+          value: urgentExpenses,
+          color: Colors.red,
+        ),
+        PieChartSectionData(
+          title:
+          "Nicht dringend (${summary['nonUrgentPercentage'].toStringAsFixed(1)}%)",
+          value: nonUrgentExpenses,
+          color: Colors.blue,
+        ),
+      ],
+      sectionsSpace: 2,
+      centerSpaceRadius: 50, // Platz in der Mitte
+    );
+  }
+
+
+
+
 
 
   LineChartData get chartData {
@@ -418,6 +482,29 @@ class _StatisticsPageState extends State<StatisticsPage> {
     }
 
     return lastMonthBalance;
+  }
+
+  Widget buildPieChart() {
+    final summary = calculateExpenseSummary();
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        PieChart(createPiechartData()),
+        Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Gesamt',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              '${summary['totalExpenses'].toStringAsFixed(2)} €',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
 
@@ -719,7 +806,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 ],
               ),
               const SizedBox(height: 20),
-              cachedImportantChartData == [50.0,50.0]
+              urgentExpenses == 0.0 && nonUrgentExpenses == 0.0
                   ? Center(child: CircularProgressIndicator())
                   : Container(
                 width: double.infinity,
@@ -745,49 +832,33 @@ class _StatisticsPageState extends State<StatisticsPage> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: PieChart(
-                        PieChartData(
-                            sections: [
-                              PieChartSectionData(title: "Dringend", value: urgentExpenses, color: Colors.red),
-                              PieChartSectionData(title: "Nicht dringend",value: nonUrgentExpenses, color: Colors.blue)
-                            ]
-                        ),
-                        duration: Duration(milliseconds: 150), // Optional
-                        curve: Curves.linear, // Optional
-                      ),
+                      child: buildPieChart(), // Nutze die neue Methode
                     ),
                   ],
                 ),
               ),
-
-
-
-
-
             ],
           ),
         ),
       ),
     );
   }
+
   void _showImportancePicker(BuildContext context) {
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
         return Container(
-          height: 220, // Höhe des Containers
+          height: 220,
           child: CupertinoPicker(
             backgroundColor: Colors.white,
-            itemExtent: 50.0, // Höhe jedes Elements
+            itemExtent: 50.0,
             scrollController: FixedExtentScrollController(
-              initialItem: selectedTimeImportance == "Monat" ? 0 : 1, // Setzt den initialen Wert
+              initialItem: selectedTimeImportance == "Monat" ? 0 : 1,
             ),
-            onSelectedItemChanged: (int index) {
-              setState(() {
-                selectedTimeImportance = index == 0 ? "Monat" : "Woche";
-                // Hier kannst du die Daten für "Relevanz der Ausgabenverteilung" neu laden
-                print('Zeitraum geändert: $selectedTimeImportance');
-              });
+            onSelectedItemChanged: (int index) async {
+              selectedTimeImportance = index == 0 ? "Monat" : "Woche";
+              await _loadAndSetExpenses(selectedTimeImportance);
             },
             children: [
               Center(
@@ -802,6 +873,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
       },
     );
   }
+
 
   void _showCategoryPicker(BuildContext context) {
     showModalBottomSheet(
@@ -901,6 +973,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
 }
+
 class CustomScrollPhysics extends ScrollPhysics {
   const CustomScrollPhysics({ScrollPhysics? parent}) : super(parent: parent);
 
