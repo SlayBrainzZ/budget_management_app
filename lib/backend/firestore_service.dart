@@ -15,8 +15,6 @@ import 'dart:html' as html;
 import 'ImportedTransaction.dart';
 import 'web_file_reader.dart' if (dart.library.html) 'stub_file_reader.dart';
 
-
-
 class FirestoreService {
   final firestore.FirebaseFirestore _db = firestore.FirebaseFirestore.instance;
 
@@ -34,24 +32,29 @@ class FirestoreService {
   /// be called only during the user registration process.
   Future<void> createUser(User user) async {
     try {
-      firestore.DocumentReference docRef = await usersRef.add(user.toMap());
-      user.id = docRef.id;
-      await docRef.set(user.toMap());
+      final userRef = usersRef.doc(user.userId); // Use userId as the document ID
 
-      // Create subcollections for the user
-      await docRef.collection('Categories').add({});
-      await docRef.collection('Transactions').add({});
-      await docRef.collection('Subscriptions').add({});
-      await docRef.collection('bankAccounts').add({});
+      // Check if the user document already exists
+      final docSnapshot = await userRef.get();
+      if (docSnapshot.exists) {
+        print("User with userId ${user.userId} already exists.");
+      } else {
+        // Create a new user document
+        await userRef.set(user.toMap());
 
+        // Create subcollections for the user
+        await userRef.collection('Categories').add({});
+        await userRef.collection('Transactions').add({});
+        await userRef.collection('Subscriptions').add({});
+        await userRef.collection('bankAccounts').add({});
+
+        print("User with userId ${user.userId} created successfully.");
+      }
     } catch (e) {
       print("Error creating user: $e");
     }
   }
-  /// Retrieves a user from Firestore by their `userId`.
-  ///
-  /// This function takes a `userId` as input and retrieves the corresponding user document
-  /// from the `users` collection.
+
   Future<User?> getUser(String userId) async {
     firestore.QuerySnapshot snapshot = await usersRef.where('userId', isEqualTo: userId).get();
     if (snapshot.docs.isNotEmpty) {
@@ -59,17 +62,11 @@ class FirestoreService {
     }
     return null;
   }
-  /// Updates an existing user in Firestore.
-  ///
-  /// This function takes a `User` object as input and updates the corresponding user document
-  /// in the `users` collection.
+
   Future<void> updateUser(User user) async {
     await usersRef.doc(user.id).update(user.toMap());
   }
-  /// Deletes a user from Firestore.
-  ///
-  /// This function takes a `userId` as input and deletes the corresponding user document
-  /// from the `users` collection.
+
   Future<void> deleteUser(String userId) async {
     await usersRef.doc(userId).delete();
   }
@@ -229,7 +226,7 @@ class FirestoreService {
     return importedCount;
   }
 
-  /// Function to create an imported transaction
+  // Function to create an imported transaction
   Future<void> createImportedTransaction(String userId, ImportedTransaction transaction) async {
     try {
       final userImportedTransactionsRef = usersRef.doc(userId).collection('ImportedTransactions');
@@ -244,7 +241,7 @@ class FirestoreService {
     }
   }
 
-  /// Function to fetch all imported transactions
+  // Function to fetch all imported transactions
   Future<List<ImportedTransaction>> getImportedTransactions(String userId) async {
     try {
       // Access the user's ImportedTransactions sub-collection
@@ -261,18 +258,10 @@ class FirestoreService {
     }
   }
 
-
-
-
-
   /// ==============
   /// CSV OPERATIONS (END)
   /// ==============
 
-  /// Creates a new bank account in Firestore for a specific user.
-  ///
-  /// This function takes the user's `documentId` and a `BankAccount` object as input,
-  /// and adds the bank account to the user's `bankAccounts` subcollection.
   Future<void> createBankAccount(String documentId, BankAccount account) async {
     try {
       final userBankAccountsRef = usersRef.doc(documentId).collection('bankAccounts');
@@ -284,10 +273,6 @@ class FirestoreService {
     }
   }
 
-  /// Retrieves a bank account from Firestore by its account ID and the user's `documentId`.
-  ///
-  /// This function takes the user's `documentId` and the `accountId` as input,
-  /// and retrieves the corresponding bank account document from the user's `bankAccounts` subcollection.
   Future<BankAccount?> getBankAccount(String documentId, String accountId) async {
     try {
       final userBankAccountsRef = usersRef.doc(documentId).collection('bankAccounts');
@@ -419,9 +404,6 @@ class FirestoreService {
     }
   }
 
-
-
-
   /// Retrieves a list of default categories from Firestore.
   ///
   /// This function retrieves all category documents with the field `isDefault` set to `true`
@@ -431,10 +413,6 @@ class FirestoreService {
     firestore.QuerySnapshot snapshot = await _db.collectionGroup('Categories').where('isDefault', isEqualTo: true).get();
     return snapshot.docs.map((doc) => Category.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
   }*/
-
-
-
-
   /// Retrieves a specific category for a user from Firestore.
   ///
   /// This function takes the user's `documentId` and the `categoryId` as input,
@@ -642,7 +620,6 @@ class FirestoreService {
     }
   }*/
 
-
   //sortiert default nach oben und userdefined nach unten
   Future<List<Category>> getSortedUserCategories(String documentId) async {
     try {
@@ -757,7 +734,6 @@ class FirestoreService {
     }
   }
 
-
   Future<List<Category>> getDefaultCategories(String userId) async {
     try {
       final userCategoriesRef = usersRef.doc(userId).collection('Categories');
@@ -771,8 +747,6 @@ class FirestoreService {
       return [];
     }
   }
-
-
 
 /*
   Future<void> updateCategoryBudgetLimit(String userId, String categoryId, double newLimit) async {
@@ -795,11 +769,7 @@ class FirestoreService {
       print("Fehler beim Aktualisieren des Budgetlimits: $e");
     }
   }
-  /// Deletes a category from Firestore for a specific user.
-  ///
-  /// This function takes the user's `documentId` and the `categoryId` as input,
-  /// and deletes the corresponding category document from the user's `Categories` subcollection.
-  /// It also deletes all transactions associated with the category.
+
   Future<void> deleteCategory(String documentId, String categoryId) async {
     try {
       // 1. Delete transactions belonging to the category (within the user's scope)
@@ -817,13 +787,9 @@ class FirestoreService {
     }
   }
 
-
-
   // =======================
   //  Transaction Functions
   // =======================
-
-
 
   /* meins
   Future<void> createTransactionV23(String documentId, String accountId, Transaction transaction, {String? categoryId}) async {
@@ -954,8 +920,6 @@ class FirestoreService {
       print("Error creating transaction: $e");
     }
   }
-
-
   ///TEST
   ///update: Test successfully done. This function does exactly what it's named.
   Future<void> createTransactionUnderCategory(String userId, Transaction transaction, String categoryId) async {
@@ -1081,7 +1045,6 @@ class FirestoreService {
     }
   }
 
-
   Future<List<Transaction>> getTransactionsByAccountIdsAndMonth(
       String documentId, List<String> accountIds, int year, int month) async {
     try {
@@ -1104,7 +1067,6 @@ class FirestoreService {
     }
   }
 
-
   ///TEST
   Future<List<Transaction>> getCategoryTransactions(String userId, String categoryId) async {
     try {
@@ -1120,13 +1082,8 @@ class FirestoreService {
       return [];
     }
   }
-
   ///TEST
 
-  /// Retrieves a transaction from Firestore by its transaction ID and the user's `documentId`.
-  ///
-  /// This function takes the user's `documentId` and the `transactionId` as input,
-  /// and retrieves the corresponding transaction document from the user's `Transactions` subcollection.
   Future<Transaction?> getTransaction(String documentId, String transactionId, String? accountId) async {
     try {
       final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
@@ -1143,13 +1100,6 @@ class FirestoreService {
     }
   }
 
-
-
-  /// Retrieves all transactions for a specific user and category, ordered by date (latest first).
-  ///
-  /// This function takes the user's `documentId` and a `categoryId` as input,
-  /// and retrieves all transaction documents from the user's `Transactions` subcollection that belong
-  /// to the specified category. The results are ordered by date with the latest transaction appearing first.
   Future<List<Transaction>> getTransactionsByCategory(String documentId, String categoryId) async {
     try {
       final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
@@ -1233,7 +1183,6 @@ class FirestoreService {
       print("Error deleting transaction: $e");
     }
   }
-
 
   Future<double> calculateBankAccountBalance(String documentId, BankAccount bankAccount) async {
     try {
@@ -1376,10 +1325,6 @@ class FirestoreService {
     }
   }
 
-
-
-
-
   /// Calculates monthly spending for a given user.
   ///
   /// This function takes the user's `documentId` and a `year` as input,
@@ -1507,8 +1452,6 @@ class FirestoreService {
     return yearlySpending;
   }
 
-
-
   Future<List<double>> calculateMonthlySpendingByDay(
       String documentId, String type, String chosenYear, String chosenMonth, double lastMonthBalance, String accountid) async {
     print("Entered calculateMonthlySpendingByDay");
@@ -1587,10 +1530,6 @@ class FirestoreService {
   }
 
 
-
-
-
-
 // Hilfsfunktion zur Berechnung der Kalenderwoche
   int _getWeekNumber(DateTime date) {
     // 4. Januar verwenden, da dies immer in der ersten Kalenderwoche des Jahres liegt
@@ -1655,11 +1594,6 @@ class FirestoreService {
 
     return weeklySpending;
   }
-
-
-
-
-
 
   DateTime _getMondayOfWeek(DateTime date) {
     int weekday = date.weekday;
@@ -1730,13 +1664,13 @@ class FirestoreService {
     Map<int, double> monthlyCategoryValues = {};
     DateTime today = DateTime.now();
     DateTime usableToday = DateTime(today.year, today.month, today.day);
-    //print("DAYTIME NOW IST: ${today} ODER AUCH $today");
+    print("DAYTIME NOW IST: ${today} ODER AUCH $today");
     DateTime startDate = DateTime(today.year, today.month, 1);
 
     // Retrieve transactions for the entire month
-    List<Transaction> transactions = await getTransactionsByDateRangeAndCategory(documentId, categoryId, startDate, usableToday, accountid);
+    List<Transaction> transactions = await getTransactionsByDateRangeAndCategory(documentId, categoryId, startDate, usableToday);
 
-    //print(transactions);
+    print(transactions);
 
     // Iterate through each day of the current month up to today
     for (int day = 1; day <= usableToday.day; day++) {
