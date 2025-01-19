@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:budget_management_app/backend/firestore_service.dart';
 
 class SettingsPage extends StatefulWidget {
   @override
@@ -29,9 +30,16 @@ class _SettingsPageState extends State<SettingsPage> {
   void _deleteAccount() async {
     try {
       User? user = _auth.currentUser;
+
       if (user != null) {
+        // First, delete the user document from Firestore
+        await FirestoreService().deleteUser(user.uid);
+
+        // Then delete the user from Firebase Authentication
         await user.delete();
         print("Account gelöscht");
+
+        // Navigate to the login screen
         Navigator.of(context).pushReplacementNamed('/login');
       } else {
         print("Kein eingeloggter Nutzer gefunden.");
