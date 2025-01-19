@@ -34,20 +34,30 @@ class FirestoreService {
   /// be called only during the user registration process.
   Future<void> createUser(User user) async {
     try {
-      firestore.DocumentReference docRef = await usersRef.add(user.toMap());
-      user.id = docRef.id;
-      await docRef.set(user.toMap());
+      final userRef = usersRef.doc(user.userId); // Use userId as the document ID
 
-      // Create subcollections for the user
-      await docRef.collection('Categories').add({});
-      await docRef.collection('Transactions').add({});
-      await docRef.collection('Subscriptions').add({});
-      await docRef.collection('bankAccounts').add({});
+      // Check if the user document already exists
+      final docSnapshot = await userRef.get();
+      if (docSnapshot.exists) {
+        print("User with userId ${user.userId} already exists.");
+      } else {
+        // Create a new user document
+        await userRef.set(user.toMap());
 
+        // Create subcollections for the user
+        await userRef.collection('Categories').add({});
+        await userRef.collection('Transactions').add({});
+        await userRef.collection('Subscriptions').add({});
+        await userRef.collection('bankAccounts').add({});
+
+        print("User with userId ${user.userId} created successfully.");
+      }
     } catch (e) {
       print("Error creating user: $e");
     }
   }
+
+
   /// Retrieves a user from Firestore by their `userId`.
   ///
   /// This function takes a `userId` as input and retrieves the corresponding user document
