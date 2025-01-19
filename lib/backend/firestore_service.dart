@@ -1769,11 +1769,11 @@ class FirestoreService {
   }
 
 
-  Future<Map<String, double>> fetchUrgentAndNonUrgentExpenses(String documentId, DateTime startDate, DateTime endDate, String accountid) async {
+  Future<Map<String, double>> fetchUrgentAndNonUrgentExpenses(String documentId, DateTime startDate, DateTime endDate, String accountId) async {
     try {
       // Hole alle Transaktionen im gegebenen Datumsbereich
       List<Transaction> transactions =
-      await getSpecificTransactionByDateRange(documentId, "null", startDate, endDate, accountid);
+      await getSpecificTransactionByDateRange(documentId, "null", startDate, endDate, accountId);
 
       // Initialisiere Summen
       double urgentTotal = 0.0;

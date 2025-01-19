@@ -172,8 +172,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
     try {
       // Rufe die summierten Ausgaben ab
-      Map<String, double> expenses = await _firestoreService.fetchUrgentAndNonUrgentExpenses(user.uid, startdate, enddate, selectedAccountID
-      );
+      Map<String, double> expenses = await _firestoreService.fetchUrgentAndNonUrgentExpenses(user.uid, startdate, enddate, selectedAccountID);
 
       setState(() {
         urgentExpenses = expenses["Dringend"] ?? 0.0;
