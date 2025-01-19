@@ -55,6 +55,7 @@ class _SavingPlanState extends State<SavingPlan> {
             userCategory.id!,
             startOfMonth,
             endOfMonth,
+            "NULL"
           ).then((transactions) async {
             // Summiere die Beträge und stelle sicher, dass jeder Betrag ein finaler 'double' ist
             double sum = 0.0;

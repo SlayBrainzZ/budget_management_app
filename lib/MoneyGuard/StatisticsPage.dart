@@ -5,6 +5,7 @@ import 'package:budget_management_app/backend/Category.dart';
 import 'package:budget_management_app/backend/firestore_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'home_page.dart';
+import 'package:budget_management_app/backend/BankAccount.dart';
 
 class StatisticsPage extends StatefulWidget {
   @override
@@ -12,34 +13,29 @@ class StatisticsPage extends StatefulWidget {
 }
 
 class _StatisticsPageState extends State<StatisticsPage> {
+
   String? _userId;
   String selectedAmountType = 'Gesamtbetrag';
-
   String selectedTimeCategory = 'Monat';
   String selectedTimeImportance = 'Monat';
-  String selectedYear = '2025'; // Standardwert für das Jahr
-  String selectedMonth = 'Monat'; // Standardwert für den Monat
+  //String selectedYear = '2025';
+  String selectedYear = DateTime.now().year.toString();
+
+  String selectedMonth = 'Monat';
   final List<int> availableYears = List.generate(
       100, (index) => 2000 + index); // letze 20 und nächste 80 jare
-
   double urgentExpenses = 0.0;
   double nonUrgentExpenses = 0.0;
-
   final ScrollController _scrollController = ScrollController();
   final FirestoreService _firestoreService = FirestoreService();
   String selectedAccount = 'Gesamtübersicht'; // Standardmäßig "Gesamtübersicht"
-
-
+  String selectedAccountID = "";
   List<LineChartBarData>? cachedYearlyLineChartData;
   List<double>? cachedImportantChartData;
   List<LineChartBarData>? cachedCategoryLineChartData;
-
   Map<String, LineChartData> chartCache = {};
-
-
   List<Category> categories = [];
-
-  //List <double> allMonthBalanceData = [];
+  List<BankAccount> userAccounts = [];
   double lastMonthBalance = 0.0;
   Map<String, double> monthlyBalanceList = {};
 
@@ -47,15 +43,44 @@ class _StatisticsPageState extends State<StatisticsPage> {
   @override
   void initState() {
     super.initState();
+
+    // Standardwert festlegen
+    if (userAccounts.isNotEmpty) {
+      selectedAccount = userAccounts.first.accountName ?? 'Gesamtübersicht';
+      selectedAccountID = userAccounts.first.id ?? '';
+    } else {
+      selectedAccount = 'Gesamtübersicht';
+      selectedAccountID = '';
+    }
+
     _initializeData();
   }
+
 
   Future<void> _initializeData() async {
     await _loadCategories();
     await _loadAndSetExpenses(selectedTimeImportance);
     loadLineChartBarData(selectedYear, selectedMonth);
+
+
+    print("NAME UND ID: $selectedAccount, $selectedAccountID");
   }
 
+  Future<void> _reloadAllStatistics() async {
+    try {
+      // Lade Kategorien und Bankkonten
+      await _loadCategories();
+
+      // Lade Diagrammdaten und Statistiken
+      await _loadAndSetExpenses(selectedTimeImportance);
+      await loadLineChartBarData(selectedYear, selectedMonth);
+    } catch (e) {
+      print('Fehler beim Aktualisieren der Statistiken: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Fehler beim Laden der Statistiken')),
+      );
+    }
+  }
 
 
   Future<User?> _loadUser() async {
@@ -63,9 +88,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
     if (user == null) return null;
 
     try {
-      await _firestoreService.getUserCategories(
-          user.uid); // Just loading categories for now
-      //print("Der Benutzer im Allgemeinen ist ${user.uid}");
       return user;
     } catch (e) {
       print('Fehler beim Laden des Users: ${e.toString()}');
@@ -81,11 +103,12 @@ class _StatisticsPageState extends State<StatisticsPage> {
     }
     setState(() {
       categories = [];
+      userAccounts = [];
     });
 
     try {
-      List<Category> userCategories = await _firestoreService.getUserCategories(
-          user.uid);
+      List<Category> userCategories = await _firestoreService.getUserCategories(user.uid);
+      final userBankAccounts = await _firestoreService.getUserBankAccounts(user.uid);
       if (userCategories.isEmpty) {
         print("Keine Kategorien gefunden für den Benutzer.");
         return;
@@ -94,6 +117,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
       setState(() {
         _userId = user.uid;
         categories = userCategories;
+        userAccounts = userBankAccounts;
       });
     } catch (e) {
       print('Fehler beim Laden der Kategorien: ${e.toString()}');
@@ -131,6 +155,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
         user.uid,
         startdate,
         enddate,
+          selectedAccountID
       );
 
       setState(() {
@@ -142,9 +167,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
     }
 
   }
-
-
-
+//#######################################################################################################################################
 
   Future<List<FlSpot>> generateSpotsforMonth(String chosenYear, chosenMonth,
       String type) async {
@@ -163,7 +186,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
           findLastMonthBalance(monthlyBalanceList, chosenYear, chosenMonth);
       print("lastMonthBalance nach Monatsangabe: $lastMonthBalance");
       data = await _firestoreService.calculateMonthlySpendingByDay(
-          user.uid, type, chosenYear, chosenMonth, lastMonthBalance);
+          user.uid, type, chosenYear, chosenMonth, lastMonthBalance, selectedAccountID);
       for (double y in data) {
         FlSpotlist.add(FlSpot(x, y));
         x = x + 1;
@@ -193,8 +216,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
     try {
       if (chosenMonth == "Monat") {
         monthlyTransactions =
-        await _firestoreService.calculateYearlySpendingByMonth2(
-            user.uid, chosenYear);
+        await _firestoreService.calculateYearlySpendingByMonth2(user.uid, chosenYear, selectedAccountID);
 
         for (int j = 0; j <= 2; j++) {
           Map<String, double> monthlySpending = monthlyTransactions[j];
@@ -217,7 +239,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
     }
     return FlSpotListList;
   }
-
+//#################################################################################################################
 
   Future<LineChartBarData> defineLineChartBarData(Color color,
       String chosenYear, String chosenMonth, String type,
@@ -373,9 +395,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
 
-
-  Future<List<FlSpot>> generateSpotsForCategory(String category,
-      String selectedTimeCategory) async {
+//###########################################################################################################################
+  Future<List<FlSpot>> generateSpotsForCategory(String category, String selectedTimeCategory) async {
     final user = await _loadUser();
     if (user == null) {
       print("Kein Benutzer gefunden.");
@@ -388,13 +409,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
     try {
       if (selectedTimeCategory == "Monat") {
         //print("Der Benutzer in Categorie ist ${user.uid}");
-        categoryTransactions = await _firestoreService
-            .getCurrentMonthTransactionsByDateRangeAndCategory(
-            user.uid, category);
-      } else if (selectedTimeCategory == "Woche") {
-        categoryTransactions = await _firestoreService
-            .getCurrentWeekTransactionsByDateRangeAndCategory(
-            user.uid, category);
+        categoryTransactions = await _firestoreService.getCurrentMonthTransactionsByDateRangeAndCategory(user.uid, category, selectedAccountID);
+      } else if (selectedTimeCategory == "Jahr") {
+        categoryTransactions = await _firestoreService.calculateMonthlyCategoryExpenses(user.uid, category, selectedYear, selectedAccountID);
       } else {
         print("Keine Periode für Kategorie ausgwählt");
       }
@@ -576,16 +593,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
 
   void _updateDataForSelectedAccount() {
-    switch (selectedAccount) {
-      case 'Gesamtübersicht':
-        loadLineChartBarData(selectedYear, selectedMonth);
-        break;
-      case 'Konto 1':
-        loadLineChartBarDataForAccount('Konto 1');
-        break;
-      case 'Konto 2':
-        loadLineChartBarDataForAccount('Konto 2');
-        break;
+    if (selectedAccount == 'Gesamtübersicht') {
+      loadLineChartBarData(selectedYear, selectedMonth);
+    } else {
+      // Lade die Daten für das ausgewählte Konto
+      loadLineChartBarDataForAccount(selectedAccount);
     }
   }
 
@@ -619,30 +631,48 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     ),
                   ),
                   DropdownButton<String>(
-                    value: selectedAccount,
+                      value: userAccounts.any((account) => account.accountName == selectedAccount)
+                          ? selectedAccount
+                          : 'Gesamtübersicht', // Fallback-Wert
                     items: [
                       DropdownMenuItem(
                         value: 'Gesamtübersicht',
                         child: Text('Gesamtübersicht'),
                       ),
-                      DropdownMenuItem(
-                        value: 'Konto 1',
-                        child: Text('Konto 1'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Konto 2',
-                        child: Text('Konto 2'),
-                      ),
+                      ...userAccounts.map((BankAccount account) {
+                        return DropdownMenuItem<String>(
+                          value: account.accountName,
+                          child: Text(account.accountName ?? 'Unbekanntes Konto'),
+                        );
+                      }).toList(),
                     ],
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        selectedAccount = newValue!;
-                        _updateDataForSelectedAccount(); // Methode zum Aktualisieren der Daten
-                      });
-                    },
+                      onChanged: (String? newValue) async {
+                        setState(() {
+                          selectedAccount = newValue!;
+
+                          if (selectedAccount == 'Gesamtübersicht') {
+                            selectedAccountID = ''; // Gesamtübersicht
+                          } else {
+                            final BankAccount selectedBankAccount = userAccounts.firstWhere(
+                                  (account) => account.accountName == selectedAccount,
+                              orElse: () => BankAccount(id: '', accountName: 'Unbekannt', accountType: "", userId: _userId ?? ''),
+                            );
+
+                            selectedAccountID = selectedBankAccount.id ?? '';
+                          }
+                        });
+
+                        // Lade alle Statistiken, aber nur, wenn die Daten valide sind
+                        if (selectedAccountID.isNotEmpty) {
+                          await _reloadAllStatistics();
+                        }
+                      }
                   ),
+
+
                 ],
               ),
+
 
               const SizedBox(height: 20),
 
@@ -893,14 +923,14 @@ class _StatisticsPageState extends State<StatisticsPage> {
             onSelectedItemChanged: (int index) {
               setState(() {
                 // "Monat" oder "Woche" auswählen
-                selectedTimeCategory = index == 0 ? "Monat" : "Woche";
+                selectedTimeCategory = index == 0 ? "Monat" : "Jahr";
                 // Daten nach der Auswahl neu laden
               });
             },
             children: [
               Center(child: Text("Monat",
                   style: TextStyle(fontSize: 18, color: Colors.black))),
-              Center(child: Text("Woche",
+              Center(child: Text("Jahr",
                   style: TextStyle(fontSize: 18, color: Colors.black))),
             ],
           ),
@@ -913,7 +943,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
 
 
-  class CategoryStatWidget extends StatelessWidget {
+class CategoryStatWidget extends StatelessWidget {
   final Category category;
   final Future<LineChartData> chartDataFuture;
 
@@ -927,9 +957,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
         } else if (snapshot.hasError) {
-          return Text('Fehler beim Laden der Daten');
+          return Center(child: Text('Fehler: ${snapshot.error}'));
         } else if (!snapshot.hasData || snapshot.data == null) {
-          return Text('Keine Daten verfügbar');
+          return Center(child: Text('Keine Daten verfügbar'));
         }
 
         return Container(
@@ -987,4 +1017,3 @@ class CustomScrollPhysics extends ScrollPhysics {
     return offset / 1; // Hier kannst du den Scrollfaktor anpassen, um die Geschwindigkeit zu reduzieren
   }
 }
-
