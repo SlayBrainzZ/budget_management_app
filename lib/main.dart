@@ -47,11 +47,11 @@ void main() async {
       if (user != null) {
         print("User logged in: ${user.email}");
 
-        /* await FirestoreService().createUser(testUser.User(
+        await FirestoreService().createUser(testUser.User(
           userId: user.uid,
           email: user.email!,
           createdDate: DateTime.now(),
-        )); */
+        ));
 
         // Get user's bank accounts
         FirestoreService firestoreService = FirestoreService();
@@ -60,7 +60,7 @@ void main() async {
         if (accounts.isNotEmpty) {
           String? firstAccountId = accounts[0].id;
 
-          // 1. Fetch the first five categories
+          /* // 1. Fetch the first five categories
           List<testCat.Category> allCategories = await firestoreService.getUserCategories(user.uid);
           List<String> firstFiveCategoryIds = allCategories.sublist(0, 5).map((category) => category.id!).toList();
 
@@ -74,7 +74,7 @@ void main() async {
           print("Filtered transactions:");
           for (var transaction in filteredTransactions) {
             print(transaction.toMap());
-          }
+          } */
 
         } else {
           print("No bank accounts found for this user.");
