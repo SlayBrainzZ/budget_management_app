@@ -55,9 +55,8 @@ class _SavingPlanState extends State<SavingPlan> {
             userCategory.id!,
             startOfMonth,
             endOfMonth,
-            "NULL"
+            "null",
           ).then((transactions) async {
-            // Summiere die Beträge und stelle sicher, dass jeder Betrag ein finaler 'double' ist
             double sum = 0.0;
             for (final transaction in transactions) {
               final amount = transaction.amount is int
@@ -75,10 +74,24 @@ class _SavingPlanState extends State<SavingPlan> {
       setState(() {
         _userId = user.uid;
         categories = userCategories;
-        remainingBudget = List.generate(
-          userCategories.length,
-              (index) => (userCategories[index].budgetLimit ?? 0) - spentAmounts[index],
-        );
+
+        // Berechne verbleibende Budgets und aktualisiere den Streak-Counter
+        remainingBudget = List.generate(userCategories.length, (index) {
+          double remaining = (userCategories[index].budgetLimit ?? 0) - spentAmounts[index];
+          String categoryId = userCategories[index].id ?? "";
+
+          // Aktualisiere den Streak-Counter
+          if (remaining >= 0) {
+            // Budget eingehalten, Streak hochzählen
+            streakCounterDictionary[categoryId] = (streakCounterDictionary[categoryId] ?? 0) + 1;
+          } else {
+            // Budget überschritten, Streak zurücksetzen
+            streakCounterDictionary[categoryId] = 0;
+          }
+
+          return remaining;
+        });
+
         totalIncome = categories.fold(
           0.0,
               (sum, category) => sum + (category.budgetLimit ?? 0),
@@ -90,8 +103,8 @@ class _SavingPlanState extends State<SavingPlan> {
         SnackBar(content: Text("Fehler beim Laden der Daten")),
       );
     }
-
   }
+
 
 
 
@@ -381,30 +394,16 @@ class _SavingPlanState extends State<SavingPlan> {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  'x Monate in Folge',
+                                  '${streakCounterDictionary[category.id] ?? 0} ${streakCounterDictionary[category.id] == 1 ? "Monat" : "Monate"} in Folge',
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: Colors.grey,
                                     fontFamily: 'Roboto',
                                   ),
                                 ),
-                                /*
-                                Text(
-                                  remaining < 0
-                                      ? 'Budget um ${(remaining * -1).toStringAsFixed(2)}€ überschritten'
-                                      : remaining == 0
-                                      ? "Budget optimal verwendet"
-                                      : '${remaining.toStringAsFixed(2)}€ von ${category.budgetLimit?.toStringAsFixed(2)}€ verfügbar',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: remaining < 0 ? Colors.red : Colors.green,
-                                    fontFamily: 'Roboto',
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                 */
                               ],
                             ),
+
                           ],
                         ),
 
