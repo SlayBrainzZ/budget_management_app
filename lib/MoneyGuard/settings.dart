@@ -96,14 +96,14 @@ class _SettingsPageState extends State<SettingsPage> {
             const Divider(),
 
             // Sprache ändern
-            ListTile(
+            /*ListTile(
               title: const Text("Sprache ändern"),
               subtitle: const Text("Aktuelle Sprache: Deutsch"),
               trailing: const Icon(Icons.language),
               onTap: _changeLanguage,
             ),
 
-            const Divider(),
+            const Divider(),*/
 
             // Logout Button
             ListTile(
