@@ -139,142 +139,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
     final DateFormat timeFormat = DateFormat('HH:mm');
     return '${dateFormat.format(date)} um ${timeFormat.format(date)}';
   }
-/*
-  Future<void> _fetchTransactions() async {
-    setState(() {
-      isLoading = true;
-    });
 
-    try {
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser == null) {
-        throw Exception('Kein Benutzer angemeldet.');
-      }
-
-      final firestoreService = FirestoreService();
-      final userId = currentUser.uid;
-
-      final bankAccounts = await firestoreService.getUserBankAccounts(userId);
-      final filteredBankAccounts = selectedAccounts.isEmpty
-          ? bankAccounts
-          : bankAccounts.where((account) => selectedAccounts.contains(account.accountName)).toList();
-
-      List<Map<String, dynamic>> transactions = [];
-
-      for (final account in filteredBankAccounts) {
-        // Reguläre Transaktionen abrufen
-        List<Transaction> accountTransactions = await firestoreService.getAllTransactionsV2(userId, account.id!);
-        for (var transaction in accountTransactions) {
-
-          if (transaction.categoryId != null) {
-            final category = await firestoreService.getCategoryV2(
-              userId,
-              transaction.accountId!,
-              transaction.categoryId!,
-            );
-            transaction.categoryData = category;
-            print('Jetzt Transaktion: ${transaction.id}, Kategorie: ${transaction.categoryId}, ${transaction.categoryData?.name}');
-
-          }
-          transaction.bankAccount = account;
-          transactions.add({'type': 'regular', 'data': transaction});
-        }
-
-        // Importierte Transaktionen abrufen und verknüpfen
-        List<ImportedTransaction> importedTransactions =
-        await firestoreService.getImportedTransactionsV2(userId, account.id!);
-        for (var importedTransaction in importedTransactions) {
-          importedTransaction.accountId = account.id; // Konto-ID zuweisen
-          importedTransaction.linkedAccount = account; // BankAccount verknüpfen
-          transactions.add({'type': 'imported', 'data': importedTransaction});
-        }
-      }
-
-      // Transaktionen nach Datum sortieren
-      transactions.sort((a, b) {
-        final dateA = a['data'].date as DateTime;
-        final dateB = b['data'].date as DateTime;
-        return dateB.compareTo(dateA); // Absteigend sortieren
-      }); ///
-
-      setState(() {
-        dailyTransactions = transactions;
-      });
-    } catch (e) {
-      print('Fehler beim Abrufen der Transaktionen: $e');
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }*/
-
-
-/*
-  Future<void> _fetchTransactions() async {
-    setState(() {
-      isLoading = true;
-    });
-
-    try {
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser == null) {
-        throw Exception('Kein Benutzer angemeldet.');
-      }
-
-      final firestoreService = FirestoreService();
-      final userId = currentUser.uid;
-
-      final bankAccounts = await firestoreService.getUserBankAccounts(userId);
-      final filteredBankAccounts = selectedAccounts.isEmpty
-          ? bankAccounts
-          : bankAccounts.where((account) => selectedAccounts.contains(account.accountName)).toList();
-
-      List<Map<String, dynamic>> transactions = [];
-
-      for (final account in filteredBankAccounts) {
-        // Retrieve regular transactions using the older method
-        List<Transaction> accountTransactions = await firestoreService.getUserTransactions(account.id!);
-        for (var transaction in accountTransactions) {
-          if (transaction.categoryId != null) {
-            final category = await firestoreService.getCategory(
-              userId,
-              transaction.categoryId!,
-            );
-            transaction.categoryData = category;
-          }
-          transaction.bankAccount = account;
-          transactions.add({'type': 'regular', 'data': transaction});
-        }
-
-        // Retrieve imported transactions using the older method
-        List<ImportedTransaction> importedTransactions =
-        await firestoreService.getImportedTransactions(userId);
-        for (var importedTransaction in importedTransactions) {
-          importedTransaction.accountId = account.id; // Assign account ID
-          importedTransaction.linkedAccount = account; // Link to BankAccount
-          transactions.add({'type': 'imported', 'data': importedTransaction});
-        }
-      }
-
-      // Sort transactions by date in descending order
-      transactions.sort((a, b) {
-        final dateA = a['data'].date as DateTime;
-        final dateB = b['data'].date as DateTime;
-        return dateB.compareTo(dateA); // Descending
-      });
-
-      setState(() {
-        dailyTransactions = transactions;
-      });
-    } catch (e) {
-      print('Fehler beim Abrufen der Transaktionen: $e');
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }*/
 //Monthly ##########################
   Map<int, Map<String, double>> _generateMonthlyData() {
     Map<int, Map<String, double>> monthlyData = {};
@@ -594,15 +459,107 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
         final selected = await showDialog<List<BankAccount>>(
           context: context,
           builder: (BuildContext context) {
-            return MultiSelectDialog(
-              items: items.map((e) {
-                // Titel mit Icon vorbereiten
-                final String displayTitle =
-                    '${e.accountType == "Bargeld" ? "💵" : "🏦"} ${e.accountName ?? "Unbenannt"}';
-                return MultiSelectItem(e, displayTitle);
-              }).toList(),
-              initialValue: selectedItems,
-              title: Text(title),
+            List<BankAccount> tempSelectedItems = List.from(selectedItems);
+
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: StatefulBuilder(
+                builder: (BuildContext context, StateSetter setState) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: 400, // Dialog breiter machen
+                        maxHeight: 500, // Dialoghöhe anpassen
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Expanded(
+                            child: ListView.builder(
+                              itemCount: items.length,
+                              itemBuilder: (context, index) {
+                                final account = items[index];
+                                final isSelected =
+                                tempSelectedItems.contains(account);
+
+                                return ListTile(
+                                  leading: Icon(
+                                    account.accountType == "Bargeld"
+                                        ? Icons.attach_money
+                                        : Icons.account_balance,
+                                    color: Colors.blue,
+                                  ),
+                                  title: Text(
+                                    account.accountName ?? "Unbenannt",
+                                    style: const TextStyle(color: Colors.black),
+                                  ),
+                                  trailing: Checkbox(
+                                    value: isSelected,
+                                    onChanged: (checked) {
+                                      setState(() {
+                                        if (checked == true) {
+                                          tempSelectedItems.add(account);
+                                        } else {
+                                          tempSelectedItems.remove(account);
+                                        }
+                                      });
+                                    },
+                                  ),
+                                  onTap: () {
+                                    setState(() {
+                                      if (isSelected) {
+                                        tempSelectedItems.remove(account);
+                                      } else {
+                                        tempSelectedItems.add(account);
+                                      }
+                                    });
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop(); // Abbrechen
+                                },
+                                child: const Text(
+                                  "Abbrechen",
+                                  style: TextStyle(color: Colors.black), // Textfarbe
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop(tempSelectedItems); // Bestätigen
+                                },
+                                child: const Text(
+                                  "Bestätigen",
+                                  //style: TextStyle(color: Colors.black), // Textfarbe
+                                ),
+                              ),
+                            ],
+                          )
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
             );
           },
         );
@@ -612,7 +569,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
         }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
           border: Border.all(color: Colors.grey),
           borderRadius: BorderRadius.circular(8),
@@ -634,7 +591,10 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
         ),
       ),
     );
-  } //mu
+  }
+
+
+
 
 
 
@@ -1106,15 +1066,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
       ),
     );
   }
-/*
-  Widget _buildEmptyMonthlyView() {
-    return Center(
-      child: const Text(
-        'Keine Daten für die monatliche Ansicht.',
-        style: TextStyle(fontSize: 16, color: Colors.grey),
-      ),
-    );
-  }*/
+
   Widget _buildMonthlyView(Map<int, Map<String, double>> monthlyData) {
     if (monthlyData.isEmpty) {
       return _buildEmptyMonthlyView();

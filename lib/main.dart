@@ -165,13 +165,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      // MaterialApp ist ein Widget, das die grundlegenden Funktionen einer Flutter-App wie Navigation und Thema (Farben, Textstile) enthält.
       debugShowCheckedModeBanner: false,
-      title: 'Budget Management App',
+      title: 'Flutter Demo',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
       ),
-      home: const WidgetTree(), // Use WidgetTree for authentication
+      home: const WidgetTree(), // Setzt die Startseite der App auf MyHomePage
     );
   }
 }

@@ -1184,6 +1184,7 @@ class FirestoreService {
     }
   }
 
+  /*
   Future<double> calculateBankAccountBalance(String documentId, BankAccount bankAccount) async {
     try {
       // Starten mit dem aktuellen Kontostand im Bankkonto
@@ -1216,8 +1217,43 @@ class FirestoreService {
       print("Error calculating balance for bank account: $e");
       return bankAccount.balance ?? 0.0;
     }
+  }*/
+
+  Future<double> calculateBankAccountBalance(String documentId, BankAccount bankAccount) async {
+    try {
+      // Start mit dem aktuellen Kontostand im Bankkonto
+      double totalBalance = bankAccount.balance ?? 0.0;
+
+      // Letzter Aktualisierungszeitpunkt des Kontos
+      DateTime? lastUpdated = bankAccount.lastUpdated;
+
+      // Abrufen aller relevanten Transaktionen
+      List<Transaction> transactions = await FirestoreService()
+          .getTransactionsByAccountIds(documentId, [bankAccount.id!]);
+
+      for (var transaction in transactions) {
+        // Überprüfen, ob die Transaktion nach der letzten Aktualisierung liegt
+        if (lastUpdated == null || transaction.date.isAfter(lastUpdated)) {
+          if (transaction.type == 'Einnahme') {
+            totalBalance += transaction.amount;
+          } else if (transaction.type == 'Ausgabe') {
+            totalBalance -= transaction.amount;
+          }
+        }
+      }
+
+      // Kontostand und Aktualisierungszeitpunkt speichern
+      bankAccount.balance = totalBalance;
+      bankAccount.lastUpdated = DateTime.now();
+
+      return totalBalance;
+    } catch (e) {
+      print("Error calculating balance for bank account: $e");
+      return bankAccount.balance ?? 0.0;
+    }
   }
 
+/*
   Future<double> calculateImportBankAccountBalance(String documentId, BankAccount bankAccount) async {
     try {
       // Starten mit dem aktuellen Kontostand im Bankkonto
@@ -1242,6 +1278,40 @@ class FirestoreService {
       print('balance ${bankAccount.balance}');
 
       // Optional: Aktualisiere den Kontostand im BankAccount-Objekt
+      bankAccount.balance = totalBalance;
+      bankAccount.lastUpdated = DateTime.now();
+
+      return totalBalance;
+    } catch (e) {
+      print("Error calculating balance for bank account: $e");
+      return bankAccount.balance ?? 0.0;
+    }
+  }*/
+  Future<double> calculateImportBankAccountBalance(String documentId, BankAccount bankAccount) async {
+    try {
+      // Start mit dem aktuellen Kontostand im Bankkonto
+      double totalBalance = bankAccount.balance ?? 0.0;
+
+      // Letzter Aktualisierungszeitpunkt des Kontos
+      DateTime? lastUpdated = bankAccount.lastUpdated;
+
+      List<ImportedTransaction> transactions = await FirestoreService()
+          .getImportedTransactionsByAccountIds(documentId, [bankAccount.id!]);
+
+      // Berechnung des Gesamtguthabens basierend auf den Transaktionen
+      for (var transaction in transactions) {
+        if (lastUpdated == null || transaction.date.isAfter(lastUpdated)) {
+          // Einnahmen addieren (inflow)
+          if (transaction.inflow > 0) {
+            totalBalance += transaction.inflow;
+          }
+          // Ausgaben subtrahieren (outflow)
+          if (transaction.outflow > 0) {
+            totalBalance -= transaction.outflow;
+          }}
+      }
+
+      // Kontostand und Aktualisierungszeitpunkt speichern
       bankAccount.balance = totalBalance;
       bankAccount.lastUpdated = DateTime.now();
 

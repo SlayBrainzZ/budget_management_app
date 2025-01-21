@@ -78,7 +78,15 @@ class _LoginPageState extends State<LoginPage>{
   Widget build(BuildContext context){
     return Scaffold(
       appBar: AppBar(
-        title: _title(),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        centerTitle: true,
+        title: const Text(
+          'MoneyGuard',
+          style: TextStyle(
+            color: Colors.white,
+            fontFamily: 'Roboto',
+          ),
+        ),
       ),
       body: Container(
         height: double.infinity,

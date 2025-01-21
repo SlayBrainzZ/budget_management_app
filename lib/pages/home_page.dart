@@ -30,7 +30,15 @@ class HomePage extends StatelessWidget{
   Widget build(BuildContext context){ // Builds the UI layout of the home screen using a Scaffold with centered content in a Column.
     return Scaffold(
       appBar: AppBar(
-        title: _title(),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        centerTitle: true,
+        title: const Text(
+          'MoneyGuard',
+          style: TextStyle(
+            color: Colors.white,
+            fontFamily: 'Roboto',
+          ),
+        ),
       ),
       body: Container(
         height: double.infinity,
