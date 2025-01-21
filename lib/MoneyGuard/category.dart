@@ -440,52 +440,6 @@ class _CategoryScreenState extends State<CategoryScreen> {
   }
 
 
-
-
-/*
-  void _confirmDeleteCategory(Category category) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Kategorie löschen'),
-          content: Text('Möchten Sie die Kategorie "${category.name}" wirklich löschen?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Abbrechen'),
-            ),
-            TextButton(
-              onPressed: () async {
-                final user = FirebaseAuth.instance.currentUser;
-
-                if (user == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Kein Benutzer angemeldet.')),
-                  );
-                  return;
-                }
-
-                try {
-                  await FirestoreService().deleteCategory(user.uid, category.id!);
-
-                  setState(() {
-                    userCategories = FirestoreService().getSortedUserCategories(user.uid);
-                  });
-                  Navigator.of(context).pop();
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Fehler beim Löschen der Kategorie: $e')),
-                  );
-                }
-              },
-              child: Text('Löschen'),
-            ),
-          ],
-        );
-      },
-    );
-  }*/
   void _confirmDeleteCategory(Category category) {
     showDialog(
       context: context,
@@ -502,7 +456,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
               } else {
                 final transactions = snapshot.data ?? [];
                 return Text(transactions.isNotEmpty
-                    ? 'Die Kategorie "${category.name}" hat ${transactions.length} zugehörige Transaktionen. Wenn Sie die Kategorie löschen, werden diese ebenfalls entfernt. Möchten Sie fortfahren?'
+                    ? 'Die Kategorie "${category.name}" hat ${transactions.length} zugehörige Transaktion(en). Wenn Sie die Kategorie löschen, werden diese ebenfalls entfernt. Möchten Sie fortfahren?'
                     : 'Möchten Sie die Kategorie "${category.name}" wirklich löschen?');
               }
             },
