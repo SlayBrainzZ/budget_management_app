@@ -1,3 +1,5 @@
+//import 'dart:nativewrappers/_internal/vm/lib/ffi_native_type_patch.dart';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -38,6 +40,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
   List<BankAccount> allBankAccounts = [];
   double lastMonthBalance = 0.0;
   Map<String, double> monthlyBalanceList = {};
+  bool importedTypeOfBankAccount = false;
 
 
   @override
@@ -52,12 +55,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
     setState(() {
       selectedAccount = 'Gesamtübersicht';
       selectedAccountID = "null";
+      importedTypeOfBankAccount = false;
     });
 
     await _loadAndSetExpenses(selectedTimeImportance);
     await loadBigChartBarData(selectedYear, selectedMonth);
 
-    print("NAME UND ID: $selectedAccount, $selectedAccountID");
+    print("NAME UND ID: $selectedAccount, $selectedAccountID, $importedTypeOfBankAccount");
   }
 
 
@@ -118,7 +122,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
         SnackBar(content: Text("Fehler beim Laden der Daten")),
       );
     }
-    print("Leaving loadcategories");
+    //print("Leaving loadcategories");
   }
   Future<void> _loadBankAccounts() async {
     final user = await _loadUser();
@@ -150,6 +154,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
   }
   Future<void> _loadExpenses(String chosenTime) async { //gloabel variablen urgentexpenses udn nonurgendstexepenses werden defineirt
     final user = await _loadUser();
+
     if (user == null) {
       print("Kein Benutzer gefunden.");
       return;
@@ -158,6 +163,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
     DateTime today = DateTime.now();
     DateTime startdate;
     DateTime enddate;
+    Map<String, double> expenses;
 
     if (chosenTime == "Woche") {
       startdate = today.subtract(Duration(days: today.weekday - 1)); // Montag
@@ -172,7 +178,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
     try {
       // Rufe die summierten Ausgaben ab
-      Map<String, double> expenses = await _firestoreService.fetchUrgentAndNonUrgentExpenses(user.uid, startdate, enddate, selectedAccountID);
+        expenses = await _firestoreService.fetchUrgentAndNonUrgentExpenses(user.uid, startdate, enddate, selectedAccountID);
 
       setState(() {
         urgentExpenses = expenses["Dringend"] ?? 0.0;
@@ -329,9 +335,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
     try {
       if (chosenMonth == "Monat") {
-        monthlyTransactions =
-        await _firestoreService.calculateYearlySpendingByMonth2(user.uid, chosenYear, selectedAccountID);
-
+        if(importedTypeOfBankAccount == false) {
+          monthlyTransactions =
+          await _firestoreService.calculateYearlySpendingByMonth2(user.uid, chosenYear, selectedAccountID);
+        }
+        else if (importedTypeOfBankAccount == true){
+          monthlyTransactions = await _firestoreService.calculateYearlyImportedSpendingByMonth(user.uid, chosenYear, selectedAccountID);
+        }
         for (int j = 0; j <= 2; j++) {
           Map<String, double> monthlySpending = monthlyTransactions[j];
           List<FlSpot> FlSpotlist = [];
@@ -364,14 +374,35 @@ class _StatisticsPageState extends State<StatisticsPage> {
     List<FlSpot> categoryList = [];
 
     try {
-      if (selectedTimeCategory == "Monat") {
-        categoryTransactions = await _firestoreService.getCurrentMonthTransactionsByDateRangeAndCategory(user.uid, category, selectedAccountID);
-      }
-      else if (selectedTimeCategory == "Jahr") {
-        categoryTransactions = await _firestoreService.calculateMonthlyCategoryExpenses(user.uid, category, selectedYear, selectedAccountID);
-      }
-      else {
-        print("Keine Periode für Kategorie ausgwählt");
+
+      if (importedTypeOfBankAccount == false) {
+        if (selectedTimeCategory == "Monat") {
+          categoryTransactions = await _firestoreService
+              .getCurrentMonthTransactionsByDateRangeAndCategory(
+              user.uid, category, selectedAccountID);
+        }
+        else if (selectedTimeCategory == "Jahr") {
+          categoryTransactions =
+          await _firestoreService.calculateMonthlyCategoryExpenses(
+              user.uid, category, selectedYear, selectedAccountID);
+        }
+        else {
+          print("Keine Periode für Kategorie ausgwählt");
+        }
+      } else if (importedTypeOfBankAccount == true){
+        if (selectedTimeCategory == "Monat") {
+          categoryTransactions =
+          await _firestoreService.getCurrentMonthImportedTransactionsByDateRangeAndCategory(user.uid, category, selectedAccountID);
+        }
+        else if (selectedTimeCategory == "Jahr") {
+          categoryTransactions =
+          await _firestoreService.calculateMonthlyCategoryImportedExpenses(user.uid, category, selectedYear, selectedAccountID);
+        }
+        else {
+          print("Keine Periode für Kategorie ausgwählt");
+        }
+      } else {
+        print("importedTypeofBankAcout unklar");
       }
       //print(categoryTransactions); die transactions jeder einezelenen kategorrie!
 
@@ -623,12 +654,17 @@ class _StatisticsPageState extends State<StatisticsPage> {
                             if (bA.accountName == selectedAccount){
                               print("Accountname gefunden!!!");
                               selectedAccountID = bA.id!;
+                              importedTypeOfBankAccount = bA.forImport;
                             } else {
                               print("Accountname NICHTTTTTTT gefunden!!!");
+                              print("$selectedAccount");
                             }
                           }
-                        }
+                        } // Reset cache to force data reload
+                        chartCache.clear();
+                        cachedYearlyLineChartData = null;
                       });
+
                       await _reloadAllStatistics();
                     },
                   ),
@@ -718,7 +754,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 children: [
                   const SizedBox(width: 30),
                   Text(
-                    'Kategorieübersicht im Zeitraum:  ',
+                    'Kategorieausgaben im Zeitraum:  ',
                     style: TextStyle(fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Colors.black),
@@ -771,66 +807,75 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 ),
               ),
               const SizedBox(height: 40),
-              Row(
+
+
+              importedTypeOfBankAccount
+                  ? Container() // Wenn CSV-Konto ausgewählt ist, zeige nichts
+                  : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(width: 30),
-                  Text(
-                    'Relevanz der Ausgabenverteilung:  ',
-                    style: TextStyle(fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black),
+                  Row(
+                    children: [
+                      const SizedBox(width: 30),
+                      Text(
+                        'Relevanz der Ausgabenverteilung:  ',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      GestureDetector(
+                        onTap: () => _showImportancePicker(context),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey),
+                          ),
+                          child: Text(
+                            selectedTimeImportance,
+                            style: TextStyle(fontSize: 16, color: Colors.black),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 20),
-                  GestureDetector(
-                    onTap: () => _showImportancePicker(context), // Klammer hinzufügen, um die Methode aufzurufen
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey),
-                      ),
-                      child: Text(
-                        selectedTimeImportance,
-                        style: TextStyle(fontSize: 16, color: Colors.black),
-                      ),
+                  const SizedBox(height: 20),
+                  urgentExpenses == 0.0 && nonUrgentExpenses == 0.0
+                      ? Center(child: CircularProgressIndicator())
+                      : Container(
+                    width: double.infinity,
+                    height: 300,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 45),
+                        Container(
+                          height: 220,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: buildPieChart(),
+                        ),
+                      ],
                     ),
                   ),
-
-
                 ],
-              ),
-              const SizedBox(height: 20),
-              urgentExpenses == 0.0 && nonUrgentExpenses == 0.0
-                  ? Center(child: CircularProgressIndicator())
-                  : Container(
-                width: double.infinity,
-                height: 300,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 6,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 45),
-                    Container(
-                      height: 220,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: buildPieChart(), // Nutze die neue Methode
-                    ),
-                  ],
-                ),
               ),
             ],
           ),

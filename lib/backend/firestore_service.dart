@@ -1288,12 +1288,43 @@ class FirestoreService {
     return totalSpending;
   }
 
+  Future<List<ImportedTransaction>> getImportedTransactionsByDateRange(String documentId, String type, DateTime startDate, DateTime endDate, String accountid) async {
+    print("getImportedTransactionsByDateRange");
+    try {
+      // Setze startDate auf Mitternacht und endDate auf den letzten Moment des Tages
+      startDate = DateTime.utc(startDate.year, startDate.month, startDate.day, 0, 0, 0).subtract(Duration(microseconds: 1));
+      endDate = DateTime.utc(endDate.year, endDate.month, endDate.day, 23, 59, 59);
+
+      // Zugriff auf die 'ImportedTransactions'-Unterkollektion des Nutzers
+      final userImportedTransactionsRef = usersRef.doc(documentId).collection('ImportedTransactions');
+
+      // Basiskonfiguration der Abfrage
+      firestore.Query query = userImportedTransactionsRef
+          .where('date', isGreaterThanOrEqualTo: startDate.toIso8601String())
+          .where('date', isLessThanOrEqualTo: endDate.toIso8601String())
+          .orderBy('date', descending: true);
+
+      // Abfrage ausführen
+      firestore.QuerySnapshot querySnapshot = await query.get();
+
+      // Ergebnisse in eine Liste von ImportedTransactions umwandeln
+      return querySnapshot.docs.map((doc) {
+        return ImportedTransaction.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+      }).toList();
+    } catch (e) {
+      print("Error fetching imported transactions by date range: $e");
+      return [];
+    }
+  }
+
   /// Gets transactions within a specific date range for a specific user.
   ///
   /// This function takes the user's `documentId`, a `startDate`, and an `endDate` as input,
   /// and retrieves all transaction documents from the user's `Transactions` subcollection that fall
   /// within the given date range.
   Future<List<Transaction>> getSpecificTransactionByDateRange(String documentId, String type, DateTime startDate, DateTime endDate, String accountid) async {
+
+    print("getSpecificTransactionByDateRange");
     try {
       // Setze startDate auf Mitternacht (00:00:00) und endDate auf den letzten Moment des Tages (23:59:59)
       startDate = DateTime.utc(startDate.year, startDate.month, startDate.day, 0, 0, 0).subtract(Duration(microseconds: 1)); // Setze die Zeit auf 00:00
@@ -1330,6 +1361,71 @@ class FirestoreService {
   /// This function takes the user's `documentId` and a `year` as input,
   /// and calculates the total spending for each month of the given year.
 
+  Future<List<Map<String, double>>> calculateYearlyImportedSpendingByMonth(String documentId, String chosenYear, String accountId) async {
+    print("Entered calculateYearlyImportedSpendingByMonth");
+
+    // Erstelle Maps zur Speicherung der Ergebnisse
+    Map<String, double> incomeMap = {};
+    Map<String, double> expenseMap = {};
+    Map<String, double> netMap = {};
+
+    // Liste für parallele Futures
+    List<Future<Map<String, dynamic>>> futures = [];
+
+    // Erstelle Futures für alle Monate
+    for (int month = 1; month <= 12; month++) {
+      futures.add(Future(() async {
+        // Setze Start- und Enddatum für den Monat
+        DateTime startDate = DateTime.utc(int.parse(chosenYear), month, 1);
+        DateTime endDate = DateTime.utc(int.parse(chosenYear), month + 1, 1).subtract(Duration(days: 1));
+
+        // Hole die ImportedTransactions für den aktuellen Monat
+        List<ImportedTransaction> monthTransactions =
+        await getImportedTransactionsByDateRange(documentId, "null", startDate, endDate, accountId);
+
+        double monthIncome = 0.0;
+        double monthExpense = 0.0;
+
+        for (var transaction in monthTransactions) {
+          if (transaction.inflow > 0) {
+            // Einnahmen
+            monthIncome += transaction.inflow;
+          } else if (transaction.outflow > 0) {
+            // Ausgaben
+            monthExpense += transaction.outflow;
+          }
+        }
+
+        // Netto berechnen
+        double netAmount = monthIncome - monthExpense;
+
+        // Monatsschlüssel generieren
+        String monthKey = "${startDate.year}-${month.toString().padLeft(2, '0')}";
+
+        return {
+          "monthKey": monthKey,
+          "monthIncome": monthIncome,
+          "monthExpense": monthExpense,
+          "netAmount": netAmount
+        };
+      }));
+    }
+
+    // Führe alle Futures parallel aus
+    List<Map<String, dynamic>> results = await Future.wait(futures);
+
+    // Ergebnisse in Maps aufteilen
+    for (var result in results) {
+      String monthKey = result["monthKey"];
+      incomeMap[monthKey] = result["monthIncome"];
+      expenseMap[monthKey] = result["monthExpense"];
+      netMap[monthKey] = result["netAmount"];
+    }
+
+    print("Finished calculateYearlyImportedSpendingByMonth");
+
+    return [incomeMap, expenseMap, netMap];
+  }
 
 
   Future<List<Map<String, double>>> calculateYearlySpendingByMonth2(String documentId, String chosenYear, String accountid) async {
@@ -1408,7 +1504,7 @@ class FirestoreService {
 
 
 
-  Future<Map<String, double>> calculateYearlySpendingByMonth(String documentId, String type, String chosenYear, String accountid) async {
+  /*Future<Map<String, double>> calculateYearlySpendingByMonth(String documentId, String type, String chosenYear, String accountid) async {
     print("Entered calculateYearlySpendingByMonth");
     Map<String, double> yearlySpending = {}; // Initialisiere das Dictionary
     double cumulativeNetAmount = 0.0;
@@ -1450,7 +1546,11 @@ class FirestoreService {
     }
     print("Left calculateYearlySpendingByMonth");
     return yearlySpending;
-  }
+  }*/
+
+
+
+
 
   Future<List<double>> calculateMonthlySpendingByDay(
       String documentId, String type, String chosenYear, String chosenMonth, double lastMonthBalance, String accountid) async {
@@ -1540,7 +1640,7 @@ class FirestoreService {
 
 
 
-  Future<List<double>> calculateWeeklySpendingByDay(String documentId, String type, String accountid) async {
+  /*Future<List<double>> calculateWeeklySpendingByDay(String documentId, String type, String accountid) async {
     List<double> weeklySpending = List.filled(7, 0.0); // Initialisierung der Liste für die Wochentage
     double cumulativeNetAmount = 0.0; // Netto-Wert, der sich über die Woche hinweg summiert
 
@@ -1593,7 +1693,7 @@ class FirestoreService {
     }
 
     return weeklySpending;
-  }
+  }*/
 
   DateTime _getMondayOfWeek(DateTime date) {
     int weekday = date.weekday;
@@ -1606,15 +1706,93 @@ class FirestoreService {
       date.day - daysToSubtract, // Subtrahiere die Tage
     );
 
-    print("IST DER MONTag korrekt? ${mondayOfWeek}");
+    //print("IST DER MONTag korrekt? ${mondayOfWeek}");
     return mondayOfWeek; // Montag um 00:00:00 UTC
   }
 
 
 
+  /*Future<List<ImportedTransaction>> getImportedTransactionsByDateRangeAndCategory(
+      String documentId, String categoryId, DateTime startDate, DateTime endDate, String accountId) async {
+
+    print("Entering getImportedTransactionsByDateRangeAndCategory");
+    try {
+      // Start- und Enddatum setzen
+      startDate = DateTime.utc(startDate.year, startDate.month, startDate.day, 0, 0, 0)
+          .subtract(Duration(microseconds: 1)); // Startzeit auf 00:00 setzen
+      endDate = DateTime(endDate.year, endDate.month, endDate.day + 1)
+          .subtract(Duration(microseconds: 1)); // Endzeit auf den letzten Moment des Tages setzen
+
+      // Referenz zur Transaktionskollektion
+      final userTransactionsRef = usersRef.doc(documentId).collection('ImportedTransactions');
+
+      // Basiskonfiguration der Abfrage
+      firestore.Query query = userTransactionsRef
+          .where('categoryId', isEqualTo: categoryId)
+          .where('date', isGreaterThanOrEqualTo: startDate.toIso8601String())
+          .where('date', isLessThanOrEqualTo: endDate.toIso8601String());
+
+      // Filterung nach accountId nur, wenn es nicht null oder leer ist
+      if (accountId != "null" && accountId.isNotEmpty) {
+        query = query.where('accountId', isEqualTo: accountId);
+      }
+
+
+      // Query ausführen
+      firestore.QuerySnapshot snapshot = await query
+          .orderBy('date', descending: true)
+          .get();
+
+      // Ergebnisse in Transaktionsobjekte umwandeln
+      return snapshot.docs
+          .map((doc) => ImportedTransaction.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .toList();
+    } catch (e) {
+      print("Error getting transactions by date range: $e");
+      return [];
+    }
+  }*/
+
+  Future<List<ImportedTransaction>> getImportedTransactionsByDateRangeAndCategory(
+      String documentId, String categoryId, DateTime startDate, DateTime endDate, String accountId) async {
+
+    print("Entering getImportedTransactionsByDateRangeAndCategory");
+    try {
+      // Referenz zur Transaktionskollektion
+      final userTransactionsRef = usersRef.doc(documentId).collection('ImportedTransactions');
+
+      // Grundabfrage nur nach Kategorie
+      firestore.Query query = userTransactionsRef
+          .where('date', isGreaterThanOrEqualTo: startDate.toIso8601String())
+          .where('date', isLessThanOrEqualTo: endDate.toIso8601String());
+          //.where('categoryId', isEqualTo: categoryId);
+
+      // Query ausführen
+      firestore.QuerySnapshot snapshot = await query.get();
+
+      // Ergebnisse in Transaktionsobjekte umwandeln
+      List<ImportedTransaction> transactions = snapshot.docs
+          .map((doc) => ImportedTransaction.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .toList();
+
+      //print(transactions);
+
+      // Filterung nach Datum und accountId im Client
+      return transactions.where((transaction) {
+        return transaction.categoryId == categoryId &&
+            (accountId.isEmpty || transaction.accountId == accountId);
+      }).toList();
+    } catch (e) {
+      print("Error getting transactions by date range: $e");
+      return [];
+    }
+  }
+
 
 
   Future<List<Transaction>> getTransactionsByDateRangeAndCategory(String documentId, String categoryId, DateTime startDate, DateTime endDate, String accountId) async {
+
+    print("Entering getTransactionsByDateRangeAndCategory");
     try {
       // Start- und Enddatum setzen
       startDate = DateTime.utc(startDate.year, startDate.month, startDate.day, 0, 0, 0)
@@ -1652,11 +1830,47 @@ class FirestoreService {
     }
   }
 
+  Future<Map<int, double>> getCurrentMonthImportedTransactionsByDateRangeAndCategory(String documentId, String categoryId, String accountId) async {
+    print("Entering getCurrentMonthImportedTransactionsByDateRangeAndCategory");
+    Map<int, double> monthlyCategoryValues = {};
+    try{
 
+      DateTime today = DateTime.now();
+      DateTime usableToday = DateTime(today.year, today.month, today.day);
+      DateTime startDate = DateTime(today.year, today.month, 1);
+
+
+      List<ImportedTransaction> transactions = await getImportedTransactionsByDateRangeAndCategory(documentId, categoryId, startDate, usableToday, accountId);
+      print(" nach sortieren nach kategorie $transactions");
+      for (int day = 1; day <= usableToday.day; day++) {
+        DateTime currentDay = DateTime(usableToday.year, usableToday.month, day).subtract(Duration(microseconds: 1));
+
+
+        List<ImportedTransaction> dayTransactions = transactions.where((transaction) {
+          return transaction.date.toUtc().year == currentDay.year &&
+              transaction.date.toUtc().month == currentDay.month &&
+              transaction.date.toUtc().day == currentDay.day;
+        }).toList();
+        //print(dayTransactions);
+
+        // Berechne die Summe der Ausgaben für den aktuellen Tag
+        double dayExpense = dayTransactions
+            .where((transaction) => transaction.outflow != 0) // Filtere Ausgaben falls es noch geändert wird (outflow > 0)
+            .fold(0.0, (sum, transaction) => sum + transaction.outflow);
+
+        // Speichere die Ausgabe des Tages in der Map
+        monthlyCategoryValues[day] = dayExpense;
+      }
+    }  catch (e) {
+    print("Fehler beim Abrufen der Monatsausgaben: $e");
+    }
+    return monthlyCategoryValues;
+  }
 
 
 
   Future<Map<int, double>> getCurrentMonthTransactionsByDateRangeAndCategory(String documentId, String categoryId, String accountId) async {
+    print("Entering getCurrentMonthTransactionsByDateRangeAndCategory");
     Map<int, double> monthlyCategoryValues = {};
     DateTime today = DateTime.now();
     DateTime usableToday = DateTime(today.year, today.month, today.day);
@@ -1690,7 +1904,38 @@ class FirestoreService {
     return monthlyCategoryValues;
   }
 
+  Future<Map<int, double>> calculateMonthlyCategoryImportedExpenses(String documentId, String categoryId, String chosenYear, String accountId) async {
+    print("Entering calculateMonthlyCategoryImportedExpenses");
+    Map<int, double> monthlyCategoryExpenses = {}; // Initialisiere das Dictionary
+    try {
+      for (int month = 1; month <= 12; month++) {
+        // Berechne den Start- und Endzeitpunkt für den aktuellen Monat
+        DateTime startDate = DateTime.utc(int.parse(chosenYear), month, 1);
+        DateTime endDate = DateTime.utc(int.parse(chosenYear), month + 1, 1)
+            .subtract(Duration(days: 1));
+
+        // Hole die Transaktionen für den aktuellen Monat und die Kategorie
+        List<ImportedTransaction> monthTransactions = await getImportedTransactionsByDateRangeAndCategory(documentId, categoryId, startDate, endDate, accountId);
+
+        // Berechne die Gesamtausgaben für den aktuellen Monat
+        double monthExpense = monthTransactions
+            .where((transaction) => transaction.outflow > 0) // Filtere Ausgaben (outflow > 0)
+            .fold(0.0, (sum, transaction) => sum + transaction.outflow);
+
+        // Speichere die Gesamtausgaben des Monats in der Map
+        monthlyCategoryExpenses[month] = monthExpense;
+      }
+    } catch (e) {
+      print("Fehler beim Berechnen der monatlichen Ausgaben: $e");
+    }
+    return monthlyCategoryExpenses;
+  }
+
+
+
   Future<Map<int, double>> calculateMonthlyCategoryExpenses(String documentId, String categoryId, String chosenYear, String accountId) async {
+
+    print("Entering calculateMonthlyCategoryExpenses");
     Map<int, double> monthlyCategoryExpenses = {}; // Initialisiere das Dictionary
 
     for (int month = 1; month <= 12; month++) {
@@ -1772,8 +2017,7 @@ class FirestoreService {
   Future<Map<String, double>> fetchUrgentAndNonUrgentExpenses(String documentId, DateTime startDate, DateTime endDate, String accountId) async {
     try {
       // Hole alle Transaktionen im gegebenen Datumsbereich
-      List<Transaction> transactions =
-      await getSpecificTransactionByDateRange(documentId, "null", startDate, endDate, accountId);
+      List<Transaction> transactions = await getSpecificTransactionByDateRange(documentId, "null", startDate, endDate, accountId);
 
       // Initialisiere Summen
       double urgentTotal = 0.0;
@@ -1804,6 +2048,9 @@ class FirestoreService {
       };
     }
   }
+
+
+
 
   Future<List<Category>> getUserCategoriesWithBudget(String documentId) async {
     try {
