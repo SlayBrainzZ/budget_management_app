@@ -16,6 +16,7 @@ class Category {
   Color? color;
   bool isDefault;  // New field for default category identification
   String? accountId;
+  int streakCounter; //New field to track the streak of adherence to budget
 
   Category({
     required this.userId,
@@ -26,6 +27,7 @@ class Category {
     this.isDefault = false,  // Default is false for user-defined categories
     this.accountId, // Optional account link
     this.id,
+    this.streakCounter = 0, // Initialize streak counter with 0
   });
 
   Map<String, dynamic> toMap() {
@@ -37,6 +39,7 @@ class Category {
       'color': color?.value,
       'isDefault': isDefault, // Save isDefault field
       'accountId': accountId,
+      'streakCounter': streakCounter,
       'id' : id,
     };
   }
@@ -50,6 +53,7 @@ class Category {
       color: data['color'] != null ? Color(data['color']) : null,
       isDefault: data['isDefault'] ?? false,  // Parse isDefault from Firestore
       accountId: data['accountId'],
+      streakCounter: data['streakCounter'] ?? 0, // Load streak counter from Firestore
     )..id = documentId;
   }
 }

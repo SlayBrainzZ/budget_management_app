@@ -293,6 +293,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
 
 
+
   Future<List<FlSpot>> generateSpotsforMonth(String chosenYear, chosenMonth, String type) async {
     final user = await _loadUser();
     if (user == null) {
@@ -305,10 +306,23 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
     try {
       print(monthlyBalanceList);
-      lastMonthBalance =
-          findLastMonthBalance(monthlyBalanceList, chosenYear, chosenMonth);
+      lastMonthBalance = findLastMonthBalance(monthlyBalanceList, chosenYear, chosenMonth);
       print("lastMonthBalance nach Monatsangabe: $lastMonthBalance");
-      data = await _firestoreService.calculateMonthlySpendingByDay(user.uid, type, chosenYear, chosenMonth, lastMonthBalance, selectedAccountID);
+      if(importedTypeOfBankAccount == false) {
+        if (selectedAccountID == "null") {
+
+          data = await _firestoreService.calculateMonthlyCombinedSpendingByDay(user.uid, type, chosenYear, chosenMonth, lastMonthBalance, selectedAccountID);
+
+        } else {
+
+          data = await _firestoreService.calculateMonthlySpendingByDay(user.uid, type, chosenYear, chosenMonth, lastMonthBalance, selectedAccountID);
+
+        }
+      }
+      else if (importedTypeOfBankAccount == true){
+        data = await _firestoreService.calculateMonthlyImportedSpendingByDay(user.uid, type, chosenYear, chosenMonth, lastMonthBalance, selectedAccountID);
+      }
+
 
       for (double y in data) {
         FlSpotlist.add(FlSpot(x, y));
@@ -336,12 +350,17 @@ class _StatisticsPageState extends State<StatisticsPage> {
     try {
       if (chosenMonth == "Monat") {
         if(importedTypeOfBankAccount == false) {
-          monthlyTransactions =
-          await _firestoreService.calculateYearlySpendingByMonth2(user.uid, chosenYear, selectedAccountID);
+          if (selectedAccountID == "null"){
+            monthlyTransactions = await _firestoreService.combineYearlyCombinedSpendingByMonth(user.uid, chosenYear, selectedAccountID);
+          } else {
+            monthlyTransactions = await _firestoreService.calculateYearlySpendingByMonth2(user.uid, chosenYear, selectedAccountID);
+          }
         }
         else if (importedTypeOfBankAccount == true){
           monthlyTransactions = await _firestoreService.calculateYearlyImportedSpendingByMonth(user.uid, chosenYear, selectedAccountID);
         }
+
+
         for (int j = 0; j <= 2; j++) {
           Map<String, double> monthlySpending = monthlyTransactions[j];
           List<FlSpot> FlSpotlist = [];
@@ -376,31 +395,48 @@ class _StatisticsPageState extends State<StatisticsPage> {
     try {
 
       if (importedTypeOfBankAccount == false) {
-        if (selectedTimeCategory == "Monat") {
-          categoryTransactions = await _firestoreService
-              .getCurrentMonthTransactionsByDateRangeAndCategory(
-              user.uid, category, selectedAccountID);
+
+        if (selectedAccountID == "null"){
+          if (selectedTimeCategory == "Monat") {
+
+            categoryTransactions = await _firestoreService.getCurrentMonthCombinedTransactionsByDateRangeAndCategory(user.uid, category, selectedAccountID);
+
+          } else if (selectedTimeCategory == "Jahr") {
+
+            categoryTransactions = await _firestoreService.calculateYearlyCombinedCategoryExpenses(user.uid, category, selectedYear, selectedAccountID);
+
+          } else {
+            print("Keine Periode für Kategorie ausgwählt");
+          }
+
+        } else {
+            if (selectedTimeCategory == "Monat") {
+
+              categoryTransactions = await _firestoreService.getCurrentMonthTransactionsByDateRangeAndCategory(user.uid, category, selectedAccountID);
+
+            } else if (selectedTimeCategory == "Jahr") {
+
+              categoryTransactions = await _firestoreService.calculateYearlyCategoryExpenses(user.uid, category, selectedYear, selectedAccountID);
+
+            } else {
+              print("Keine Periode für Kategorie ausgwählt");
+            }
         }
-        else if (selectedTimeCategory == "Jahr") {
-          categoryTransactions =
-          await _firestoreService.calculateMonthlyCategoryExpenses(
-              user.uid, category, selectedYear, selectedAccountID);
-        }
-        else {
-          print("Keine Periode für Kategorie ausgwählt");
-        }
+
       } else if (importedTypeOfBankAccount == true){
-        if (selectedTimeCategory == "Monat") {
-          categoryTransactions =
-          await _firestoreService.getCurrentMonthImportedTransactionsByDateRangeAndCategory(user.uid, category, selectedAccountID);
-        }
-        else if (selectedTimeCategory == "Jahr") {
-          categoryTransactions =
-          await _firestoreService.calculateMonthlyCategoryImportedExpenses(user.uid, category, selectedYear, selectedAccountID);
-        }
-        else {
-          print("Keine Periode für Kategorie ausgwählt");
-        }
+
+          if (selectedTimeCategory == "Monat") {
+            categoryTransactions =
+            await _firestoreService.getCurrentMonthImportedTransactionsByDateRangeAndCategory(user.uid, category, selectedAccountID);
+          }
+          else if (selectedTimeCategory == "Jahr") {
+            categoryTransactions =
+            await _firestoreService.calculateYearlyCategoryImportedExpenses(user.uid, category, selectedYear, selectedAccountID);
+          }
+          else {
+            print("Keine Periode für Kategorie ausgwählt");
+          }
+
       } else {
         print("importedTypeofBankAcout unklar");
       }
@@ -417,6 +453,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
     return categoryList;
   }
+
 
 
 
@@ -490,6 +527,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
       lineTouchData: LineTouchData(handleBuiltInTouches: true),
     );
   }
+
+
 
 
   double findLastMonthBalance(Map<String, double> data, String chosenYear, String chosenMonth) {
@@ -605,6 +644,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
   }
 
 
+
+
   @override
   Widget build(BuildContext context) {
 
@@ -649,15 +690,18 @@ class _StatisticsPageState extends State<StatisticsPage> {
                         // Aktualisiere die Account-ID basierend auf der Auswahl
                         if (selectedAccount == 'Gesamtübersicht') {
                           selectedAccountID = 'null'; // Keine spezifische ID für die Gesamtübersicht
+                          print("Accountname gefunden!!!");
+                          print("$selectedAccount");
+                          importedTypeOfBankAccount = false;
                         } else {
                           for (var bA in allBankAccounts){
                             if (bA.accountName == selectedAccount){
                               print("Accountname gefunden!!!");
+                              print("$selectedAccount");
                               selectedAccountID = bA.id!;
                               importedTypeOfBankAccount = bA.forImport;
                             } else {
-                              print("Accountname NICHTTTTTTT gefunden!!!");
-                              print("$selectedAccount");
+                              //print("Accountname NICHTTTTTTT gefunden!!!");
                             }
                           }
                         } // Reset cache to force data reload
