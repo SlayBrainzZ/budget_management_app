@@ -849,7 +849,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
               ],
             ),
             trailing: SizedBox(
-              width: 300,
+              width: 130,
               child: Row(
                 mainAxisSize: MainAxisSize.max,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -858,7 +858,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                     'Imp',
                     style: TextStyle(
                       color: Colors.black,
-                      fontSize: 10,
+                      fontSize: 8,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
