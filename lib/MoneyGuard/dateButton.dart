@@ -539,7 +539,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                                 },
                                 child: const Text(
                                   "Abbrechen",
-                                  style: TextStyle(color: Colors.black), // Textfarbe
+                                  //style: TextStyle(color: Colors.black), // Textfarbe
                                 ),
                               ),
                               const SizedBox(width: 16),

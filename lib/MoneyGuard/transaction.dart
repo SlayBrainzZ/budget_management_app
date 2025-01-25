@@ -138,9 +138,14 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       return;
     }
 
+    double amount = double.tryParse(_amountController.text) ?? 0.0;
+    if (type == 'Ausgabe' && amount > 0) {
+      amount = -amount; // Betrag negativ machen für Ausgaben
+    }
+
     final transaction = Transaction(
       userId: _userId!,
-      amount: double.tryParse(_amountController.text) ?? 0.0,
+      amount: amount,//double.tryParse(_amountController.text) ?? 0.0,
       date: _selectedDate,
       categoryId: _selectedCategory,
       type: type,
@@ -194,10 +199,15 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       return;
     }
 
+    double amount = double.tryParse(_amountController.text) ?? 0.0;
+    if (type == 'Ausgabe' && amount > 0) {
+      amount = -amount; // Betrag negativ machen für Ausgaben
+    }
+
     if (widget.transaction != null) {
       // Update bestehende Transaktion
       final updatedTransaction = widget.transaction!.copyWith(
-        amount: double.tryParse(_amountController.text) ?? 0.0,
+        amount: amount,//double.tryParse(_amountController.text) ?? 0.0,
         date: _selectedDate,
         categoryId: _selectedCategory,
         type: type,
