@@ -282,9 +282,15 @@ class _StatisticsPageState extends State<StatisticsPage> {
         ),
       ],
       gridData: FlGridData(show: true),
-      borderData: FlBorderData(show: true),
-      titlesData: FlTitlesData(
+      borderData: FlBorderData(show: true,
+        border: const Border(
+          left: BorderSide(color: Colors.black, width: 1), // Linke Linie
+          bottom: BorderSide(color: Colors.black, width: 1), // Untere Linie
+          top: BorderSide.none, // Keine obere Linie
+          right: BorderSide.none, // Keine rechte Linie
+        ),
       ),
+      titlesData: categoryChartTitlesDataYear,
       lineTouchData: LineTouchData(
         handleBuiltInTouches: true,
       ),
@@ -520,11 +526,241 @@ class _StatisticsPageState extends State<StatisticsPage> {
       throw Exception("Daten müssen vorab geladen werden!");
     }
     return LineChartData(
+
+      //minY: 1, // Bereich unten erweitern
+      //maxY: 10000, // Bereich oben erweitern, damit "DEZ" nicht so nah am Rand ist
+
       lineBarsData: cachedYearlyLineChartData!,
       gridData: FlGridData(show: true),
-      borderData: FlBorderData(show: true),
-      titlesData: FlTitlesData(),
+      borderData: FlBorderData(
+        show: true,
+        border: const Border(
+          left: BorderSide(color: Colors.black, width: 1), // Linke Linie
+          bottom: BorderSide(color: Colors.black, width: 1), // Untere Linie
+          top: BorderSide.none, // Keine obere Linie
+          right: BorderSide.none, // Keine rechte Linie
+    ),
+    ),
+      titlesData: bigChartTitlesDataYear,
       lineTouchData: LineTouchData(handleBuiltInTouches: true),
+    );
+  }
+
+
+
+
+  FlTitlesData get categoryChartTitlesDataYear => FlTitlesData(
+    bottomTitles: AxisTitles(
+      sideTitles: categoryBottomTitles
+    ),
+    rightTitles:  AxisTitles(
+      sideTitles: SideTitles(showTitles: false),
+    ),
+    topTitles: const AxisTitles(
+      sideTitles: SideTitles(showTitles: false),
+    ),
+    leftTitles: AxisTitles(
+      sideTitles: SideTitles(
+        showTitles: true, // Aktiviere die linke Achse
+        reservedSize: 40, // Vergrößere den Platz links
+        getTitlesWidget: (value, meta) {
+          return Text(
+            '${value.toInt()}€', // Beschriftung für linke Achse
+            style: const TextStyle(fontSize: 10),
+          );
+        },
+      ),
+    ),
+  );
+  FlTitlesData get bigChartTitlesDataYear => FlTitlesData(
+    bottomTitles: AxisTitles(
+      sideTitles: bottomTitles,
+    ),
+    rightTitles:  AxisTitles(
+      sideTitles: SideTitles(showTitles: false),
+    ),
+    topTitles: const AxisTitles(
+      sideTitles: SideTitles(showTitles: false),
+    ),
+    leftTitles: AxisTitles(
+      sideTitles: SideTitles(
+        showTitles: true, // Aktiviere die linke Achse
+        reservedSize: 40, // Vergrößere den Platz links
+        getTitlesWidget: (value, meta) {
+          return Text(
+            '${value.toInt()}€', // Beschriftung für linke Achse
+            style: const TextStyle(fontSize: 10),
+          );
+        },
+      ),
+    ),
+  );
+  SideTitles get bottomTitles => SideTitles(
+    showTitles: true,
+    reservedSize: 25,
+    interval: 1,
+    getTitlesWidget: bottomTitleWidgets,
+  );
+  SideTitles get categoryBottomTitles => SideTitles(
+    showTitles: true, // Aktiviere die linke Achse
+    reservedSize: 25,
+    interval: 1,
+    getTitlesWidget: categoryBottomTitleWidgets
+  );
+  Widget categoryBottomTitleWidgets(double value, TitleMeta meta) {
+    const style = TextStyle(
+      //fontWeight: FontWeight.bold,
+      fontSize: 11,
+    );
+    Widget text;
+    if (selectedTimeCategory == "Jahr") {
+      switch (value.toInt()) {
+        case 1:
+          text = const Text('JAN', style: style);
+          break;
+        case 2:
+          text = const Text('FEB', style: style);
+          break;
+        case 3:
+          text = const Text('MÄR', style: style);
+          break;
+        case 4:
+          text = const Text('APR', style: style);
+          break;
+        case 5:
+          text = const Text('MAI', style: style);
+          break;
+        case 6:
+          text = const Text('JUN', style: style);
+          break;
+        case 7:
+          text = const Text('JUL', style: style);
+          break;
+        case 8:
+          text = const Text('AUG', style: style);
+          break;
+        case 9:
+          text = const Text('SEP', style: style);
+          break;
+        case 10:
+          text = const Text('OKT', style: style);
+          break;
+        case 11:
+          text = const Text('NOV', style: style);
+          break;
+        case 12:
+          text = const Text('DEZ', style: style);
+          break;
+        default:
+          text = const Text('');
+          break;
+      }
+    } else {
+      switch (value.toInt()) {
+        case 5:
+          text = Text("${value.toString()}.${DateTime.now().month}", style: style);
+          break;
+        case 10:
+          text = Text("${value.toString()}.${DateTime.now().month}", style: style);
+          break;
+        case 15:
+          text = Text("${value.toString()}.${DateTime.now().month}", style: style);
+          break;
+        case 20:
+          text = Text("${value.toString()}.${DateTime.now().month}", style: style);
+          break;
+        case 25:
+          text = Text("${value.toString()}.${DateTime.now().month}", style: style);
+          break;
+        case 30:
+          text = Text("${value.toString()}.${DateTime.now().month}", style: style);
+        default:
+          text = const Text('');
+          break;
+      }
+    }
+    return SideTitleWidget(
+      axisSide: meta.axisSide,
+      space: 10,
+      child: text,
+    );
+  }
+  Widget bottomTitleWidgets(double value, TitleMeta meta) {
+    const style = TextStyle(
+      //fontWeight: FontWeight.bold,
+      fontSize: 11,
+    );
+    Widget text;
+    if (selectedMonth == "Monat") {
+      switch (value.toInt()) {
+        case 1:
+          text = const Text('JAN', style: style);
+          break;
+        case 2:
+          text = const Text('FEB', style: style);
+          break;
+        case 3:
+          text = const Text('MÄR', style: style);
+          break;
+        case 4:
+          text = const Text('APR', style: style);
+          break;
+        case 5:
+          text = const Text('MAI', style: style);
+          break;
+        case 6:
+          text = const Text('JUN', style: style);
+          break;
+        case 7:
+          text = const Text('JUL', style: style);
+          break;
+        case 8:
+          text = const Text('AUG', style: style);
+          break;
+        case 9:
+          text = const Text('SEP', style: style);
+          break;
+        case 10:
+          text = const Text('OKT', style: style);
+          break;
+        case 11:
+          text = const Text('NOV', style: style);
+          break;
+        case 12:
+          text = const Text('DEZ', style: style);
+          break;
+        default:
+          text = const Text('');
+          break;
+      }
+    } else {
+      switch (value.toInt()) {
+        case 5:
+          text = Text("${value.toString()}.${selectedMonth}", style: style);
+          break;
+        case 10:
+          text = Text("${value.toString()}.${selectedMonth}", style: style);
+          break;
+        case 15:
+          text = Text("${value.toString()}.${selectedMonth}", style: style);
+          break;
+        case 20:
+          text = Text("${value.toString()}.${selectedMonth}", style: style);
+          break;
+        case 25:
+          text = Text("${value.toString()}.${selectedMonth}", style: style);
+          break;
+        case 30:
+          text = Text("${value.toString()}.${selectedMonth}", style: style);
+        default:
+          text = const Text('');
+          break;
+      }
+    }
+    return SideTitleWidget(
+      axisSide: meta.axisSide,
+      space: 10,
+      child: text,
     );
   }
 
@@ -619,7 +855,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
             // Höhe jedes Elements
             scrollController: FixedExtentScrollController(
               initialItem: selectedMonth == "Monat" ? 0 : int.parse(
-                  selectedMonth) - 1,
+                  selectedMonth),
             ),
             onSelectedItemChanged: (int index) {
               setState(() {
@@ -660,13 +896,16 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Statistiken für:',
+                    'Konto:',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
                     ),
                   ),
+
+                  const SizedBox(width: 40),
+
                   DropdownButton<String>(
                     value: allBankAccounts.any((account) => account.accountName == selectedAccount)
                         ? selectedAccount
@@ -718,6 +957,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 ],
               ),
 
+              const Divider(
+                thickness: 1, // Stärke der Linie
+                color: Colors.black, // Farbe der Linie
+                height: 0, // Kein zusätzlicher Abstand unter der Linie
+              ),
 
               const SizedBox(height: 20),
 
@@ -789,6 +1033,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     ),
                   ],
                 ),
+                // Platz links hinzufügen
+                padding: const EdgeInsets.only(right: 20, left: 10, top: 10),
                 child: LineChart(chartData), // Diagramm anzeigen
               ),
               const SizedBox(height: 40),
@@ -1031,14 +1277,25 @@ class CategoryStatWidget extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                category.name,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Colors.black,
-                ),
+              Row(
+                  children: [
+                    Text(
+                      category.name ,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: category.color,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Icon(
+                      category.icon,
+                      color: category.color,
+                      size: 16.0,
+                    ),
+                  ]
               ),
+
               const SizedBox(height: 20),
               Container(
                 height: 220,

@@ -233,30 +233,12 @@ class _SavingPlanState extends State<SavingPlan> {
                     ),
                   ],
                 ),
+                padding: const EdgeInsets.only(right: 20, left: 5, bottom: 10, top: 10),
                 child: BarChart(
                   BarChartData(
                     alignment: BarChartAlignment.spaceEvenly, // Mehr Platz zwischen den Balken
                     maxY: 100, // Maximaler Y-Wert für die Prozentanzeige
                     titlesData: FlTitlesData(
-                      /*leftTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true, // Aktiviere die Titel auf der linken Seite
-                          interval: 25, // Schrittweite für die angezeigten Werte (z. B. 0, 25, 50, 75, 100)
-                          getTitlesWidget: (double value, TitleMeta meta) {
-                            // Bedingte Logik für die Anzeige
-                            if (value % 25 == 0) {
-                              return Text(
-                                '${value.toInt()}', // Zeigt den Prozentwert an
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.black,
-                                ),
-                              );
-                            }
-                            return const SizedBox.shrink(); // Keine Anzeige für andere Werte
-                          },
-                        ),
-                      ),*/
                       rightTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: false, // Rechte Achse deaktivieren
@@ -375,6 +357,7 @@ class _SavingPlanState extends State<SavingPlan> {
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'Roboto',
+                                  color: category.color,
                                 ),
                               ),
                             ),

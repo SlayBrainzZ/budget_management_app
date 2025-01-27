@@ -2144,8 +2144,8 @@ class FirestoreService {
 
         // Berechne die Gesamtausgaben für den aktuellen Monat
         double monthExpense = monthTransactions
-            .where((transaction) => transaction.outflow > 0) // Filtere Ausgaben (outflow > 0)
-            .fold(0.0, (sum, transaction) => sum + transaction.outflow);
+            .where((transaction) => transaction.outflow.abs() > 0) // Filtere Ausgaben (outflow > 0)
+            .fold(0.0, (sum, transaction) => sum + transaction.outflow.abs());
 
         // Speichere die Gesamtausgaben des Monats in der Map
         monthlyCategoryExpenses[month] = monthExpense;
@@ -2217,8 +2217,8 @@ class FirestoreService {
 
         // Berechne die Gesamtausgaben für importierte Transaktionen
         double importedExpenses = importedTransactions
-            .where((transaction) => transaction.outflow > 0) // Filtere Ausgaben (outflow > 0)
-            .fold(0.0, (sum, transaction) => sum + transaction.outflow);
+            .where((transaction) => transaction.outflow.abs() > 0) // Filtere Ausgaben (outflow > 0)
+            .fold(0.0, (sum, transaction) => sum + transaction.outflow.abs());
 
         // Summiere die Ausgaben von regulären und importierten Transaktionen
         double totalExpenses = regularExpenses + importedExpenses;
