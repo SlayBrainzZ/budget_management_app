@@ -728,7 +728,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 children: [
                   const SizedBox(width: 20),
                   Text(
-                    'Gesamtübersicht im Zeitraum:  ',
+                    'Gesamtübersicht:  ',
                     style: TextStyle(fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Colors.black),
@@ -798,7 +798,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 children: [
                   const SizedBox(width: 30),
                   Text(
-                    'Kategorieausgaben im Zeitraum:  ',
+                    'Kategorieausgaben:  ',
                     style: TextStyle(fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Colors.black),
@@ -862,7 +862,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     children: [
                       const SizedBox(width: 30),
                       Text(
-                        'Relevanz der Ausgabenverteilung:  ',
+                        'Ausgabenverteilung:  ',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,

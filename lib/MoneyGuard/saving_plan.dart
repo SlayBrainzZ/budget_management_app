@@ -20,6 +20,9 @@ class _SavingPlanState extends State<SavingPlan> {
   double totalIncome = 0.0;
   List<Transaction> monthlyTransactionCategoryAll = [];
   List<double> remainingBudget = []; // Liste, um verbleibende Budgets für jede Kategorie zu speichern
+  List<double> combinedTransactions = [];
+
+
   Map<String, int> streakCounterDictionary = {};
 
   // Methode zum Laden der Kategorien und Benutzerinformationen
@@ -33,6 +36,7 @@ class _SavingPlanState extends State<SavingPlan> {
     });
 
     try {
+      // Lade Kategorien
       List<Category> userCategories = await _firestoreService.getUserCategoriesWithBudget(user.uid);
 
       if (userCategories.isEmpty) {
@@ -43,32 +47,14 @@ class _SavingPlanState extends State<SavingPlan> {
         return;
       }
 
-      DateTime now = DateTime.now();
-      DateTime startOfMonth = DateTime.utc(now.year, now.month, 1);
-      DateTime endOfMonth = DateTime.utc(now.year, now.month + 1, 0);
-
-      List<Future<double>> transactionFutures = [];
-      for (final userCategory in userCategories) {
-        transactionFutures.add(
-          _firestoreService.getTransactionsByDateRangeAndCategory(
-            user.uid,
-            userCategory.id!,
-            startOfMonth,
-            endOfMonth,
-            "null",
-          ).then((transactions) async {
-            double sum = 0.0;
-            for (final transaction in transactions) {
-              final amount = transaction.amount is int
-                  ? (transaction.amount as int).toDouble()
-                  : transaction.amount ?? 0.0;
-              sum += amount;
-            }
-            return sum;
-          }),
+      // Lade kombinierte Transaktionen
+      List<Future<double>> transactionFutures = userCategories.map((category) {
+        return _firestoreService.getCurrentMonthCombinedTransactions(
+          user.uid, category.id!, "null", // Account-ID hier optional anpassen
         );
-      }
+      }).toList();
 
+      // Warte auf alle Transaktionssummen
       List<double> spentAmounts = await Future.wait(transactionFutures);
 
       setState(() {
@@ -92,6 +78,7 @@ class _SavingPlanState extends State<SavingPlan> {
           return remaining;
         });
 
+        // Gesamteinnahmen berechnen
         totalIncome = categories.fold(
           0.0,
               (sum, category) => sum + (category.budgetLimit ?? 0),
@@ -104,6 +91,8 @@ class _SavingPlanState extends State<SavingPlan> {
       );
     }
   }
+
+
 
 
 
@@ -389,21 +378,6 @@ class _SavingPlanState extends State<SavingPlan> {
                                 ),
                               ),
                             ),
-                            // Nachricht rechts oben im Widget
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  '${streakCounterDictionary[category.id] ?? 0} ${streakCounterDictionary[category.id] == 1 ? "Monat" : "Monate"} in Folge',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey,
-                                    fontFamily: 'Roboto',
-                                  ),
-                                ),
-                              ],
-                            ),
-
                           ],
                         ),
 
