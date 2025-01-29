@@ -271,7 +271,7 @@ class _SavingPlanState extends State<SavingPlan> {
                     barTouchData: BarTouchData(
                       touchTooltipData: BarTouchTooltipData(
                         getTooltipColor: (BarChartGroupData group) {
-                          return Color.fromARGB(80, 100, 150, 100); // Leicht verblasstes Türkisgrün
+                          return Color.fromARGB(255, 255, 255, 255); // Leicht verblasstes Türkisgrün
                         },
                         tooltipBorder: BorderSide(
                           color: Colors.black, // Farbe des Randes
@@ -286,7 +286,7 @@ class _SavingPlanState extends State<SavingPlan> {
                                 '📊 Anteil: ${percentage.toStringAsFixed(1)}%\n'
                                 '💰 Budget: ${category.budgetLimit!}€',
                             TextStyle(
-                              color: Colors.white,
+                              color: category.color,
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
                             ),

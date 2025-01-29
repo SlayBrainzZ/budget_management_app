@@ -1011,7 +1011,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                         child: Row(
                           children: [
                             Icon(Icons.show_chart,
-                              color: Colors.black,
+                              color: Colors.blue,
                             ),
                             const SizedBox(width: 5),
                             Text('Gesamtübersicht'),
