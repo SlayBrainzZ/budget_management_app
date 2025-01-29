@@ -270,17 +270,31 @@ class _SavingPlanState extends State<SavingPlan> {
                     barGroups: _buildCategoryData(),
                     barTouchData: BarTouchData(
                       touchTooltipData: BarTouchTooltipData(
+                        getTooltipColor: (BarChartGroupData group) {
+                          return Color.fromARGB(80, 100, 150, 100); // Leicht verblasstes Türkisgrün
+                        },
+                        tooltipBorder: BorderSide(
+                          color: Colors.black, // Farbe des Randes
+                          width: 1, // Dicke des Randes
+                        ),
+                        tooltipPadding: EdgeInsets.all(8), // Abstand innerhalb des Tooltips
                         getTooltipItem: (group, groupIndex, rod, rodIndex) {
                           final category = categories[groupIndex];
-                          final double percentage =
-                              (category.budgetLimit! / totalIncome) * 100;
+                          final double percentage = (category.budgetLimit! / totalIncome) * 100;
                           return BarTooltipItem(
-                            '${category.name}\n${percentage.toStringAsFixed(1)}%', // Tooltip mit Prozentwert
-                            TextStyle(color: Colors.white), // Textfarbe des Tooltips
+                            '${category.name}\n'
+                                '📊 Anteil: ${percentage.toStringAsFixed(1)}%\n'
+                                '💰 Budget: ${category.budgetLimit!}€',
+                            TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
                           );
                         },
                       ),
                     ),
+
                   ),
                 ),
               ),

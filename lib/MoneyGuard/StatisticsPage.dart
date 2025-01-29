@@ -303,19 +303,24 @@ class _StatisticsPageState extends State<StatisticsPage> {
         handleBuiltInTouches: true,
         touchTooltipData: LineTouchTooltipData(
           getTooltipColor: (LineBarSpot spot) {
-            return Color.fromARGB(180, 120, 120, 120);
+            return Color.fromARGB(255, 255, 255, 255); // Weißer Hintergrund
           },
+          tooltipBorder: BorderSide(
+            color: Colors.black, // Farbe des Randes
+            width: 1, // Dicke des Randes
+          ),
+          tooltipPadding: EdgeInsets.all(8), // Abstand innerhalb des Tooltips
           getTooltipItems: (List<LineBarSpot> touchedSpots) {
             return touchedSpots.map((spot) {
               Map<int, String> lineLabels = {
-                0: "Ausg."
+                0: "Ausg.",
               };
               String label = lineLabels[spot.barIndex] ?? "Wert";
               return LineTooltipItem(
                 "$label: ${spot.y.toStringAsFixed(2)} €", // Individueller Text
                 TextStyle(
                   fontSize: 13,
-                  fontWeight: FontWeight.normal,
+                  fontWeight: FontWeight.bold,
                   color: spot.bar.color ?? Colors.black,
                 ),
               );
@@ -323,6 +328,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
           },
         ),
       ),
+
     );
   }
 
@@ -603,8 +609,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
         handleBuiltInTouches: true,
         touchTooltipData: LineTouchTooltipData(
           getTooltipColor: (LineBarSpot spot) {
-            return Color.fromARGB(180, 120, 120, 120);
+            return Color.fromARGB(255, 255, 255, 255);;
           },
+          tooltipBorder: BorderSide(
+            color: Colors.black, // Farbe des Randes
+            width: 1, // Dicke des Randes
+          ),
+          tooltipPadding: EdgeInsets.all(8), // Abstand innerhalb des Tooltips
           getTooltipItems: (List<LineBarSpot> touchedSpots) {
             return touchedSpots.map((spot) {
               Map<int, String> lineLabels = {
@@ -617,7 +628,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 "$label: ${spot.y.toStringAsFixed(2)} €", // Individueller Text
                 TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.normal,
+                    fontWeight: FontWeight.bold,
                     color: spot.bar.color ?? Colors.black,
                 ),
               );
