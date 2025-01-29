@@ -152,9 +152,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
       );
     }
   }
-  Future<void> _loadExpenses(String chosenTime) async { //gloabel variablen urgentexpenses udn nonurgendstexepenses werden defineirt
+  Future<void> _loadExpenses(String chosenTime) async {
     final user = await _loadUser();
-
     if (user == null) {
       print("Kein Benutzer gefunden.");
       return;
@@ -163,7 +162,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
     DateTime today = DateTime.now();
     DateTime startdate;
     DateTime enddate;
-    Map<String, double> expenses;
+    Map<String, double> expenses = {"Dringend": 0.0, "Nicht dringend": 0.0}; // Standardwerte setzen
 
     if (chosenTime == "Woche") {
       startdate = today.subtract(Duration(days: today.weekday - 1)); // Montag
@@ -177,8 +176,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
     }
 
     try {
-      // Rufe die summierten Ausgaben ab
-        expenses = await _firestoreService.fetchUrgentAndNonUrgentExpenses(user.uid, startdate, enddate, selectedAccountID);
+      expenses = await _firestoreService.fetchUrgentAndNonUrgentExpenses(user.uid, startdate, enddate, selectedAccountID) ?? {"Dringend": 0.0, "Nicht dringend": 0.0};
 
       setState(() {
         urgentExpenses = expenses["Dringend"] ?? 0.0;
@@ -187,8 +185,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
     } catch (e) {
       print("Fehler beim Laden der Ausgaben: $e");
     }
-
   }
+
   Future<void> _loadAndSetExpenses(String chosenTime) async {
     await _loadExpenses(chosenTime);
     setState(() {}); // Aktualisiert den Zustand nach dem Laden
@@ -480,25 +478,39 @@ class _StatisticsPageState extends State<StatisticsPage> {
   }
   PieChartData definePiechartData() {
     final summary = calculateExpenseSummary();
+
+    if (summary['totalExpenses'] == 0) {
+      return PieChartData(
+        sections: [
+          PieChartSectionData(
+            title: "Keine Daten",
+            value: 1, // Dummy-Wert, damit das Diagramm nicht crasht
+            color: Colors.grey,
+          ),
+        ],
+        sectionsSpace: 2,
+        centerSpaceRadius: 50,
+      );
+    }
+
     return PieChartData(
       sections: [
         PieChartSectionData(
-          title:
-          "Dringend (${summary['urgentPercentage'].toStringAsFixed(1)}%)",
+          title: "Dringend (${summary['urgentPercentage'].toStringAsFixed(1)}%)",
           value: urgentExpenses,
           color: Colors.red,
         ),
         PieChartSectionData(
-          title:
-          "Nicht dringend (${summary['nonUrgentPercentage'].toStringAsFixed(1)}%)",
+          title: "Nicht dringend (${summary['nonUrgentPercentage'].toStringAsFixed(1)}%)",
           value: nonUrgentExpenses,
           color: Colors.blue,
         ),
       ],
       sectionsSpace: 2,
-      centerSpaceRadius: 50, // Platz in der Mitte
+      centerSpaceRadius: 50,
     );
   }
+
   Widget buildPieChart() {
     final summary = calculateExpenseSummary();
     return Stack(
@@ -522,8 +534,12 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
   LineChartData get chartData { //getterfunktion für die große Statistik
-    if (cachedYearlyLineChartData == null) {
-      throw Exception("Daten müssen vorab geladen werden!");
+    if (cachedYearlyLineChartData == null || cachedYearlyLineChartData!.isEmpty) {
+      return LineChartData(
+        lineBarsData: [],
+        gridData: FlGridData(show: false),
+        borderData: FlBorderData(show: false),
+      );
     }
     return LineChartData(
 
@@ -907,43 +923,65 @@ class _StatisticsPageState extends State<StatisticsPage> {
                   const SizedBox(width: 40),
 
                   DropdownButton<String>(
-                    value: allBankAccounts.any((account) => account.accountName == selectedAccount)
+                    value: allBankAccounts.any((account) => account.id == selectedAccount)
                         ? selectedAccount
-                        : 'Gesamtübersicht', // Fallback zu "Gesamtübersicht"
+                        : 'Gesamtübersicht', // Standardwert als Fallback
+
                     items: [
                       DropdownMenuItem(
                         value: 'Gesamtübersicht',
-                        child: Text('Gesamtübersicht'),
+                        child: Row(
+                          children: [
+                            Icon(Icons.show_chart,
+                              color: Colors.black,
+                            ),
+                            const SizedBox(width: 5),
+                            Text('Gesamtübersicht'),
+                          ],
+                        ),
                       ),
-                      ...allBankAccounts.map((BankAccount account) {
+                      ...allBankAccounts
+                          .where((account) => account.id != null && account.id != '')
+                          .map((BankAccount account) {
                         return DropdownMenuItem<String>(
-                          value: account.accountName,
-                          child: Text(account.accountName ?? 'Unbekanntes Konto'),
+                          value: account.id, // ID statt Name als value
+                          child: Row(
+                            children: [
+                              Icon(
+                                account.accountType == "Bargeld"
+                                    ? Icons.attach_money
+                                    : Icons.account_balance,
+                                color: Colors.blue,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(account.accountName ?? 'Unbekanntes Konto'),
+                            ],
+                          ),
                         );
                       }).toList(),
                     ],
+
                     onChanged: (String? newValue) async {
                       setState(() {
-                        selectedAccount = newValue!;
+                        selectedAccount = newValue ?? 'Gesamtübersicht';
 
-                        // Aktualisiere die Account-ID basierend auf der Auswahl
-                        if (selectedAccount == 'Gesamtübersicht') {
-                          selectedAccountID = 'null'; // Keine spezifische ID für die Gesamtübersicht
-                          print("Accountname gefunden!!!");
-                          print("$selectedAccount");
-                          importedTypeOfBankAccount = false;
-                        } else {
-                          for (var bA in allBankAccounts){
-                            if (bA.accountName == selectedAccount){
-                              print("Accountname gefunden!!!");
-                              print("$selectedAccount");
-                              selectedAccountID = bA.id!;
-                              importedTypeOfBankAccount = bA.forImport;
-                            } else {
-                              //print("Accountname NICHTTTTTTT gefunden!!!");
-                            }
+                      // Aktualisiere die Account-ID basierend auf der Auswahl
+                      if (selectedAccount == 'Gesamtübersicht') {
+                      selectedAccountID = 'null'; // Keine spezifische ID für die Gesamtübersicht
+                      print("Accountname gefunden!!!");
+                      print("$selectedAccount");
+                      importedTypeOfBankAccount = false;
+                      } else {
+                        // Suche nach dem Konto anhand der ID
+                        for (var bA in allBankAccounts) {
+                          if (bA.id == selectedAccount && bA.id != null && bA.id != '') {
+                            selectedAccountID = bA.id!;
+                            importedTypeOfBankAccount = bA.forImport;
                           }
-                        } // Reset cache to force data reload
+                        }
+                      }
+
+                        // Reset cache to force data reload
                         chartCache.clear();
                         cachedYearlyLineChartData = null;
                       });
@@ -951,6 +989,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                       await _reloadAllStatistics();
                     },
                   ),
+
 
 
 
@@ -972,7 +1011,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 children: [
                   const SizedBox(width: 20),
                   Text(
-                    'Gesamtübersicht:  ',
+                    'Gesamtverlauf:  ',
                     style: TextStyle(fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Colors.black),
@@ -1017,8 +1056,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
               ),
               const SizedBox(height: 20),
               // Diagramm-Widget
-              cachedYearlyLineChartData == null
-                  ? Center(child: CircularProgressIndicator())
+              cachedYearlyLineChartData == null || cachedYearlyLineChartData!.isEmpty
+                  ? Center(child: Text("Noch keine Daten verfügbar"))
                   : Container(
                 width: double.infinity,
                 height: 300,
@@ -1033,10 +1072,10 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     ),
                   ],
                 ),
-                // Platz links hinzufügen
                 padding: const EdgeInsets.only(right: 20, left: 10, top: 10),
-                child: LineChart(chartData), // Diagramm anzeigen
+                child: LineChart(chartData),
               ),
+
               const SizedBox(height: 40),
 
               // Kategorieübersicht (mit einem Picker zur Auswahl des Zeitraums)
@@ -1098,7 +1137,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
               ),
               const SizedBox(height: 40),
 
-
+              /*
               importedTypeOfBankAccount
                   ? Container() // Wenn CSV-Konto ausgewählt ist, zeige nichts
                   : Column(
@@ -1166,7 +1205,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     ),
                   ),
                 ],
-              ),
+              ),*/
             ],
           ),
         ),
@@ -1252,17 +1291,24 @@ class CategoryStatWidget extends StatelessWidget {
     return FutureBuilder<LineChartData>(
       future: chartDataFuture,
       builder: (context, snapshot) {
+
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
         } else if (snapshot.hasError) {
           return Center(child: Text('Fehler: ${snapshot.error}'));
-        } else if (!snapshot.hasData || snapshot.data == null) {
-          return Center(child: Text('Keine Daten verfügbar'));
+        } else if (!snapshot.hasData || snapshot.data == null || snapshot.data!.lineBarsData.isEmpty) {
+          return Center(
+            child: Text(
+              'Keine Daten für diese Kategorie verfügbar',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+          );
         }
 
         return Container(
           padding: const EdgeInsets.all(12.0),
-          width: 410, // Responsive Anpassung
+          width: 410,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(8),
@@ -1278,24 +1324,23 @@ class CategoryStatWidget extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                  children: [
-                    Text(
-                      category.name ,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: category.color,
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Icon(
-                      category.icon,
+                children: [
+                  Text(
+                    category.name,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
                       color: category.color,
-                      size: 16.0,
                     ),
-                  ]
+                  ),
+                  const SizedBox(width: 5),
+                  Icon(
+                    category.icon,
+                    color: category.color,
+                    size: 16.0,
+                  ),
+                ],
               ),
-
               const SizedBox(height: 20),
               Container(
                 height: 220,
@@ -1303,7 +1348,7 @@ class CategoryStatWidget extends StatelessWidget {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: LineChart(snapshot.data!), // Anzeige des Diagramms
+                child: LineChart(snapshot.data!),
               ),
             ],
           ),
@@ -1311,6 +1356,7 @@ class CategoryStatWidget extends StatelessWidget {
       },
     );
   }
+
 }
 
 class CustomScrollPhysics extends ScrollPhysics {

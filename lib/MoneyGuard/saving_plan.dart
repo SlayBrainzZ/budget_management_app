@@ -49,11 +49,11 @@ class _SavingPlanState extends State<SavingPlan> {
 
       // Lade kombinierte Transaktionen
       List<Future<double>> transactionFutures = userCategories.map((category) {
-        return _firestoreService.getCurrentMonthCombinedTransactions(
-          user.uid, category.id!, "null", // Account-ID hier optional anpassen
+        return _firestoreService.getCurrentMonthCombinedTransactions(user.uid, category.id!, "null", // Account-ID hier optional anpassen
         );
       }).toList();
 
+      print(transactionFutures);
       // Warte auf alle Transaktionssummen
       List<double> spentAmounts = await Future.wait(transactionFutures);
 
@@ -310,16 +310,28 @@ class _SavingPlanState extends State<SavingPlan> {
                   (context, index) {
                 final category = categories[index];
                 final remaining = remainingBudget[index];
-                final spentPercent = 1 -
-                    (remaining / (category.budgetLimit ?? 1))
-                        .clamp(0.0, 1.0);
+                final spentAmount = (category.budgetLimit ?? 0) - remaining;
+                final spentPercent = 1 - (remaining / (category.budgetLimit ?? 1)).clamp(0.0, 1.0);
 
-                // Bedingte Nachricht je nach Budgetstatus
+                    // Neue Anzeige-Bedingung
+                    String spentMessage;
+                    if (remaining < 0) {
+                      spentMessage = "${(spentAmount).toStringAsFixed(2)}€ ausgegeben";
+                    } else if (remaining == 0) {
+                      spentMessage = "${category.budgetLimit!.toStringAsFixed(2)}€ genutzt";
+                    } else {
+                      spentMessage = "${spentAmount.toStringAsFixed(2)}€ ausgegeben";
+                    }
+
+
+                    // Bedingte Nachricht je nach Budgetstatus
                 String statusMessage = remaining < 0
-                    ? "Limit überschritten!"
+                    ? "Limit um ${(remaining * -1).toStringAsFixed(2)}€ überschritten!"
+                    : remaining == 0
+                    ? "Limit optimal eingehalten!"
                     : remaining / (category.budgetLimit ?? 1) < 0.05
                     ? "Achtung, Limit bald überschritten!"
-                    : "Super!";
+                    : "Super! ${remaining.toStringAsFixed(2)}€ verfügbar";
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(
@@ -352,7 +364,7 @@ class _SavingPlanState extends State<SavingPlan> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                category.name ?? "Unbekannt",
+                                "${category.name}: ${category.budgetLimit.toString()}€"  ?? "Unbekannt",
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -372,11 +384,7 @@ class _SavingPlanState extends State<SavingPlan> {
                           children: [
                             Expanded(
                               child: Text(
-                                remaining < 0
-                                    ? 'Budget um ${(remaining * -1).toStringAsFixed(2)}€ überschritten'
-                                    : remaining == 0
-                                    ? "Budget optimal verwendet"
-                                    : '${remaining.toStringAsFixed(2)}€ von ${category.budgetLimit?.toStringAsFixed(2)}€ verfügbar',
+                                spentMessage,
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: remaining < 0 ? Colors.red : Colors.green,
@@ -384,6 +392,7 @@ class _SavingPlanState extends State<SavingPlan> {
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
+
                             ),
                             const SizedBox(width: 10),
                             Text(
