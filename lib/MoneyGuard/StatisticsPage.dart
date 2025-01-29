@@ -205,9 +205,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
           List<List<FlSpot>> FlSpotListList = await generateSpotsforYear(chosenYear, chosenMonth, "null");
 
-          LineChartBarData einnahmeDaten = await defineLineChartBarData(Colors.green, chosenYear, "Monat", "Einnahme", FlSpotListList[0]);
-          LineChartBarData ausgabeDaten = await defineLineChartBarData(Colors.red, chosenYear, "Monat", "Ausgabe", FlSpotListList[1]);
-          LineChartBarData gesamtDaten = await defineLineChartBarData(Colors.blue, chosenYear, "Monat", "null", FlSpotListList[2]);
+          LineChartBarData einnahmeDaten = await defineLineChartBarData(Colors.greenAccent.shade700, chosenYear, "Monat", "Einnahme", FlSpotListList[0]);
+          LineChartBarData ausgabeDaten = await defineLineChartBarData(Colors.redAccent.shade700, chosenYear, "Monat", "Ausgabe", FlSpotListList[1]);
+          LineChartBarData gesamtDaten = await defineLineChartBarData(Colors.blueAccent.shade700, chosenYear, "Monat", "null", FlSpotListList[2]);
 
 
           setState(() {
@@ -237,11 +237,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
               chosenYear, chosenMonth, "null");
 
           LineChartBarData einnahmeDaten = await defineLineChartBarData(
-              Colors.green, chosenYear, chosenMonth, "Einnahme", FlSpotlist1);
+              Colors.greenAccent.shade700, chosenYear, chosenMonth, "Einnahme", FlSpotlist1);
           LineChartBarData ausgabeDaten = await defineLineChartBarData(
-              Colors.red, chosenYear, chosenMonth, "Ausgabe", FlSpotlist2);
+              Colors.redAccent.shade700, chosenYear, chosenMonth, "Ausgabe", FlSpotlist2);
           LineChartBarData gesamtDaten = await defineLineChartBarData(
-              Colors.blue, chosenYear, chosenMonth, "null", FlSpotlist3);
+              Colors.blueAccent.shade700, chosenYear, chosenMonth, "null", FlSpotlist3);
 
           setState(() {
             cachedYearlyLineChartData = [einnahmeDaten, ausgabeDaten, gesamtDaten];
@@ -270,11 +270,21 @@ class _StatisticsPageState extends State<StatisticsPage> {
         LineChartBarData(
           preventCurveOverShooting: true,
           isCurved: true,
-          color: Colors.red,
+          color: Colors.redAccent.shade700,
           curveSmoothness: 0.35,
           barWidth: 4,
           isStrokeCapRound: true,
-          dotData: const FlDotData(show: false),
+          dotData: FlDotData(
+            show: true,
+            getDotPainter: (FlSpot spot, double xPercentage, LineChartBarData bar, int index, {double? size}) {
+              return FlDotCirclePainter(
+                radius: 3, // Größe der Dots (Standard ist 4)
+                color: bar.color ?? Colors.black, // Nutzt die Linienfarbe
+                strokeWidth: 1, // Randdicke
+                strokeColor: Colors.white, // Randfarbe der Dots
+              );
+            },
+          ),
           belowBarData: BarAreaData(show: false),
           spots: categoryList,
         ),
@@ -291,6 +301,27 @@ class _StatisticsPageState extends State<StatisticsPage> {
       titlesData: categoryChartTitlesDataYear,
       lineTouchData: LineTouchData(
         handleBuiltInTouches: true,
+        touchTooltipData: LineTouchTooltipData(
+          getTooltipColor: (LineBarSpot spot) {
+            return Color.fromARGB(180, 120, 120, 120);
+          },
+          getTooltipItems: (List<LineBarSpot> touchedSpots) {
+            return touchedSpots.map((spot) {
+              Map<int, String> lineLabels = {
+                0: "Ausg."
+              };
+              String label = lineLabels[spot.barIndex] ?? "Wert";
+              return LineTooltipItem(
+                "$label: ${spot.y.toStringAsFixed(2)} €", // Individueller Text
+                TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.normal,
+                  color: spot.bar.color ?? Colors.black,
+                ),
+              );
+            }).toList();
+          },
+        ),
       ),
     );
   }
@@ -471,7 +502,17 @@ class _StatisticsPageState extends State<StatisticsPage> {
       color: color,
       barWidth: 4,
       isStrokeCapRound: true,
-      dotData: const FlDotData(show: true),
+      dotData: FlDotData(
+        show: true,
+        getDotPainter: (FlSpot spot, double xPercentage, LineChartBarData bar, int index, {double? size}) {
+          return FlDotCirclePainter(
+            radius: 4, // Größe der Dots (Standard ist 4)
+            color: bar.color ?? Colors.black, // Nutzt die Linienfarbe
+            strokeWidth: 1, // Randdicke
+            strokeColor: Colors.white, // Randfarbe der Dots
+          );
+        },
+      ),
       belowBarData: BarAreaData(show: false),
       spots: spotsList,
     );
@@ -558,7 +599,33 @@ class _StatisticsPageState extends State<StatisticsPage> {
     ),
     ),
       titlesData: bigChartTitlesDataYear,
-      lineTouchData: LineTouchData(handleBuiltInTouches: true),
+      lineTouchData: LineTouchData(
+        handleBuiltInTouches: true,
+        touchTooltipData: LineTouchTooltipData(
+          getTooltipColor: (LineBarSpot spot) {
+            return Color.fromARGB(180, 120, 120, 120);
+          },
+          getTooltipItems: (List<LineBarSpot> touchedSpots) {
+            return touchedSpots.map((spot) {
+              Map<int, String> lineLabels = {
+                0: "Einn.",
+                1: "Ausg.",
+                2: "Bilanz"
+              };
+              String label = lineLabels[spot.barIndex] ?? "Wert";
+              return LineTooltipItem(
+                "$label: ${spot.y.toStringAsFixed(2)} €", // Individueller Text
+                TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.normal,
+                    color: spot.bar.color ?? Colors.black,
+                ),
+              );
+            }).toList();
+          },
+        ),
+      ),
+
     );
   }
 
