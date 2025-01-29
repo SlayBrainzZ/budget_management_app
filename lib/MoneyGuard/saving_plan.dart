@@ -332,7 +332,7 @@ class _SavingPlanState extends State<SavingPlan> {
                     if (remaining < 0) {
                       spentMessage = "${(spentAmount).toStringAsFixed(2)}€ ausgegeben";
                     } else if (remaining == 0) {
-                      spentMessage = "${category.budgetLimit!.toStringAsFixed(2)}€ genutzt";
+                      spentMessage = "${(spentAmount).toStringAsFixed(2)}€ ausgegeben";
                     } else {
                       spentMessage = "${spentAmount.toStringAsFixed(2)}€ ausgegeben";
                     }
@@ -401,7 +401,7 @@ class _SavingPlanState extends State<SavingPlan> {
                                 spentMessage,
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: remaining < 0 ? Colors.red : Colors.green,
+                                  color: Colors.black,
                                   fontFamily: 'Roboto',
                                 ),
                                 overflow: TextOverflow.ellipsis,
