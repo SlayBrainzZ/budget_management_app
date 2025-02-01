@@ -475,7 +475,6 @@ class FirestoreService {
 
   Future<void> createDefaultCategories(String userId) async {
     final List<Map<String, dynamic>> defaultCategories = [
-      {'name': 'Einnahmen', 'icon': Icons.attach_money, 'color': Colors.green, 'budgetLimit': 0.0},
       {'name': 'Unterhaltung', 'icon': Icons.movie, 'color': Colors.blue, 'budgetLimit': 0.0},
       {'name': 'Lebensmittel', 'icon': Icons.restaurant, 'color': Colors.orange, 'budgetLimit': 0.0},
       {'name': 'Haushalt', 'icon': Icons.home, 'color': Colors.teal, 'budgetLimit': 0.0},
@@ -1185,40 +1184,6 @@ class FirestoreService {
     }
   }
 
-  /*
-  Future<double> calculateBankAccountBalance(String documentId, BankAccount bankAccount) async {
-    try {
-      // Starten mit dem aktuellen Kontostand im Bankkonto
-      double totalBalance = bankAccount.balance ?? 0.0;
-
-      // Abrufen aller Transaktionen für das spezifische Konto
-      List<Transaction> transactions = await FirestoreService()
-          .getTransactionsByAccountIds(documentId, [bankAccount.id!]);
-
-      // Berechnung des Gesamtguthabens basierend auf den Transaktionen
-      for (var transaction in transactions) {
-        // Einnahmen addieren
-        if (transaction.type == 'Einnahme') {
-          totalBalance += transaction.amount;
-        }
-        // Ausgaben subtrahieren
-        else if (transaction.type == 'Ausgabe') {
-          totalBalance -= transaction.amount;
-        }
-      }
-
-      print('balance ${bankAccount.balance}');
-
-      // Optional: Aktualisiere den Kontostand im BankAccount-Objekt
-      bankAccount.balance = totalBalance;
-      bankAccount.lastUpdated = DateTime.now();
-
-      return totalBalance;
-    } catch (e) {
-      print("Error calculating balance for bank account: $e");
-      return bankAccount.balance ?? 0.0;
-    }
-  }*/
 
   Future<double> calculateBankAccountBalance(String documentId, BankAccount bankAccount) async {
     try {
@@ -1238,7 +1203,7 @@ class FirestoreService {
           if (transaction.type == 'Einnahme') {
             totalBalance += transaction.amount;
           } else if (transaction.type == 'Ausgabe') {
-            totalBalance -= transaction.amount;
+            totalBalance += transaction.amount;
           }
         }
       }
@@ -1254,40 +1219,7 @@ class FirestoreService {
     }
   }
 
-/*
-  Future<double> calculateImportBankAccountBalance(String documentId, BankAccount bankAccount) async {
-    try {
-      // Starten mit dem aktuellen Kontostand im Bankkonto
-      double totalBalance = bankAccount.balance ?? 0.0;
 
-      // Abrufen aller Transaktionen für das spezifische Konto
-      List<ImportedTransaction> transactions = await FirestoreService()
-          .getImportedTransactionsByAccountIds(documentId, [bankAccount.id!]);
-
-      // Berechnung des Gesamtguthabens basierend auf den Transaktionen
-      for (var transaction in transactions) {
-        // Einnahmen addieren (inflow)
-        if (transaction.inflow > 0) {
-          totalBalance += transaction.inflow;
-        }
-        // Ausgaben subtrahieren (outflow)
-        if (transaction.outflow > 0) {
-          totalBalance -= transaction.outflow;
-        }
-      }
-
-      print('balance ${bankAccount.balance}');
-
-      // Optional: Aktualisiere den Kontostand im BankAccount-Objekt
-      bankAccount.balance = totalBalance;
-      bankAccount.lastUpdated = DateTime.now();
-
-      return totalBalance;
-    } catch (e) {
-      print("Error calculating balance for bank account: $e");
-      return bankAccount.balance ?? 0.0;
-    }
-  }*/
   Future<double> calculateImportBankAccountBalance(String documentId, BankAccount bankAccount) async {
     try {
       // Start mit dem aktuellen Kontostand im Bankkonto
@@ -1298,19 +1230,28 @@ class FirestoreService {
 
       List<ImportedTransaction> transactions = await FirestoreService()
           .getImportedTransactionsByAccountIds(documentId, [bankAccount.id!]);
+      transactions.forEach((transaction) {
+        totalBalance += transaction.amount;
+        print("Transaction Amount: ${transaction.amount}");
+      });
 
+/*
       // Berechnung des Gesamtguthabens basierend auf den Transaktionen
       for (var transaction in transactions) {
         if (lastUpdated == null || transaction.date.isAfter(lastUpdated)) {
+          totalBalance += transaction.amount;
           // Einnahmen addieren (inflow)
           if (transaction.inflow > 0) {
-            totalBalance += transaction.inflow;
+            totalBalance += transaction.amount;
+            print("balanceinflow: $totalBalance");
           }
           // Ausgaben subtrahieren (outflow)
           if (transaction.outflow > 0) {
-            totalBalance -= transaction.outflow;
+            totalBalance += transaction.amount;
+            print("balanceinflow: $totalBalance");
           }}
-      }
+      print("balance: $totalBalance");
+      }*/
 
       // Kontostand und Aktualisierungszeitpunkt speichern
       bankAccount.balance = totalBalance;

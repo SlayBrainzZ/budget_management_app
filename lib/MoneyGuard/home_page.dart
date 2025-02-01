@@ -8,17 +8,14 @@ import 'settings.dart';
 import 'package:flutter_localizations/flutter_localizations.dart'; // Dieser Import ist notwendig
 
 
-/*
-void main() {
-  runApp(const MyApp());
-}*/
+
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key}); //Konstruktor für MyApp. super.key hilft Flutter, Widgets effizient zu erstellen und zu identifizieren.
-//Ein Widget, das keinen internen Zustand hat
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(   //MaterialApp ist ein Widget, das die grundlegenden Funktionen einer Flutter-App wie Navigation und Thema (Farben, Textstile) enthält.
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: ThemeData(
@@ -31,9 +28,9 @@ class MyApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [
-        Locale('de', 'DE'), // Deutsche Lokalisierung
+        Locale('de', 'DE'),
       ],
-      home: const MyHomePage(title: 'MoneyGuard'),   //Setzt die Startseite der App auf MyHomePage
+      home: const MyHomePage(title: 'MoneyGuard'),
     );
   }
 }
@@ -47,17 +44,17 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _selectedIndex = 0;  // Diese Variable speichert den aktuell ausgewählten Index der BottomNavigationBar.
+  int _selectedIndex = 0;
 
   void _tappedItem(int index) {
     setState(() {
-      _selectedIndex = index;  // Überschreibt index und aktualisiert den Zustand der App, sodass das UI neu gezeichnet wird.
+      _selectedIndex = index;
     });
   }
 
 
   final List<Widget> _views = [
-    Dashboard(), // Dashboard Widget
+    Dashboard(),
     StatisticsPage(),
     AddTransactionPage(),
     SavingPlan(),
@@ -68,8 +65,8 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: _selectedIndex == 2
-          ? null  // Wenn der Index 2 (Plus-Button) ist, wird die AppBar nicht angezeigt.
-          : AppBar(  // Wenn der Index nicht 2 ist, zeigen wir die AppBar an.
+          ? null
+          : AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         centerTitle: true,
         title: Text(
@@ -89,7 +86,7 @@ class _MyHomePageState extends State<MyHomePage> {
         ],
       ),
       body: Center(
-        child: _views[_selectedIndex],  // Zeigt die aktuell ausgewählte Seite basierend auf dem Index.
+        child: _views[_selectedIndex],
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[

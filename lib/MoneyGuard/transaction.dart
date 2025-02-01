@@ -79,28 +79,6 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     }
   }
 
-  /*
-  Future<void> _Balance() async {
-    if (FirebaseAuth.instance.currentUser != null) {
-      List<BankAccount> accounts =
-      await FirestoreService().getUserBankAccounts(FirebaseAuth.instance.currentUser!.uid);
-
-      for (BankAccount account in accounts) {
-        // Überprüfe, ob das Konto für den Import vorgesehen ist
-        if (account.forImport) {
-          // Berechne den Kontostand für importierte Konten
-          await FirestoreService().calculateImportBankAccountBalance(FirebaseAuth.instance.currentUser!.uid, account);
-        } else {
-          // Berechne den Kontostand für normale Konten
-          await FirestoreService().calculateBankAccountBalance(FirebaseAuth.instance.currentUser!.uid, account);
-        }
-      }
-
-      setState(() {
-
-      });
-    }
-  }*/
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -180,11 +158,6 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     _firestoreService
         .deleteTransaction(_userId!, widget.transaction!.id!)
         .then((_) {
-      Navigator.of(context).pop();
-      /*Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => MyApp()),
-            (Route<dynamic> route) => false,
-      );*/
     });
   }
 
@@ -211,7 +184,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
         date: _selectedDate,
         categoryId: _selectedCategory,
         type: type,
-        importance: _isUrgent,
+        //importance: _isUrgent,
         note: _noteController.text,
         accountId: _selectedAccount,
       );
@@ -369,7 +342,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
             decoration: const InputDecoration(labelText: 'Notiz hinzufügen'),
           ),
           const SizedBox(height: 16),
-          SwitchListTile(
+          /*SwitchListTile(
             title: const Text('Dringend'),
             value: _isUrgent,
             onChanged: (bool value) {
@@ -377,7 +350,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                 _isUrgent = value;
               });
             },
-          ),
+          ),*/
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {

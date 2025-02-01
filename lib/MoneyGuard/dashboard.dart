@@ -353,6 +353,15 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Konto konfigurieren"),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => Dashboard()),
+            );
+          },
+        ),
       ),
       body: Column(
         children: [
@@ -434,18 +443,6 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
                     } else {
                       widget.onAccountCreated(accountData);
                     }
-                    /*
-                    //Navigator.pop(context);
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => MyApp(),
-                      ),
-                    );
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => CategoryScreen()),
-                    );*/
                     //Navigator.pop(context);
                     Navigator.pushReplacement(
                       context,
@@ -498,101 +495,7 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
       },
     );
   }
-/*
-  void _showDeleteConfirmationDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Konto löschen"),
-          content: widget.account != null
-              ? FutureBuilder<List<dynamic>>(
-            future: widget.account!.forImport
-                ? FirestoreService().getImportedTransactionsByAccountIds(
-                widget.account!.userId, [widget.account!.id!])
-                : FirestoreService().getTransactionsByAccountIds(
-                widget.account!.userId, [widget.account!.id!]),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Text("Prüfe, ob Transaktionen vorhanden sind...");
-              }
 
-              if (snapshot.hasError) {
-                return const Text("Fehler beim Abrufen der Transaktionen.");
-              }
-
-              // Das ist die Liste von Transaktionen, entweder normal oder importiert
-              final transactions = snapshot.data ?? [];
-
-              if (transactions.isNotEmpty) {
-                return Text(
-                  "Dieses Konto hat ${transactions.length} Transaktionen. "
-                      "Wenn Sie das Konto löschen, werden diese Transaktionen ebenfalls gelöscht. "
-                      "Möchten Sie fortfahren?",
-                );
-              } else {
-                return const Text(
-                  "Sind Sie sicher, dass Sie dieses Konto löschen möchten? "
-                      "Es gibt keine zugehörigen Transaktionen.",
-                );
-              }
-            },
-          )
-
-              : const Text(
-              "Sind Sie sicher, dass Sie dieses Konto löschen möchten?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Abbrechen"),
-            ),
-            TextButton(
-              onPressed: () async {
-                if (widget.account != null) {
-                  // Löschung basierend auf dem Transaktionstyp (normal oder importiert)
-                  if (widget.account!.forImport) {
-                    // Importierte Transaktionen löschen
-                    List<ImportedTransaction> importedTransactions =
-                    await FirestoreService().getImportedTransactionsByAccountIds(
-                        widget.account!.userId, [widget.account!.id!]);
-
-                    for (var transaction in importedTransactions) {
-                      await FirestoreService().deleteImportedTransaction(
-                          widget.account!.userId, transaction.id!);
-                    }
-                  } else {
-                    // Normale Transaktionen löschen
-                    List<Transaction> transactions = await FirestoreService()
-                        .getTransactionsByAccountIds(widget.account!.userId, [widget.account!.id!]);
-
-                    for (var transaction in transactions) {
-                      await FirestoreService().deleteTransaction(
-                          widget.account!.userId, transaction.id!);
-                    }
-                  }
-
-
-                  // Konto löschen
-                  await FirestoreService().deleteBankAccount(
-                      widget.account!.userId, widget.account!.id!);
-
-                  // Aktualisiere die Ansicht oder navigiere zurück
-                  widget.onAccountDeleted?.call();
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => MyApp(),
-                    ),
-                  );
-                }
-              },
-              child: const Text("Löschen"),
-            ),
-          ],
-        );
-      },
-    );
-  }*/
   void _showDeleteConfirmationDialog() {
     showDialog(
       context: context,

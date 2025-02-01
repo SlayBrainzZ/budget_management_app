@@ -109,24 +109,6 @@ class CategoryScreen extends StatefulWidget {
 
 class _CategoryScreenState extends State<CategoryScreen> {
   late Future<List<Category>> userCategories;
-/*
-  @override
-  void initState() {
-    super.initState();
-
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (user != null) {
-      final userId = user.uid;  // Hier die UID verwenden
-      setState(() {
-        FirestoreService().createDefaultCategories(userId);
-        userCategories = FirestoreService().getSortedUserCategories(userId);
-      });
-    } else {
-      // Falls kein Benutzer angemeldet ist, handle diesen Fall
-      print("Kein Benutzer angemeldet.");
-    }
-  }*/
 
 
   @override

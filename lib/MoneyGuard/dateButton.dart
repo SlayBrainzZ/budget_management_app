@@ -116,12 +116,16 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    /*
     _tabController.addListener(() {
       if (_tabController.index == 1) { // Monatlich ausgewählt
         setState(() {
           _generateMonthlyData(); // Daten berechnen
         });
       }
+    }*/// Listener für Tab-Wechsel
+    _tabController.addListener(() {
+      setState(() {}); // UI aktualisieren, wenn sich der Tab ändert
     });
     _fetchBankAccounts();
     _fetchTransactions();
@@ -197,94 +201,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
       print('Fehler beim Abrufen der Bankkonten: $e');
     }
   }
-//##################################
-  /*
-  Future<void> _fetchTransactions() async {
-    setState(() {
-      isLoading = true;
-    });
 
-    try {
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser == null) {
-        throw Exception('Kein Benutzer angemeldet.');
-      }
-
-      final firestoreService = FirestoreService();
-      final userId = currentUser.uid;
-
-      // Hole reguläre Transaktionen
-      List<Transaction> transactions;
-      if (selectedCategories.isEmpty || selectedCategories.length == categories.length) {
-        transactions = await firestoreService.getUserTransactions(userId);
-      } else {
-        transactions = [];
-        for (final category in selectedCategories) {
-          final filteredTransactions = await firestoreService.getTransactionsByCategory(
-            userId,
-            category.id!,
-          );
-          transactions.addAll(filteredTransactions);
-        }
-      }
-
-      // Kategorie-Daten für jede Transaktion laden
-      for (var transaction in transactions) {
-        if(transaction.accountId != null){
-          final bankAccount = await firestoreService.getBankAccount(userId, transaction.accountId!);
-          transaction.bankAccount = bankAccount;
-        }
-        if (transaction.categoryId != null) {
-          final category = await firestoreService.getCategory(userId, transaction.categoryId!);
-          transaction.categoryData = category;
-        }
-      }
-
-      // Hole importierte Transaktionen
-      final importedTransactions = await firestoreService.getImportedTransactions(userId);
-      for (var importedTransaction in importedTransactions) {
-        if(importedTransaction.accountId != null){
-          final bankAccount = await firestoreService.getBankAccount(userId, importedTransaction.accountId!);
-          importedTransaction.linkedAccount = bankAccount;
-        } /*
-        if (importedTransaction.categoryId != null) {
-          final category = await firestoreService.getCategory(userId, transaction.categoryId!);
-          transaction.categoryData = category;
-        }*/
-      }
-      final combinedTransactions = [
-        ...transactions.map((t) => {
-          'type': 'regular',
-          'data': t,
-        }),
-        ...importedTransactions.map((t) => {
-          'type': 'imported',
-          'data': t,
-        }),
-      ];
-
-      // Sortiere die Transaktionen nach Datum
-      combinedTransactions.sort((a, b) {
-        final aDate = a['type'] == 'regular'
-            ? (a['data'] as Transaction).date
-            : (a['data'] as ImportedTransaction).date;
-        final bDate = b['type'] == 'regular'
-            ? (b['data'] as Transaction).date
-            : (b['data'] as ImportedTransaction).date;
-        return bDate.compareTo(aDate);
-      });
-
-      setState(() {
-        dailyTransactions = combinedTransactions;
-      });
-    } catch (e) {
-      print('Fehler beim Abrufen der Transaktionen: $e');
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }*/
   Future<void> _fetchTransactions() async {
     setState(() {
       isLoading = true;
@@ -715,73 +632,6 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                 });
               }
           );
-          /*
-        } else if (type == 'imported') {
-          final importedTransaction = data as ImportedTransaction;
-          final bankAccount = importedTransaction.linkedAccount;
-
-          return ListTile(
-            leading: _buildLeadingIcon(importedTransaction.inflow > 0 ? 'Einnahme' : 'Ausgabe'),
-            title: Text(
-              importedTransaction.description,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Empfänger: ${importedTransaction.payerOrRecipient}'),
-                const Text('Kategorie: Keine Kategorie'),
-                if (bankAccount != null)
-                  Row(
-                    children: [
-                      _buildAccountLogo(bankAccount.accountType),
-                      const SizedBox(width: 10),
-                      Text(
-                        '${bankAccount.accountName ?? 'Unbekannt'}',
-                        style: const TextStyle(color: Colors.black, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                /*Text(
-                  'Datum: ${importedTransaction.date.toLocal().toIso8601String()}',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),*/
-                Text(
-                  'Datum: ${_formatDate(importedTransaction.date)}',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
-            ),
-            trailing: SizedBox(
-              width: 300, // Feste Breite für die gesamte trailing-Spalte
-              child: Row(
-                mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Imp',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    '${importedTransaction.amount.toStringAsFixed(2)} €',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: importedTransaction.inflow > 0 ? Colors.green : Colors.red,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            onTap: () {
-              _showCategoryAssignDialog(context, importedTransaction);
-            },
-          );
-        }*/
         } else if (type == 'imported') {
           final importedTransaction = data as ImportedTransaction;
           final bankAccount = importedTransaction.linkedAccount;
@@ -883,65 +733,6 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
       },
     );
   }
-/*
-  Future<void> _showCategoryAssignDialog(
-      BuildContext context, ImportedTransaction transaction) async {
-    List<Category> categories = await _fetchSortedCategories();
-    Category? selectedCategory;
-
-    await showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Kategorie zuweisen'),
-          content: DropdownButton<Category>(
-            isExpanded: true,
-            value: selectedCategory,
-            hint: const Text('Kategorie auswählen'),
-            items: categories.map((category) {
-              return DropdownMenuItem<Category>(
-                value: category,
-                child: Row(
-                  children: [
-                    Icon(
-                      category.icon ?? Icons.category,
-                      color: category.color ?? Colors.grey,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(category.name),
-                  ],
-                ),
-              );
-            }).toList(),
-            onChanged: (Category? newValue) {
-              setState(() {
-                selectedCategory = newValue;
-              });
-            },
-          ),
-          actions: [
-            TextButton(
-              child: const Text('Abbrechen'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            ElevatedButton(
-              child: const Text('Speichern'),
-              onPressed: () async {
-                if (selectedCategory != null) {
-                  // Hier könntest du die Kategorie der Transaktion zuweisen
-                  // await _assignCategoryToTransaction(transaction, selectedCategory!);
-                  Navigator.of(context).pop();
-                }
-              },
-            ),
-          ],
-        );
-      },
-    );
-
-    // Aktualisiere die Transaktionsliste nach dem Speichern
-    _fetchTransactions();
-  }*/
 
   Future<void> _showCategoryAssignDialog(
       BuildContext context, ImportedTransaction transaction) async {
@@ -1103,7 +894,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                     style: const TextStyle(fontSize: 16, color: Colors.green),
                   ),
                   Text(
-                    'Ausgaben: ${data['ausgaben']!.toStringAsFixed(2)} €',
+                    'Ausgaben: -${data['ausgaben']!.toStringAsFixed(2)} €',
                     style: const TextStyle(fontSize: 16, color: Colors.red),
                   ),
                   Text(
