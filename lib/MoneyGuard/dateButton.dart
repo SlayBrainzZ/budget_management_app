@@ -345,7 +345,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
               TabBar(
                 controller: _tabController,
                 tabs: const [
-                  Tab(text: 'Täglich'),
+                  Tab(text: 'Liste der Transaktionen'),
                   Tab(text: 'Monatlich'),
                 ],
               ),
