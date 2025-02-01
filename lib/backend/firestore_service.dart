@@ -1223,7 +1223,7 @@ class FirestoreService {
   Future<double> calculateImportBankAccountBalance(String documentId, BankAccount bankAccount) async {
     try {
       // Start mit dem aktuellen Kontostand im Bankkonto
-      double totalBalance = bankAccount.balance ?? 0.0;
+      double totalBalance = 0.0;
 
       // Letzter Aktualisierungszeitpunkt des Kontos
       DateTime? lastUpdated = bankAccount.lastUpdated;

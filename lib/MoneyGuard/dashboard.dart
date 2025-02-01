@@ -376,9 +376,15 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
           ListTile(
             leading: const Icon(Icons.money, color: Colors.blue),
             title: const Text("Aktueller Kontostand"),
-            trailing: Text("$accountBalance EUR >"),
-            onTap: () {
-              _editField("Aktueller Kontostand", (value) => setState(() => accountBalance = value));
+            trailing: Text(
+              "$accountBalance EUR${widget.account?.forImport == true ? '' : ' >'}",
+            ),
+            onTap: widget.account?.forImport == true
+                ? null
+                : () {
+              _editField("Aktueller Kontostand", (value) {
+                setState(() => accountBalance = value);
+              });
             },
           ),
           const SizedBox(height: 20),
