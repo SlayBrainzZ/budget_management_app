@@ -1188,15 +1188,19 @@ class FirestoreService {
   Future<double> calculateBankAccountBalance(String documentId, BankAccount bankAccount) async {
     try {
       // Start mit dem aktuellen Kontostand im Bankkonto
-      double totalBalance = bankAccount.balance ?? 0.0;
-
+      //double totalBalance = bankAccount.balance ?? 0.0;
+      double totalBalance = 0.0;
       // Letzter Aktualisierungszeitpunkt des Kontos
-      DateTime? lastUpdated = bankAccount.lastUpdated;
+      //DateTime? lastUpdated = bankAccount.lastUpdated;
 
       // Abrufen aller relevanten Transaktionen
       List<Transaction> transactions = await FirestoreService()
           .getTransactionsByAccountIds(documentId, [bankAccount.id!]);
-
+      transactions.forEach((transaction) {
+        totalBalance += transaction.amount;
+        print("Transaction Amount: ${transaction.amount}");
+      });
+      /*
       for (var transaction in transactions) {
         // Überprüfen, ob die Transaktion nach der letzten Aktualisierung liegt
         if (lastUpdated == null || transaction.date.isAfter(lastUpdated)) {
@@ -1206,7 +1210,7 @@ class FirestoreService {
             totalBalance += transaction.amount;
           }
         }
-      }
+      }*/
 
       // Kontostand und Aktualisierungszeitpunkt speichern
       bankAccount.balance = totalBalance;
@@ -1226,7 +1230,7 @@ class FirestoreService {
       double totalBalance = 0.0;
 
       // Letzter Aktualisierungszeitpunkt des Kontos
-      DateTime? lastUpdated = bankAccount.lastUpdated;
+      //DateTime? lastUpdated = bankAccount.lastUpdated;
 
       List<ImportedTransaction> transactions = await FirestoreService()
           .getImportedTransactionsByAccountIds(documentId, [bankAccount.id!]);
