@@ -88,7 +88,7 @@ class _SavingPlanState extends State<SavingPlan> {
         // Gesamteinnahmen berechnen
         totalIncome = categories.fold(0.0, (sum, category) => sum + (category.budgetLimit ?? 0));
       });
-
+/*
       // Prüfe Budgetüberschreitungen und sende Benachrichtigungen
       for (int index = 0; index < userCategories.length; index++) {
         double remaining = (userCategories[index].budgetLimit ?? 0) - spentAmounts[index];
@@ -110,7 +110,7 @@ class _SavingPlanState extends State<SavingPlan> {
             );
           }
         }
-      }
+      }*/
 
 
     } catch (e) {

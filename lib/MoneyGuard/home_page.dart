@@ -101,6 +101,13 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications, color: Colors.white),
+            onPressed: () {
+              // Aktion für Benachrichtigungen
+            },
+          ),
+        /*[
           StreamBuilder<int>(
             stream: _getUnreadNotificationsCount(),
             builder: (context, snapshot) {
@@ -130,7 +137,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 ],
               );
             },
-          ),
+          ),*/
         ],
 
 

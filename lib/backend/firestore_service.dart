@@ -2806,7 +2806,7 @@ class FirestoreService {
         .map((snapshot) => snapshot.docs.length);
   }*/
 
-
+/*
   /// Gibt einen Stream für die Benachrichtigungen des Benutzers zurück, lokal gefiltert.
   Stream<List<Map<String, dynamic>>> getUserNotificationsStream(String userId) {
   return _db
@@ -2832,7 +2832,7 @@ class FirestoreService {
   /// Erstellt eine neue Benachrichtigung, wenn sie für den aktuellen Monat noch nicht existiert.
   Future<void> createNotification(String userId, String message, String type, {String? categoryId}) async {
   try {
-  final userNotificationsRef = _db.collection('users').doc(userId).collection('notifications');
+  final userNotificationsRef = _db.collection('Users').doc(userId).collection('notifications');
 
   // Prüfen, ob es die gleiche Nachricht für den aktuellen Monat schon gibt
   bool exists = await doesNotificationExist(userId, categoryId ?? "", type);
@@ -2925,7 +2925,7 @@ class FirestoreService {
   } catch (e) {
   print("Fehler beim Markieren der Benachrichtigungen als gelesen: $e");
   }
-  }
+  }*/
 
 }
 

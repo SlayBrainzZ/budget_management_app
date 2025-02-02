@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:budget_management_app/backend/firestore_service.dart';
 
-class NotificationsPage extends StatefulWidget {
+/*class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
 
   @override
@@ -78,4 +78,4 @@ class _NotificationsPageState extends State<NotificationsPage> {
       ),
     );
   }
-}
+}*/
