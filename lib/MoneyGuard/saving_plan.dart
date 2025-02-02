@@ -28,7 +28,12 @@ class _SavingPlanState extends State<SavingPlan> {
   // Methode zum Laden der Kategorien und Benutzerinformationen
   Future<void> _loadUserAndCategories() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+
+    // Falls user null ist, breche die Funktion ab
+    if (user == null) {
+      print("Kein angemeldeter Benutzer gefunden.");
+      return;
+    }
 
     setState(() {
       categories = [];
@@ -36,8 +41,11 @@ class _SavingPlanState extends State<SavingPlan> {
     });
 
     try {
-      // Lade Kategorien
-      List<Category> userCategories = await _firestoreService.getUserCategoriesWithBudget(user.uid);
+      // Nutzer-ID sicher abrufen
+      _userId = user.uid;
+
+      // Lade Kategorien mit sicherer User-ID
+      List<Category> userCategories = await _firestoreService.getUserCategoriesWithBudget(_userId!);
 
       if (userCategories.isEmpty) {
         print("Keine Kategorien gefunden für den Benutzer.");
@@ -49,16 +57,17 @@ class _SavingPlanState extends State<SavingPlan> {
 
       // Lade kombinierte Transaktionen
       List<Future<double>> transactionFutures = userCategories.map((category) {
-        return _firestoreService.getCurrentMonthCombinedTransactions(user.uid, category.id!, "null", // Account-ID hier optional anpassen
+        return _firestoreService.getCurrentMonthCombinedTransactions(
+          _userId!,
+          category.id!,
+          "null", // Account-ID hier optional anpassen
         );
       }).toList();
 
-      print(transactionFutures);
       // Warte auf alle Transaktionssummen
       List<double> spentAmounts = await Future.wait(transactionFutures);
 
       setState(() {
-        _userId = user.uid;
         categories = userCategories;
 
         // Berechne verbleibende Budgets und aktualisiere den Streak-Counter
@@ -68,10 +77,8 @@ class _SavingPlanState extends State<SavingPlan> {
 
           // Aktualisiere den Streak-Counter
           if (remaining >= 0) {
-            // Budget eingehalten, Streak hochzählen
             streakCounterDictionary[categoryId] = (streakCounterDictionary[categoryId] ?? 0) + 1;
           } else {
-            // Budget überschritten, Streak zurücksetzen
             streakCounterDictionary[categoryId] = 0;
           }
 
@@ -79,11 +86,33 @@ class _SavingPlanState extends State<SavingPlan> {
         });
 
         // Gesamteinnahmen berechnen
-        totalIncome = categories.fold(
-          0.0,
-              (sum, category) => sum + (category.budgetLimit ?? 0),
-        );
+        totalIncome = categories.fold(0.0, (sum, category) => sum + (category.budgetLimit ?? 0));
       });
+
+      // Prüfe Budgetüberschreitungen und sende Benachrichtigungen
+      for (int index = 0; index < userCategories.length; index++) {
+        double remaining = (userCategories[index].budgetLimit ?? 0) - spentAmounts[index];
+        String categoryId = userCategories[index].id ?? "";
+
+        if (remaining < 0) {
+          bool alreadyExists = await _firestoreService.doesNotificationExist(
+            _userId!,
+            categoryId,
+            "budget_overflow",
+          );
+
+          if (!alreadyExists) {
+            await _firestoreService.createNotification(
+              _userId!,
+              "Budget für ${userCategories[index].name} überschritten um ${(remaining * -1).toStringAsFixed(2)}€!",
+              "budget_overflow",
+              categoryId: categoryId,
+            );
+          }
+        }
+      }
+
+
     } catch (e) {
       print('Fehler beim Laden der Kategorien: ${e.toString()}');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -244,6 +273,7 @@ class _SavingPlanState extends State<SavingPlan> {
                           showTitles: false, // Rechte Achse deaktivieren
                         ),
                       ),
+                      //leftTitles: ,
                       bottomTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: false, // Kategorienamen unter dem Balken anzeigen

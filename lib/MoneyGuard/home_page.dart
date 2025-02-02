@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+
+import 'package:flutter/material.dart';
 import 'dashboard.dart';
 import 'saving_plan.dart';
 import 'StatisticsPage.dart';
 import 'transaction.dart';
 import 'settings.dart';
+import 'notifications_page.dart';
 
 import 'package:flutter_localizations/flutter_localizations.dart'; // Dieser Import ist notwendig
 
@@ -61,6 +67,24 @@ class _MyHomePageState extends State<MyHomePage> {
     SettingsPage(),
   ];
 
+  Stream<int> _getUnreadNotificationsCount() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return Stream.value(0); // Falls der Nutzer nicht eingeloggt ist, 0 zurückgeben
+
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('notifications')
+        .where('isRead', isEqualTo: false)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length)
+        .handleError((_) => 0); // Falls ein Fehler auftritt, 0 zurückgeben
+  }
+
+
+
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -77,13 +101,40 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.white),
-            onPressed: () {
-              // Aktion für Benachrichtigungen
+          StreamBuilder<int>(
+            stream: _getUnreadNotificationsCount(),
+            builder: (context, snapshot) {
+              int unreadCount = snapshot.data ?? 0;
+
+              return Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications, color: Colors.white),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const NotificationsPage()),
+                      );
+                    },
+                  ),
+                  if (unreadCount > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: CircleAvatar(
+                        radius: 10,
+                        backgroundColor: Colors.red,
+                        child: Text(unreadCount.toString(), style: const TextStyle(color: Colors.white, fontSize: 12)),
+                      ),
+                    ),
+                ],
+              );
             },
           ),
         ],
+
+
+
       ),
       body: Center(
         child: _views[_selectedIndex],

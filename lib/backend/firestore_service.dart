@@ -2721,4 +2721,211 @@ class FirestoreService {
   }
 
 
+
+
+
+/*
+  Future<void> createNotification(String userId, String message, String type, {String? categoryId, String? accountId}) async {
+    try {
+      final userNotificationsRef = usersRef.doc(userId).collection('notifications');
+
+      // Notification-Dokument erstellen
+      firestore.DocumentReference docRef = await userNotificationsRef.add({
+        'message': message,
+        'isRead': false,
+        'timestamp': firestore.FieldValue.serverTimestamp(),
+        'categoryId': categoryId,
+        'accountId': accountId,
+        'type': type, // NEU: Typ der Benachrichtigung speichern
+      });
+
+      print("Notification erstellt: $message (Type: $type) - ID: ${docRef.id}");
+    } catch (e) {
+      print("Fehler beim Erstellen der Notification: $e");
+    }
+  }
+
+
+  Future<List<Map<String, dynamic>>> getUserNotifications(String userId) async {
+    try {
+      final userNotificationsRef = usersRef.doc(userId).collection('notifications');
+
+      // Notifications abrufen und nach Timestamp absteigend sortieren
+      firestore.QuerySnapshot snapshot = await userNotificationsRef
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        return {
+          'id': doc.id,
+          ...doc.data() as Map<String, dynamic>,
+        };
+      }).toList();
+    } catch (e) {
+      print("Fehler beim Abrufen der Notifications: $e");
+      return [];
+    }
+  }
+  Future<void> markNotificationAsRead(String userId, String notificationId) async {
+    try {
+      final notificationRef = usersRef.doc(userId).collection('notifications').doc(notificationId);
+      await notificationRef.update({'isRead': true});
+      print("Notification $notificationId als gelesen markiert.");
+    } catch (e) {
+      print("Fehler beim Aktualisieren der Notification: $e");
+    }
+  }
+
+
+
+
+  Future<bool> doesNotificationExist(String userId, String categoryId, String type) async {
+    try {
+      final notificationsRef = usersRef.doc(userId).collection('notifications');
+
+      final querySnapshot = await notificationsRef
+          .where('categoryId', isEqualTo: categoryId)
+          .where('type', isEqualTo: type)
+          .where('isRead', isEqualTo: false) // Nur ungelesene prüfen
+          .limit(1)
+          .get();
+
+      return querySnapshot.docs.isNotEmpty;
+    } catch (e) {
+      print("Fehler beim Überprüfen der Benachrichtigung ($type): $e");
+      return false;
+    }
+  }
+
+  Stream<int> getUnreadNotificationsCount(String userId) {
+    return usersRef
+        .doc(userId)
+        .collection('notifications')
+        .where('isRead', isEqualTo: false)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }*/
+
+
+  /// Gibt einen Stream für die Benachrichtigungen des Benutzers zurück, lokal gefiltert.
+  Stream<List<Map<String, dynamic>>> getUserNotificationsStream(String userId) {
+  return _db
+      .collection('users')
+      .doc(userId)
+      .collection('notifications')
+      .snapshots()
+      .map((snapshot) {
+  // Lokale Filterung nach Monat
+  DateTime now = DateTime.now();
+  DateTime firstDayOfMonth = DateTime(now.year, now.month, 1);
+
+  return snapshot.docs
+      .map((doc) => {'id': doc.id, ...doc.data() as Map<String, dynamic>})
+      .where((notification) {
+  DateTime timestamp = (notification['timestamp'] as firestore.Timestamp).toDate();
+  return timestamp.isAfter(firstDayOfMonth);
+  })
+      .toList();
+  });
+  }
+
+  /// Erstellt eine neue Benachrichtigung, wenn sie für den aktuellen Monat noch nicht existiert.
+  Future<void> createNotification(String userId, String message, String type, {String? categoryId}) async {
+  try {
+  final userNotificationsRef = _db.collection('users').doc(userId).collection('notifications');
+
+  // Prüfen, ob es die gleiche Nachricht für den aktuellen Monat schon gibt
+  bool exists = await doesNotificationExist(userId, categoryId ?? "", type);
+  if (exists) {
+  print("Benachrichtigung existiert bereits.");
+  return;
+  }
+
+  await userNotificationsRef.add({
+  'message': message,
+  'isRead': false,
+  'timestamp': firestore.FieldValue.serverTimestamp(),
+  'categoryId': categoryId,
+  'type': type,
+  });
+
+  print("Benachrichtigung erstellt: $message");
+  } catch (e) {
+  print("Fehler beim Erstellen der Benachrichtigung: $e");
+  }
+  }
+
+  /// Prüft, ob eine ungelesene Benachrichtigung für dieselbe Kategorie im aktuellen Monat existiert.
+  Future<bool> doesNotificationExist(String userId, String categoryId, String type) async {
+  try {
+  DateTime now = DateTime.now();
+  DateTime firstDayOfMonth = DateTime(now.year, now.month, 1);
+
+  // Alle relevanten Benachrichtigungen holen (keine Firestore-Filterung nach Datum)
+  final querySnapshot = await _db
+      .collection('users')
+      .doc(userId)
+      .collection('notifications')
+      .where('categoryId', isEqualTo: categoryId)
+      .where('type', isEqualTo: type)
+      .where('isRead', isEqualTo: false)
+      .get();
+
+  // Lokale Filterung nach Datum
+  final existingNotifications = querySnapshot.docs.where((doc) {
+  DateTime timestamp = (doc['timestamp'] as firestore.Timestamp).toDate();
+  return timestamp.isAfter(firstDayOfMonth);
+  }).toList();
+
+  return existingNotifications.isNotEmpty;
+  } catch (e) {
+  print("Fehler beim Überprüfen der Benachrichtigung: $e");
+  return false;
+  }
+  }
+
+  /// Einzelne Benachrichtigung als gelesen markieren.
+  Future<void> markNotificationAsRead(String userId, String notificationId) async {
+  try {
+  await _db
+      .collection('users')
+      .doc(userId)
+      .collection('notifications')
+      .doc(notificationId)
+      .update({'isRead': true});
+  print("Benachrichtigung $notificationId als gelesen markiert.");
+  } catch (e) {
+  print("Fehler beim Aktualisieren der Benachrichtigung: $e");
+  }
+  }
+
+  /// Alle Benachrichtigungen für den aktuellen Monat als gelesen markieren.
+  Future<void> markAllNotificationsAsRead(String userId) async {
+  try {
+  DateTime now = DateTime.now();
+  DateTime firstDayOfMonth = DateTime(now.year, now.month, 1);
+
+  final querySnapshot = await _db
+      .collection('users')
+      .doc(userId)
+      .collection('notifications')
+      .where('isRead', isEqualTo: false)
+      .get();
+
+  final batch = _db.batch();
+  for (var doc in querySnapshot.docs) {
+  DateTime timestamp = (doc['timestamp'] as firestore.Timestamp).toDate();
+  if (timestamp.isAfter(firstDayOfMonth)) {
+  batch.update(doc.reference, {'isRead': true});
+  }
+  }
+
+  await batch.commit();
+  print("Alle Benachrichtigungen für den aktuellen Monat als gelesen markiert.");
+  } catch (e) {
+  print("Fehler beim Markieren der Benachrichtigungen als gelesen: $e");
+  }
+  }
+
 }
+
