@@ -21,8 +21,32 @@ class _DashboardState extends State<Dashboard> {
   void initState() {
     super.initState();
     _fetchBankAccounts();
+    _createDefaultAccount();
+    FirestoreService().createDefaultCategories(currentUser!.uid).then((_) {
+      return FirestoreService().getSortedUserCategories(currentUser!.uid);
+    });
   }
 
+  Future<void> _createDefaultAccount() async {
+    if (currentUser != null) {
+      List<BankAccount> accounts = await FirestoreService().getUserBankAccounts(currentUser!.uid);
+
+      // Falls noch kein Konto existiert, erstelle ein Standardkonto "Mein Konto"
+      if (accounts.isEmpty) {
+        final defaultAccount = BankAccount(
+          userId: currentUser!.uid,
+          accountName: 'Mein Konto',
+          balance: 0.0,
+          accountType: 'Bargeld',
+          exclude: false,
+          forImport: false,
+        );
+
+        await FirestoreService().createBankAccount(currentUser!.uid, defaultAccount);
+        _fetchBankAccounts(); // Aktualisiere die Liste
+      }
+    }
+  }
   Future<void> _fetchBankAccounts() async {
     if (currentUser != null) {
       List<BankAccount> accounts =
@@ -51,6 +75,12 @@ class _DashboardState extends State<Dashboard> {
 
   Future<void> _createBankAccount(Map<String, String> accountData, bool forImport) async {
     if (currentUser != null) {
+
+    if (accountData['name'] == null || accountData['name']!.trim().isEmpty) {
+        print("FEHLER: Name des Kontos ist leer!");
+        return; // Konto wird nicht erstellt
+      }
+
       final account = BankAccount(
         userId: currentUser!.uid,
         accountName: accountData['name'],
@@ -63,6 +93,8 @@ class _DashboardState extends State<Dashboard> {
       _fetchBankAccounts();
     }
   }
+
+
 
 
   Widget _buildAccountCards(BuildContext context) {
@@ -358,7 +390,7 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
           onPressed: () {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => Dashboard()),
+              MaterialPageRoute(builder: (context) => MyApp()),
             );
           },
         ),
@@ -376,6 +408,9 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
           ListTile(
             leading: const Icon(Icons.money, color: Colors.blue),
             title: const Text("Aktueller Kontostand"),
+            trailing: Text("$accountBalance EUR"),
+            onTap: null,
+            /*
             trailing: Text(
               "$accountBalance EUR${widget.account?.forImport == true ? '' : ' >'}",
             ),
@@ -385,7 +420,7 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
               _editField("Aktueller Kontostand", (value) {
                 setState(() => accountBalance = value);
               });
-            },
+            },*/
           ),
           const SizedBox(height: 20),
           ListTile(

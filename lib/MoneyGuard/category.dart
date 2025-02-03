@@ -117,6 +117,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
     final user = FirebaseAuth.instance.currentUser;
 
+    print("Kategorien geladen");
     if (user != null) {
       final userId = user.uid;
 

@@ -297,7 +297,12 @@ class FirestoreService {
       final userBankAccountsRef = usersRef.doc(documentId).collection('bankAccounts');
       firestore.QuerySnapshot snapshot = await userBankAccountsRef.get();
       print("Abgerufene Konten: ${snapshot.docs.length}");
-      return snapshot.docs.map((doc) => BankAccount.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+      //return snapshot.docs.map((doc) => BankAccount.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+      // Filtere nur Konten mit gültigem Namen und gültigem Typ
+      return snapshot.docs
+          .map((doc) => BankAccount.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .where((account) => account.accountName != null && account.accountName!.isNotEmpty && account.accountType != 'unknown')
+          .toList();
     } catch (e) {
       print("Error getting user bank accounts: $e");
       return [];
