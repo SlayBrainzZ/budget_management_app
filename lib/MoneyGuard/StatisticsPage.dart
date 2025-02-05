@@ -24,8 +24,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
   String selectedYear = DateTime.now().year.toString();
 
   String selectedMonth = 'Monat';
-  final List<int> availableYears = List.generate(
-      100, (index) => 2000 + index); // letze 20 und nächste 80 jare
+
+  //final List<int> availableYears = List.generate(
+  //    100, (index) => 2000 + index); // letze 20 und nächste 80 jare
+  final List<int> availableYears =
+  List.generate(DateTime.now().year - 2023 + 1, (index) => 2023 + index);
+
+
   double urgentExpenses = 0.0;
   double nonUrgentExpenses = 0.0;
   final ScrollController _scrollController = ScrollController();
@@ -35,13 +40,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
   List<LineChartBarData>? cachedYearlyLineChartData;
   List<double>? cachedImportantChartData;
   List<LineChartBarData>? cachedCategoryLineChartData;
-  Map<String, LineChartData> chartCache = {};
+  //Map<String, LineChartData> chartCache = {};
   List<Category> categories = [];
   List<BankAccount> allBankAccounts = [];
-  double lastMonthBalance = 0.0;
+  //double lastMonthBalance = 0.0;
   Map<String, double> monthlyBalanceList = {};
   bool importedTypeOfBankAccount = false;
-
+  User? user1;
 
   @override
   void initState() {
@@ -86,6 +91,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
   Future<User?> _loadUser() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return null;
+
+
 
     try {
       return user;
@@ -152,9 +159,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
       );
     }
   }
-  Future<void> _loadExpenses(String chosenTime) async { //gloabel variablen urgentexpenses udn nonurgendstexepenses werden defineirt
+  Future<void> _loadExpenses(String chosenTime) async {
     final user = await _loadUser();
-
     if (user == null) {
       print("Kein Benutzer gefunden.");
       return;
@@ -163,7 +169,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
     DateTime today = DateTime.now();
     DateTime startdate;
     DateTime enddate;
-    Map<String, double> expenses;
+    Map<String, double> expenses = {"Dringend": 0.0, "Nicht dringend": 0.0}; // Standardwerte setzen
 
     if (chosenTime == "Woche") {
       startdate = today.subtract(Duration(days: today.weekday - 1)); // Montag
@@ -177,8 +183,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
     }
 
     try {
-      // Rufe die summierten Ausgaben ab
-        expenses = await _firestoreService.fetchUrgentAndNonUrgentExpenses(user.uid, startdate, enddate, selectedAccountID);
+      expenses = await _firestoreService.fetchUrgentAndNonUrgentExpenses(user.uid, startdate, enddate, selectedAccountID) ?? {"Dringend": 0.0, "Nicht dringend": 0.0};
 
       setState(() {
         urgentExpenses = expenses["Dringend"] ?? 0.0;
@@ -187,8 +192,10 @@ class _StatisticsPageState extends State<StatisticsPage> {
     } catch (e) {
       print("Fehler beim Laden der Ausgaben: $e");
     }
-
   }
+
+
+
   Future<void> _loadAndSetExpenses(String chosenTime) async {
     await _loadExpenses(chosenTime);
     setState(() {}); // Aktualisiert den Zustand nach dem Laden
@@ -197,40 +204,40 @@ class _StatisticsPageState extends State<StatisticsPage> {
     try {
       if (chosenMonth == 'Monat') {
         // Zeige den Jahresverlauf
-        if (chartCache.containsKey(chosenYear)) {
+        /*if (chartCache.containsKey(chosenYear)) {
           setState(() {
             cachedYearlyLineChartData = chartCache[chosenYear]?.lineBarsData;
           });
-        } else {
+        } else {*/
           // Berechne die Jahresdaten
 
 
           List<List<FlSpot>> FlSpotListList = await generateSpotsforYear(chosenYear, chosenMonth, "null");
 
-          LineChartBarData einnahmeDaten = await defineLineChartBarData(Colors.green, chosenYear, "Monat", "Einnahme", FlSpotListList[0]);
-          LineChartBarData ausgabeDaten = await defineLineChartBarData(Colors.red, chosenYear, "Monat", "Ausgabe", FlSpotListList[1]);
-          LineChartBarData gesamtDaten = await defineLineChartBarData(Colors.blue, chosenYear, "Monat", "null", FlSpotListList[2]);
+          LineChartBarData einnahmeDaten = await defineLineChartBarData(Colors.greenAccent.shade700, chosenYear, "Monat", "Einnahme", FlSpotListList[0]);
+          LineChartBarData ausgabeDaten = await defineLineChartBarData(Colors.redAccent.shade700, chosenYear, "Monat", "Ausgabe", FlSpotListList[1]);
+          LineChartBarData gesamtDaten = await defineLineChartBarData(Colors.blueAccent.shade700, chosenYear, "Monat", "null", FlSpotListList[2]);
 
 
           setState(() {
             cachedYearlyLineChartData = [einnahmeDaten, ausgabeDaten, gesamtDaten];
-            chartCache[chosenYear] = LineChartData(
+            /*chartCache[chosenYear] = LineChartData(
               lineBarsData: cachedYearlyLineChartData!,
               gridData: FlGridData(show: true),
               borderData: FlBorderData(show: true),
               titlesData: FlTitlesData(),
               lineTouchData: LineTouchData(handleBuiltInTouches: true),
-            );
+            );*/
           });
-        }
+        //}
       } else {
         // Zeige nur den Verlauf für den bestimmten Monat
-        if (chartCache.containsKey('$chosenYear-$chosenMonth')) {
+        /*if (chartCache.containsKey('$chosenYear-$chosenMonth')) {
           setState(() {
             cachedYearlyLineChartData =
                 chartCache['$chosenYear-$chosenMonth']?.lineBarsData;
           });
-        } else {
+        } else {*/
           List<FlSpot> FlSpotlist1 = await generateSpotsforMonth(
               chosenYear, chosenMonth, "Einnahme");
           List<FlSpot> FlSpotlist2 = await generateSpotsforMonth(
@@ -239,24 +246,24 @@ class _StatisticsPageState extends State<StatisticsPage> {
               chosenYear, chosenMonth, "null");
 
           LineChartBarData einnahmeDaten = await defineLineChartBarData(
-              Colors.green, chosenYear, chosenMonth, "Einnahme", FlSpotlist1);
+              Colors.greenAccent.shade700, chosenYear, chosenMonth, "Einnahme", FlSpotlist1);
           LineChartBarData ausgabeDaten = await defineLineChartBarData(
-              Colors.red, chosenYear, chosenMonth, "Ausgabe", FlSpotlist2);
+              Colors.redAccent.shade700, chosenYear, chosenMonth, "Ausgabe", FlSpotlist2);
           LineChartBarData gesamtDaten = await defineLineChartBarData(
-              Colors.blue, chosenYear, chosenMonth, "null", FlSpotlist3);
+              Colors.blueAccent.shade700, chosenYear, chosenMonth, "null", FlSpotlist3);
 
           setState(() {
             cachedYearlyLineChartData = [einnahmeDaten, ausgabeDaten, gesamtDaten];
-            chartCache['$chosenYear-$chosenMonth'] = LineChartData(
+            /*chartCache['$chosenYear-$chosenMonth'] = LineChartData(
               lineBarsData: cachedYearlyLineChartData!,
               gridData: FlGridData(show: true),
               borderData: FlBorderData(show: true),
               titlesData: FlTitlesData(),
               lineTouchData: LineTouchData(handleBuiltInTouches: true),
-            );
+            );*/
           });
         }
-      }
+      //}
       print("leaving bigchartdata");
     } catch (e) {
       print('Fehler beim Laden der Diagrammdaten: ${e.toString()}');
@@ -272,22 +279,93 @@ class _StatisticsPageState extends State<StatisticsPage> {
         LineChartBarData(
           preventCurveOverShooting: true,
           isCurved: true,
-          color: Colors.red,
+          color: Colors.redAccent.shade700,
           curveSmoothness: 0.35,
           barWidth: 4,
           isStrokeCapRound: true,
-          dotData: const FlDotData(show: false),
+          dotData: FlDotData(
+            show: true,
+            getDotPainter: (FlSpot spot, double xPercentage, LineChartBarData bar, int index, {double? size}) {
+              return FlDotCirclePainter(
+                radius: 3, // Größe der Dots (Standard ist 4)
+                color: bar.color ?? Colors.black, // Nutzt die Linienfarbe
+                strokeWidth: 1, // Randdicke
+                strokeColor: Colors.white, // Randfarbe der Dots
+              );
+            },
+          ),
           belowBarData: BarAreaData(show: false),
           spots: categoryList,
         ),
       ],
-      gridData: FlGridData(show: true),
-      borderData: FlBorderData(show: true),
-      titlesData: FlTitlesData(
+      gridData: FlGridData(
+        show: true,
+        drawHorizontalLine: true,
+        drawVerticalLine: true,
+        getDrawingHorizontalLine: (value) {
+          return FlLine(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withOpacity(0.2) // Helle Linien im Dark Mode
+                : Colors.black.withOpacity(0.1), // Dunkle Linien im Light Mode
+            strokeWidth: 1,
+          );
+        },
+        getDrawingVerticalLine: (value) {
+          return FlLine(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withOpacity(0.2)
+                : Colors.black.withOpacity(0.1),
+            strokeWidth: 1,
+          );
+        },
       ),
+
+      borderData: FlBorderData(show: true,
+        border: const Border(
+          left: BorderSide(
+              color: Colors.black,
+              width: 1), // Linke Linie
+          bottom: BorderSide(
+              color: Colors.black,
+              width: 1), // Untere Linie
+          top: BorderSide.none, // Keine obere Linie
+          right: BorderSide.none, // Keine rechte Linie
+        ),
+      ),
+      titlesData: categoryChartTitlesDataYear,
       lineTouchData: LineTouchData(
         handleBuiltInTouches: true,
+        touchTooltipData: LineTouchTooltipData(
+          getTooltipColor: (LineBarSpot spot) {
+            return Theme.of(context).colorScheme.onSecondary;
+
+            //return Color.fromARGB(255, 255, 255, 255); // Weißer Hintergrund
+          },
+          tooltipBorder: BorderSide(
+            color: Colors.black, // Farbe des Randes
+            width: 1, // Dicke des Randes
+          ),
+          tooltipPadding: EdgeInsets.all(8), // Abstand innerhalb des Tooltips
+          getTooltipItems: (List<LineBarSpot> touchedSpots) {
+            return touchedSpots.map((spot) {
+              Map<int, String> lineLabels = {
+                0: "Ausg.",
+              };
+              String label = lineLabels[spot.barIndex] ?? "Wert";
+              return LineTooltipItem(
+                "$label: ${spot.y.toStringAsFixed(2)} €", // Individueller Text
+                TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: spot.bar.color ?? Theme.of(context).textTheme.bodyLarge?.color,
+
+                ),
+              );
+            }).toList();
+          },
+        ),
       ),
+
     );
   }
 
@@ -306,21 +384,21 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
     try {
       print(monthlyBalanceList);
-      lastMonthBalance = findLastMonthBalance(monthlyBalanceList, chosenYear, chosenMonth);
-      print("lastMonthBalance nach Monatsangabe: $lastMonthBalance");
+      //lastMonthBalance = findLastMonthBalance(monthlyBalanceList, chosenYear, chosenMonth);
+      //print("lastMonthBalance nach Monatsangabe: $lastMonthBalance");
       if(importedTypeOfBankAccount == false) {
         if (selectedAccountID == "null") {
 
-          data = await _firestoreService.calculateMonthlyCombinedSpendingByDay(user.uid, type, chosenYear, chosenMonth, lastMonthBalance, selectedAccountID);
+          data = await _firestoreService.calculateMonthlyCombinedSpendingByDay(user.uid, type, chosenYear, chosenMonth, selectedAccountID);
 
         } else {
 
-          data = await _firestoreService.calculateMonthlySpendingByDay(user.uid, type, chosenYear, chosenMonth, lastMonthBalance, selectedAccountID);
+          data = await _firestoreService.calculateMonthlySpendingByDay(user.uid, type, chosenYear, chosenMonth, selectedAccountID);
 
         }
       }
       else if (importedTypeOfBankAccount == true){
-        data = await _firestoreService.calculateMonthlyImportedSpendingByDay(user.uid, type, chosenYear, chosenMonth, lastMonthBalance, selectedAccountID);
+        data = await _firestoreService.calculateMonthlyImportedSpendingByDay(user.uid, type, chosenYear, chosenMonth, selectedAccountID);
       }
 
 
@@ -342,7 +420,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
     List<List<FlSpot>> FlSpotListList = [];
 
-    List<double> data = [];
     Map<String, double> monthlySpending = {};
     List<Map<String, double>> monthlyTransactions = [];
 
@@ -364,6 +441,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
         for (int j = 0; j <= 2; j++) {
           Map<String, double> monthlySpending = monthlyTransactions[j];
           List<FlSpot> FlSpotlist = [];
+
+
           for (var entry in monthlySpending.entries) {
             String monthKey = entry.key; // Beispiel: "2024-01"
             DateTime dateTime = DateTime.parse(monthKey + "-01");
@@ -467,32 +546,56 @@ class _StatisticsPageState extends State<StatisticsPage> {
       color: color,
       barWidth: 4,
       isStrokeCapRound: true,
-      dotData: const FlDotData(show: true),
+      dotData: FlDotData(
+        show: true,
+        getDotPainter: (FlSpot spot, double xPercentage, LineChartBarData bar, int index, {double? size}) {
+          return FlDotCirclePainter(
+            radius: 4, // Größe der Dots (Standard ist 4)
+            color: bar.color ?? Colors.black, // Nutzt die Linienfarbe
+            strokeWidth: 1, // Randdicke
+            strokeColor: Colors.white, // Randfarbe der Dots
+          );
+        },
+      ),
       belowBarData: BarAreaData(show: false),
       spots: spotsList,
     );
   }
   PieChartData definePiechartData() {
     final summary = calculateExpenseSummary();
+
+    if (summary['totalExpenses'] == 0) {
+      return PieChartData(
+        sections: [
+          PieChartSectionData(
+            title: "Keine Daten",
+            value: 1, // Dummy-Wert, damit das Diagramm nicht crasht
+            color: Colors.grey,
+          ),
+        ],
+        sectionsSpace: 2,
+        centerSpaceRadius: 50,
+      );
+    }
+
     return PieChartData(
       sections: [
         PieChartSectionData(
-          title:
-          "Dringend (${summary['urgentPercentage'].toStringAsFixed(1)}%)",
+          title: "Dringend (${summary['urgentPercentage'].toStringAsFixed(1)}%)",
           value: urgentExpenses,
           color: Colors.red,
         ),
         PieChartSectionData(
-          title:
-          "Nicht dringend (${summary['nonUrgentPercentage'].toStringAsFixed(1)}%)",
+          title: "Nicht dringend (${summary['nonUrgentPercentage'].toStringAsFixed(1)}%)",
           value: nonUrgentExpenses,
           color: Colors.blue,
         ),
       ],
       sectionsSpace: 2,
-      centerSpaceRadius: 50, // Platz in der Mitte
+      centerSpaceRadius: 50,
     );
   }
+
   Widget buildPieChart() {
     final summary = calculateExpenseSummary();
     return Stack(
@@ -516,22 +619,327 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
   LineChartData get chartData { //getterfunktion für die große Statistik
-    if (cachedYearlyLineChartData == null) {
-      throw Exception("Daten müssen vorab geladen werden!");
+    if (cachedYearlyLineChartData == null || cachedYearlyLineChartData!.isEmpty) {
+      return LineChartData(
+        lineBarsData: [],
+        gridData: FlGridData(show: false),
+        borderData: FlBorderData(show: false),
+      );
     }
     return LineChartData(
+
+      //minY: 1, // Bereich unten erweitern
+      //maxY: 10000, // Bereich oben erweitern, damit "DEZ" nicht so nah am Rand ist
+
       lineBarsData: cachedYearlyLineChartData!,
-      gridData: FlGridData(show: true),
-      borderData: FlBorderData(show: true),
-      titlesData: FlTitlesData(),
-      lineTouchData: LineTouchData(handleBuiltInTouches: true),
+      gridData: FlGridData(
+        show: true,
+        drawHorizontalLine: true,
+        drawVerticalLine: true,
+        getDrawingHorizontalLine: (value) {
+          return FlLine(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withOpacity(0.2) // Helle Linien im Dark Mode
+                : Colors.black.withOpacity(0.1), // Dunkle Linien im Light Mode
+            strokeWidth: 1,
+          );
+        },
+        getDrawingVerticalLine: (value) {
+          return FlLine(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withOpacity(0.2)
+                : Colors.black.withOpacity(0.1),
+            strokeWidth: 1,
+          );
+        },
+      ),
+
+      borderData: FlBorderData(
+        show: true,
+        border: const Border(
+          left: BorderSide(
+              color: Colors.black,
+              width: 1), // Linke Linie
+          bottom: BorderSide
+            (color: Colors.black,
+              width: 1), // Untere Linie
+          top: BorderSide.none, // Keine obere Linie
+          right: BorderSide.none, // Keine rechte Linie
+    ),
+    ),
+      titlesData: bigChartTitlesDataYear,
+      lineTouchData: LineTouchData(
+        handleBuiltInTouches: true,
+        touchTooltipData: LineTouchTooltipData(
+          getTooltipColor: (LineBarSpot spot) {
+            return Theme.of(context).colorScheme.onSecondary;
+
+            return Color.fromARGB(255, 255, 255, 255);
+          },
+          tooltipBorder: BorderSide(
+            color: Colors.black,
+            //color: Theme.of(context).textTheme.bodyLarge?.color,// Farbe des Randes
+            width: 1, // Dicke des Randes
+          ),
+          tooltipPadding: EdgeInsets.all(8), // Abstand innerhalb des Tooltips
+          getTooltipItems: (List<LineBarSpot> touchedSpots) {
+            return touchedSpots.map((spot) {
+              Map<int, String> lineLabels = {
+                0: "Einn.",
+                1: "Ausg.",
+                2: "Bilanz"
+              };
+              String label = lineLabels[spot.barIndex] ?? "Wert";
+              return LineTooltipItem(
+                "$label: ${spot.y.toStringAsFixed(2)} €", // Individueller Text
+                TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: spot.bar.color ?? Theme.of(context).textTheme.bodyLarge?.color,
+                ),
+              );
+            }).toList();
+          },
+        ),
+      ),
+
     );
   }
 
 
 
 
-  double findLastMonthBalance(Map<String, double> data, String chosenYear, String chosenMonth) {
+  FlTitlesData get categoryChartTitlesDataYear => FlTitlesData(
+    bottomTitles: AxisTitles(
+      sideTitles: categoryBottomTitles
+    ),
+    rightTitles:  AxisTitles(
+      sideTitles: SideTitles(showTitles: false),
+    ),
+    topTitles: const AxisTitles(
+      sideTitles: SideTitles(showTitles: false),
+    ),
+    leftTitles: AxisTitles(
+      sideTitles: SideTitles(
+        showTitles: true, // Aktiviere die linke Achse
+        reservedSize: 40, // Vergrößere den Platz links
+        getTitlesWidget: (value, meta) {
+          return Text(
+            '${value.toInt()}€', // Beschriftung für linke Achse
+            style: const TextStyle(fontSize: 10),
+          );
+        },
+      ),
+    ),
+  );
+  FlTitlesData get bigChartTitlesDataYear => FlTitlesData(
+    bottomTitles: AxisTitles(
+      sideTitles: bottomTitles,
+    ),
+    rightTitles:  AxisTitles(
+      sideTitles: SideTitles(showTitles: false),
+    ),
+    topTitles: const AxisTitles(
+      sideTitles: SideTitles(showTitles: false),
+    ),
+    leftTitles: AxisTitles(
+      sideTitles: SideTitles(
+        showTitles: true, // Aktiviere die linke Achse
+        reservedSize: 40, // Vergrößere den Platz links
+        getTitlesWidget: (value, meta) {
+          return Text(
+            '${value.toInt()}€', // Beschriftung für linke Achse
+            style: const TextStyle(fontSize: 10),
+          );
+        },
+      ),
+    ),
+  );
+  SideTitles get bottomTitles => SideTitles(
+    showTitles: true,
+    reservedSize: 25,
+    interval: 1,
+    getTitlesWidget: bottomTitleWidgets,
+  );
+  SideTitles get categoryBottomTitles => SideTitles(
+    showTitles: true, // Aktiviere die linke Achse
+    reservedSize: 25,
+    interval: 1,
+    getTitlesWidget: categoryBottomTitleWidgets
+  );
+  Widget categoryBottomTitleWidgets(double value, TitleMeta meta) {
+    const style = TextStyle(
+      //fontWeight: FontWeight.bold,
+      fontSize: 11,
+    );
+    Widget text;
+    if (selectedTimeCategory == "Jahr") {
+      switch (value.toInt()) {
+        case 1:
+          text = const Text('JAN', style: style);
+          break;
+        case 2:
+          text = const Text('FEB', style: style);
+          break;
+        case 3:
+          text = const Text('MÄR', style: style);
+          break;
+        case 4:
+          text = const Text('APR', style: style);
+          break;
+        case 5:
+          text = const Text('MAI', style: style);
+          break;
+        case 6:
+          text = const Text('JUN', style: style);
+          break;
+        case 7:
+          text = const Text('JUL', style: style);
+          break;
+        case 8:
+          text = const Text('AUG', style: style);
+          break;
+        case 9:
+          text = const Text('SEP', style: style);
+          break;
+        case 10:
+          text = const Text('OKT', style: style);
+          break;
+        case 11:
+          text = const Text('NOV', style: style);
+          break;
+        case 12:
+          text = const Text('DEZ', style: style);
+          break;
+        default:
+          text = const Text('');
+          break;
+      }
+    } else {
+      switch (value.toInt()) {
+        case 1:
+          text = Text("${value.toString()}.${DateTime.now().month.toString().padLeft(2, '0')}", style: style);
+          break;
+        case 3:
+          text = Text("${value.toString()}.${DateTime.now().month.toString().padLeft(2, '0')}", style: style);
+          break;
+        case 5:
+          text = Text("${value.toString()}.${DateTime.now().month.toString().padLeft(2, '0')}", style: style);
+          break;
+        case 10:
+          text = Text("${value.toString()}.${DateTime.now().month.toString().padLeft(2, '0')}", style: style);
+          break;
+        case 15:
+          text = Text("${value.toString()}.${DateTime.now().month.toString().padLeft(2, '0')}", style: style);
+          break;
+        case 20:
+          text = Text("${value.toString()}.${DateTime.now().month.toString().padLeft(2, '0')}", style: style);
+          break;
+        case 25:
+          text = Text("${value.toString()}.${DateTime.now().month.toString().padLeft(2, '0')}", style: style);
+          break;
+        case 30:
+          text = Text("${value.toString()}.${DateTime.now().month.toString().padLeft(2, '0')}", style: style);
+        default:
+          text = const Text('');
+          break;
+      }
+    }
+    return SideTitleWidget(
+      axisSide: meta.axisSide,
+      space: 10,
+      child: text,
+    );
+  }
+  Widget bottomTitleWidgets(double value, TitleMeta meta) {
+    const style = TextStyle(
+      //fontWeight: FontWeight.bold,
+      fontSize: 11,
+    );
+    Widget text;
+    if (selectedMonth == "Monat") {
+      switch (value.toInt()) {
+        case 1:
+          text = const Text('JAN', style: style);
+          break;
+        case 2:
+          text = const Text('FEB', style: style);
+          break;
+        case 3:
+          text = const Text('MÄR', style: style);
+          break;
+        case 4:
+          text = const Text('APR', style: style);
+          break;
+        case 5:
+          text = const Text('MAI', style: style);
+          break;
+        case 6:
+          text = const Text('JUN', style: style);
+          break;
+        case 7:
+          text = const Text('JUL', style: style);
+          break;
+        case 8:
+          text = const Text('AUG', style: style);
+          break;
+        case 9:
+          text = const Text('SEP', style: style);
+          break;
+        case 10:
+          text = const Text('OKT', style: style);
+          break;
+        case 11:
+          text = const Text('NOV', style: style);
+          break;
+        case 12:
+          text = const Text('DEZ', style: style);
+          break;
+        default:
+          text = const Text('');
+          break;
+      }
+    } else {
+      switch (value.toInt()) {
+        case 1:
+          text = Text("${value.toString()}.${selectedMonth}", style: style);
+          break;
+        case 3:
+          text = Text("${value.toString()}.${selectedMonth}", style: style);
+          break;
+        case 5:
+          text = Text("${value.toString()}.${selectedMonth}", style: style);
+          break;
+        case 10:
+          text = Text("${value.toString()}.${selectedMonth}", style: style);
+          break;
+        case 15:
+          text = Text("${value.toString()}.${selectedMonth}", style: style);
+          break;
+        case 20:
+          text = Text("${value.toString()}.${selectedMonth}", style: style);
+          break;
+        case 25:
+          text = Text("${value.toString()}.${selectedMonth}", style: style);
+          break;
+        case 30:
+          text = Text("${value.toString()}.${selectedMonth}", style: style);
+        default:
+          text = const Text('');
+          break;
+      }
+    }
+    return SideTitleWidget(
+      axisSide: meta.axisSide,
+      space: 10,
+      child: text,
+    );
+  }
+
+
+
+
+  /*double findLastMonthBalance(Map<String, double> data, String chosenYear, String chosenMonth) {
     // Startwert für das vorherige Monatsguthaben
     double lastMonthBalance = 0.0;
 
@@ -565,7 +973,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
     }
 
     return lastMonthBalance;
-  }
+  }*/
   Map<String, dynamic> calculateExpenseSummary() {
     double totalExpenses = urgentExpenses + nonUrgentExpenses;
 
@@ -587,6 +995,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
         return Container(
           height: 300, // Erhöhe die Höhe des Containers
           child: CupertinoPicker(
+            backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
             itemExtent: 50.0, // Erhöht die Höhe der Picker-Elemente
             scrollController: FixedExtentScrollController(
                 initialItem: initialYearIndex),
@@ -608,40 +1017,47 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
   void _showMonthPicker(BuildContext context) {
+    int maxMonth = (selectedYear == DateTime.now().year.toString())
+        ? DateTime.now().month // Falls aktuelles Jahr → Nur bis zum aktuellen Monat
+        : 12; // Falls vergangenes Jahr → Alle 12 Monate
+
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
         return Container(
           height: 300, // Höhe des Containers
           child: CupertinoPicker(
-            backgroundColor: Colors.white,
-            itemExtent: 50.0,
-            // Höhe jedes Elements
+            backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+            itemExtent: 50.0, // Höhe jedes Elements
             scrollController: FixedExtentScrollController(
-              initialItem: selectedMonth == "Monat" ? 0 : int.parse(
-                  selectedMonth) - 1,
+              initialItem: selectedMonth == "Monat" ? 0 : int.parse(selectedMonth),
             ),
             onSelectedItemChanged: (int index) {
               setState(() {
-                selectedMonth =
-                index == 0 ? "Monat" : (index).toString().padLeft(2, '0');
+                selectedMonth = index == 0
+                    ? "Monat"
+                    : index.toString().padLeft(2, '0');
                 loadBigChartBarData(selectedYear, selectedMonth);
               });
             },
             children: [
               Center(child: Text("Monat",
-                  style: TextStyle(fontSize: 18, color: Colors.black))),
-              // Standard "Monat" als ersten Eintrag
-              ...List.generate(12, (index) =>
+                  style: TextStyle(fontSize: 18,
+                      color: Theme.of(context).textTheme.bodyLarge?.color
+                  ))),
+              // Dynamische Monatserzeugung basierend auf maxMonth
+              ...List.generate(maxMonth, (index) =>
                   Center(child: Text((index + 1).toString().padLeft(2, '0'),
-                      style: TextStyle(fontSize: 18, color: Colors.black)))),
-              // Monatszahlen
+                      style: TextStyle(fontSize: 18,
+                          color: Theme.of(context).textTheme.bodyLarge?.color
+                      )))),
             ],
           ),
         );
       },
     );
   }
+
 
 
 
@@ -660,52 +1076,78 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Statistiken für:',
+                    'Konto:',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      //color: Colors.black,
+                      color: Theme.of(context).textTheme.bodyLarge?.color
                     ),
                   ),
+
+                  const SizedBox(width: 40),
+
                   DropdownButton<String>(
-                    value: allBankAccounts.any((account) => account.accountName == selectedAccount)
+                    value: allBankAccounts.any((account) => account.id == selectedAccount)
                         ? selectedAccount
-                        : 'Gesamtübersicht', // Fallback zu "Gesamtübersicht"
+                        : 'Gesamtübersicht', // Standardwert als Fallback
+
                     items: [
                       DropdownMenuItem(
                         value: 'Gesamtübersicht',
-                        child: Text('Gesamtübersicht'),
+                        child: Row(
+                          children: [
+                            Icon(Icons.show_chart,
+                              color: Colors.blue,
+                            ),
+                            const SizedBox(width: 5),
+                            Text('Gesamtübersicht'),
+                          ],
+                        ),
                       ),
-                      ...allBankAccounts.map((BankAccount account) {
+                      ...allBankAccounts
+                          .where((account) => account.id != null && account.id != '')
+                          .map((BankAccount account) {
                         return DropdownMenuItem<String>(
-                          value: account.accountName,
-                          child: Text(account.accountName ?? 'Unbekanntes Konto'),
+                          value: account.id, // ID statt Name als value
+                          child: Row(
+                            children: [
+                              Icon(
+                                account.accountType == "Bargeld"
+                                    ? Icons.attach_money
+                                    : Icons.account_balance,
+                                color: Colors.blue,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(account.accountName ?? 'Unbekanntes Konto'),
+                            ],
+                          ),
                         );
                       }).toList(),
                     ],
+
                     onChanged: (String? newValue) async {
                       setState(() {
-                        selectedAccount = newValue!;
+                        selectedAccount = newValue ?? 'Gesamtübersicht';
 
-                        // Aktualisiere die Account-ID basierend auf der Auswahl
-                        if (selectedAccount == 'Gesamtübersicht') {
-                          selectedAccountID = 'null'; // Keine spezifische ID für die Gesamtübersicht
-                          print("Accountname gefunden!!!");
-                          print("$selectedAccount");
-                          importedTypeOfBankAccount = false;
-                        } else {
-                          for (var bA in allBankAccounts){
-                            if (bA.accountName == selectedAccount){
-                              print("Accountname gefunden!!!");
-                              print("$selectedAccount");
-                              selectedAccountID = bA.id!;
-                              importedTypeOfBankAccount = bA.forImport;
-                            } else {
-                              //print("Accountname NICHTTTTTTT gefunden!!!");
-                            }
+                      // Aktualisiere die Account-ID basierend auf der Auswahl
+                      if (selectedAccount == 'Gesamtübersicht') {
+                      selectedAccountID = 'null'; // Keine spezifische ID für die Gesamtübersicht
+                      print("Accountname gefunden!!!");
+                      print("$selectedAccount");
+                      importedTypeOfBankAccount = false;
+                      } else {
+                        // Suche nach dem Konto anhand der ID
+                        for (var bA in allBankAccounts) {
+                          if (bA.id == selectedAccount && bA.id != null && bA.id != '') {
+                            selectedAccountID = bA.id!;
+                            importedTypeOfBankAccount = bA.forImport;
                           }
-                        } // Reset cache to force data reload
-                        chartCache.clear();
+                        }
+                      }
+
+                        // Reset cache to force data reload
+                        //chartCache.clear();
                         cachedYearlyLineChartData = null;
                       });
 
@@ -715,9 +1157,15 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
 
 
+
                 ],
               ),
 
+              const Divider(
+                thickness: 1, // Stärke der Linie
+                color: Colors.black, // Farbe der Linie
+                height: 0, // Kein zusätzlicher Abstand unter der Linie
+              ),
 
               const SizedBox(height: 20),
 
@@ -728,10 +1176,12 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 children: [
                   const SizedBox(width: 20),
                   Text(
-                    'Gesamtübersicht im Zeitraum:  ',
+                    'Gesamtverlauf:  ',
                     style: TextStyle(fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black),
+                        //color: Colors.black
+                        color: Theme.of(context).textTheme.bodyLarge?.color
+                    ),
                   ),
                   const SizedBox(width: 10),
                   // Jahr Picker
@@ -741,13 +1191,17 @@ class _StatisticsPageState extends State<StatisticsPage> {
                       padding: EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.surface,
+                        //color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.grey),
                       ),
                       child: Text(
                         selectedYear,
-                        style: TextStyle(fontSize: 16, color: Colors.black),
+                        style: TextStyle(fontSize: 16,
+                            //color: Colors.black
+                            color: Theme.of(context).textTheme.bodyLarge?.color
+                        ),
                       ),
                     ),
                   ),
@@ -759,13 +1213,18 @@ class _StatisticsPageState extends State<StatisticsPage> {
                       padding: EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.surface,
+
+                        //color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.grey),
                       ),
                       child: Text(
                         selectedMonth,
-                        style: TextStyle(fontSize: 16, color: Colors.black),
+                        style: TextStyle(fontSize: 16,
+                            //color: Colors.black
+                            color: Theme.of(context).textTheme.bodyLarge?.color
+                        ),
                       ),
                     ),
                   ),
@@ -773,13 +1232,14 @@ class _StatisticsPageState extends State<StatisticsPage> {
               ),
               const SizedBox(height: 20),
               // Diagramm-Widget
-              cachedYearlyLineChartData == null
-                  ? Center(child: CircularProgressIndicator())
+              cachedYearlyLineChartData == null || cachedYearlyLineChartData!.isEmpty
+                  ? Center(child: Text("Noch keine Daten verfügbar"))
                   : Container(
                 width: double.infinity,
                 height: 300,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
+                  //color: Colors.white,
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: [
                     BoxShadow(
@@ -789,8 +1249,10 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     ),
                   ],
                 ),
-                child: LineChart(chartData), // Diagramm anzeigen
+                padding: const EdgeInsets.only(right: 20, left: 10, top: 10),
+                child: LineChart(chartData),
               ),
+
               const SizedBox(height: 40),
 
               // Kategorieübersicht (mit einem Picker zur Auswahl des Zeitraums)
@@ -798,10 +1260,12 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 children: [
                   const SizedBox(width: 30),
                   Text(
-                    'Kategorieausgaben im Zeitraum:  ',
+                    'Kategorieausgaben:  ',
                     style: TextStyle(fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black),
+                        color: Theme.of(context).textTheme.bodyLarge?.color
+                        //color: Colors.black
+                    ),
                   ),
                   const SizedBox(width: 20),
                   GestureDetector(
@@ -811,13 +1275,17 @@ class _StatisticsPageState extends State<StatisticsPage> {
                       padding: EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.surface,
+                        //color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.grey),
                       ),
                       child: Text(
                         selectedTimeCategory, // Zeigt "Monat" oder "Woche" an
-                        style: TextStyle(fontSize: 16, color: Colors.black),
+                        style: TextStyle(fontSize: 16,
+                            color: Theme.of(context).textTheme.bodyLarge?.color
+                            //color: Colors.black
+                        ),
                       ),
                     ),
                   ),
@@ -852,7 +1320,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
               ),
               const SizedBox(height: 40),
 
-
+              /*
               importedTypeOfBankAccount
                   ? Container() // Wenn CSV-Konto ausgewählt ist, zeige nichts
                   : Column(
@@ -862,7 +1330,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     children: [
                       const SizedBox(width: 30),
                       Text(
-                        'Relevanz der Ausgabenverteilung:  ',
+                        'Ausgabenverteilung:  ',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -920,7 +1388,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     ),
                   ),
                 ],
-              ),
+              ),*/
             ],
           ),
         ),
@@ -928,43 +1396,15 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
 
-  void _showImportancePicker(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return Container(
-          height: 220,
-          child: CupertinoPicker(
-            backgroundColor: Colors.white,
-            itemExtent: 50.0,
-            scrollController: FixedExtentScrollController(
-              initialItem: selectedTimeImportance == "Monat" ? 0 : 1,
-            ),
-            onSelectedItemChanged: (int index) async {
-              selectedTimeImportance = index == 0 ? "Monat" : "Woche";
-              await _loadAndSetExpenses(selectedTimeImportance);
-            },
-            children: [
-              Center(
-                child: Text("Monat", style: TextStyle(fontSize: 18, color: Colors.black)),
-              ),
-              Center(
-                child: Text("Woche", style: TextStyle(fontSize: 18, color: Colors.black)),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-  void _showCategoryPicker(BuildContext context) {
+  /*void _showCategoryPicker(BuildContext context) {
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
         return Container(
           height: 220, // Höhe des Containers
           child: CupertinoPicker(
-            backgroundColor: Colors.white,
+            backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+            //backgroundColor: Colors.white,
             itemExtent: 50.0,
             // Höhe jedes Elements
             scrollController: FixedExtentScrollController(
@@ -981,15 +1421,62 @@ class _StatisticsPageState extends State<StatisticsPage> {
             },
             children: [
               Center(child: Text("Monat",
-                  style: TextStyle(fontSize: 18, color: Colors.black))),
+                  style: TextStyle(fontSize: 18,
+                      color: Theme.of(context).textTheme.bodyLarge?.color
+                      //color: Colors.black
+                  ))),
               Center(child: Text("Jahr",
-                  style: TextStyle(fontSize: 18, color: Colors.black))),
+                  style: TextStyle(fontSize: 18,
+                      color: Theme.of(context).textTheme.bodyLarge?.color
+                      //color: Colors.black
+                  ))),
+            ],
+          ),
+        );
+      },
+    );
+  }*/
+  void _showCategoryPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          height: 220, // Höhe des Containers
+          child: CupertinoPicker(
+            backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+            //backgroundColor: Colors.white,
+            itemExtent: 50.0,
+            // Höhe jedes Elements
+            scrollController: FixedExtentScrollController(
+              initialItem: selectedTimeCategory == "Monat"
+                  ? 0
+                  : 1, // Setzt den initialen Wert (Monat oder Woche)
+            ),
+            onSelectedItemChanged: (int index) {
+              setState(() {
+                // "Monat" oder "Woche" auswählen
+                selectedTimeCategory = index == 0 ? "Monat" : "Jahr";
+                // Daten nach der Auswahl neu laden
+              });
+            },
+            children: [
+              Center(child: Text("Monat",
+                  style: TextStyle(fontSize: 18,
+                      color: Theme.of(context).textTheme.bodyLarge?.color
+                    //color: Colors.black
+                  ))),
+              Center(child: Text("Jahr",
+                  style: TextStyle(fontSize: 18,
+                      color: Theme.of(context).textTheme.bodyLarge?.color
+                    //color: Colors.black
+                  ))),
             ],
           ),
         );
       },
     );
   }
+
 
 }
 
@@ -1006,19 +1493,27 @@ class CategoryStatWidget extends StatelessWidget {
     return FutureBuilder<LineChartData>(
       future: chartDataFuture,
       builder: (context, snapshot) {
+
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
         } else if (snapshot.hasError) {
           return Center(child: Text('Fehler: ${snapshot.error}'));
-        } else if (!snapshot.hasData || snapshot.data == null) {
-          return Center(child: Text('Keine Daten verfügbar'));
+        } else if (!snapshot.hasData || snapshot.data == null || snapshot.data!.lineBarsData.isEmpty) {
+          return Center(
+            child: Text(
+              'Keine Daten für diese Kategorie verfügbar',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color),
+              textAlign: TextAlign.center,
+            ),
+          );
         }
 
         return Container(
           padding: const EdgeInsets.all(12.0),
-          width: 410, // Responsive Anpassung
+          width: 410,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
+            //color: Colors.white,
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
@@ -1031,22 +1526,34 @@ class CategoryStatWidget extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                category.name,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Colors.black,
-                ),
+              Row(
+                children: [
+                  Text(
+                    category.name,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Theme.of(context).textTheme.bodyLarge?.color
+                      //color: category.color,
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Icon(
+                    category.icon,
+                    color: category.color,
+                    size: 16.0,
+                  ),
+                ],
               ),
               const SizedBox(height: 20),
               Container(
                 height: 220,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
+                  //color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: LineChart(snapshot.data!), // Anzeige des Diagramms
+                child: LineChart(snapshot.data!),
               ),
             ],
           ),
@@ -1054,6 +1561,7 @@ class CategoryStatWidget extends StatelessWidget {
       },
     );
   }
+
 }
 
 class CustomScrollPhysics extends ScrollPhysics {

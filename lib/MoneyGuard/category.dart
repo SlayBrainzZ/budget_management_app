@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:budget_management_app/backend/firestore_service.dart';
 import 'package:budget_management_app/backend/Category.dart';
 import 'package:budget_management_app/backend/User.dart';
+import 'package:budget_management_app/MoneyGuard/home_page.dart';
 
 import '../backend/Transaction.dart';
 
@@ -41,7 +42,7 @@ final List<IconData> availableIcons = [
 ];
 
 final List<Color> availableColors = [
-  Colors.blueGrey,
+  Colors.grey,
   Colors.red,
   Colors.blue,
   Colors.green,
@@ -56,8 +57,12 @@ final List<Color> availableColors = [
 ];
 
 class CategoryButton extends StatelessWidget {
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.onSecondary;
+
     return Center(
       child: GestureDetector(
         onTap: () {
@@ -70,13 +75,14 @@ class CategoryButton extends StatelessWidget {
           width: 250,
           height: 250,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: primaryColor,
             borderRadius: BorderRadius.circular(10),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.3),
-                spreadRadius: 4,
-                blurRadius: 8,
+                color: Colors.black.withOpacity(0.1), // Weniger Deckkraft für einen sanfteren Schatten
+                blurRadius: 6,  // Weniger Unschärfe für einen subtileren Schatten
+                spreadRadius: 1, // Geringere Ausdehnung
+                offset: Offset(2, 2), // Kleinere Verschiebung für einen dezenteren Schatten
               ),
             ],
           ),
@@ -109,24 +115,6 @@ class CategoryScreen extends StatefulWidget {
 
 class _CategoryScreenState extends State<CategoryScreen> {
   late Future<List<Category>> userCategories;
-/*
-  @override
-  void initState() {
-    super.initState();
-
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (user != null) {
-      final userId = user.uid;  // Hier die UID verwenden
-      setState(() {
-        FirestoreService().createDefaultCategories(userId);
-        userCategories = FirestoreService().getSortedUserCategories(userId);
-      });
-    } else {
-      // Falls kein Benutzer angemeldet ist, handle diesen Fall
-      print("Kein Benutzer angemeldet.");
-    }
-  }*/
 
 
   @override
@@ -135,6 +123,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
     final user = FirebaseAuth.instance.currentUser;
 
+    print("Kategorien geladen");
     if (user != null) {
       final userId = user.uid;
 

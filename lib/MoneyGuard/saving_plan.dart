@@ -20,12 +20,20 @@ class _SavingPlanState extends State<SavingPlan> {
   double totalIncome = 0.0;
   List<Transaction> monthlyTransactionCategoryAll = [];
   List<double> remainingBudget = []; // Liste, um verbleibende Budgets für jede Kategorie zu speichern
+  List<double> combinedTransactions = [];
+
+
   Map<String, int> streakCounterDictionary = {};
 
   // Methode zum Laden der Kategorien und Benutzerinformationen
   Future<void> _loadUserAndCategories() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+
+    // Falls user null ist, breche die Funktion ab
+    if (user == null) {
+      print("Kein angemeldeter Benutzer gefunden.");
+      return;
+    }
 
     setState(() {
       categories = [];
@@ -33,7 +41,11 @@ class _SavingPlanState extends State<SavingPlan> {
     });
 
     try {
-      List<Category> userCategories = await _firestoreService.getUserCategoriesWithBudget(user.uid);
+      // Nutzer-ID sicher abrufen
+      _userId = user.uid;
+
+      // Lade Kategorien mit sicherer User-ID
+      List<Category> userCategories = await _firestoreService.getUserCategoriesWithBudget(_userId!);
 
       if (userCategories.isEmpty) {
         print("Keine Kategorien gefunden für den Benutzer.");
@@ -43,36 +55,19 @@ class _SavingPlanState extends State<SavingPlan> {
         return;
       }
 
-      DateTime now = DateTime.now();
-      DateTime startOfMonth = DateTime.utc(now.year, now.month, 1);
-      DateTime endOfMonth = DateTime.utc(now.year, now.month + 1, 0);
-
-      List<Future<double>> transactionFutures = [];
-      for (final userCategory in userCategories) {
-        transactionFutures.add(
-          _firestoreService.getTransactionsByDateRangeAndCategory(
-            user.uid,
-            userCategory.id!,
-            startOfMonth,
-            endOfMonth,
-            "null",
-          ).then((transactions) async {
-            double sum = 0.0;
-            for (final transaction in transactions) {
-              final amount = transaction.amount is int
-                  ? (transaction.amount as int).toDouble()
-                  : transaction.amount ?? 0.0;
-              sum += amount;
-            }
-            return sum;
-          }),
+      // Lade kombinierte Transaktionen
+      List<Future<double>> transactionFutures = userCategories.map((category) {
+        return _firestoreService.getCurrentMonthCombinedTransactions(
+          _userId!,
+          category.id!,
+          "null", // Account-ID hier optional anpassen
         );
-      }
+      }).toList();
 
+      // Warte auf alle Transaktionssummen
       List<double> spentAmounts = await Future.wait(transactionFutures);
 
       setState(() {
-        _userId = user.uid;
         categories = userCategories;
 
         // Berechne verbleibende Budgets und aktualisiere den Streak-Counter
@@ -82,21 +77,43 @@ class _SavingPlanState extends State<SavingPlan> {
 
           // Aktualisiere den Streak-Counter
           if (remaining >= 0) {
-            // Budget eingehalten, Streak hochzählen
             streakCounterDictionary[categoryId] = (streakCounterDictionary[categoryId] ?? 0) + 1;
           } else {
-            // Budget überschritten, Streak zurücksetzen
             streakCounterDictionary[categoryId] = 0;
           }
 
           return remaining;
         });
 
-        totalIncome = categories.fold(
-          0.0,
-              (sum, category) => sum + (category.budgetLimit ?? 0),
-        );
+        // Gesamteinnahmen berechnen
+        totalIncome = categories.fold(0.0, (sum, category) => sum + (category.budgetLimit ?? 0));
       });
+
+      // Prüfe Budgetüberschreitungen und sende Benachrichtigungen
+      for (int index = 0; index < userCategories.length; index++) {
+        double remaining = (userCategories[index].budgetLimit ?? 0) - spentAmounts[index];
+        String categoryId = userCategories[index].id ?? "";
+
+        if (remaining < 0) {
+          bool alreadyExists = await _firestoreService.doesNotificationExist(
+            _userId!,
+            categoryId,
+            "budget_overflow",
+          );
+          //print("der Wert von bool ist $alreadyExists");
+
+          if (!alreadyExists) {
+            await _firestoreService.createNotification(
+              _userId!,
+              "Budget für ${userCategories[index].name} überschritten um ${(remaining * -1).toStringAsFixed(2)}€!",
+              "budget_overflow",
+              categoryId: categoryId,
+            );
+          }
+        }
+      }
+
+
     } catch (e) {
       print('Fehler beim Laden der Kategorien: ${e.toString()}');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -104,6 +121,47 @@ class _SavingPlanState extends State<SavingPlan> {
       );
     }
   }
+
+  /*Future<void> _loadUserAndCategories() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    setState(() {
+      categories = [];
+      remainingBudget = [];
+    });
+
+    try {
+      _userId = user.uid;
+
+      // Daten aus Firestore abrufen
+      Map<String, dynamic> data = await _firestoreService.fetchCategoriesAndTransactions(_userId!);
+      List<Category> userCategories = data["categories"];
+      List<double> spentAmounts = data["spentAmounts"];
+
+      setState(() {
+        categories = userCategories;
+
+        // Berechne verbleibende Budgets
+        remainingBudget = List.generate(userCategories.length, (index) {
+          double remaining = (userCategories[index].budgetLimit ?? 0) - spentAmounts[index];
+          return remaining;
+        });
+
+        // Gesamteinnahmen berechnen
+        totalIncome = categories.fold(0.0, (sum, category) => sum + (category.budgetLimit ?? 0));
+      });
+
+    } catch (e) {
+      print('Fehler beim Laden der Kategorien: ${e.toString()}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Fehler beim Laden der Daten")),
+      );
+    }
+  }*/
+
+
+
 
 
 
@@ -155,12 +213,11 @@ class _SavingPlanState extends State<SavingPlan> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       body: CustomScrollView(
         slivers: [
           // Statischer Bereich oben (Budgetlimit in einer SliverAppBar)
           SliverAppBar(
-            backgroundColor: Colors.white,
+            backgroundColor: Theme.of(context).colorScheme.surface,
             pinned: true,
             elevation: 2,
             expandedHeight: 120.0,
@@ -180,7 +237,7 @@ class _SavingPlanState extends State<SavingPlan> {
                           style: TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
                             //fontFamily: 'Roboto,
                           ),
                         ),
@@ -190,7 +247,7 @@ class _SavingPlanState extends State<SavingPlan> {
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
                             //fontFamily: 'Roboto',
                           ),
                         ),
@@ -201,7 +258,7 @@ class _SavingPlanState extends State<SavingPlan> {
                       'monatliches Budget',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Colors.grey[600],
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
                         //fontFamily: 'Roboto',
                       ),
                     ),
@@ -234,7 +291,7 @@ class _SavingPlanState extends State<SavingPlan> {
                 width: double.infinity,
                 height: 200,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: [
                     BoxShadow(
@@ -244,33 +301,27 @@ class _SavingPlanState extends State<SavingPlan> {
                     ),
                   ],
                 ),
+                padding: const EdgeInsets.only(right: 20, left: 5, bottom: 10, top: 10),
                 child: BarChart(
                   BarChartData(
                     alignment: BarChartAlignment.spaceEvenly, // Mehr Platz zwischen den Balken
                     maxY: 100, // Maximaler Y-Wert für die Prozentanzeige
                     titlesData: FlTitlesData(
-                      /*leftTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true, // Aktiviere die Titel auf der linken Seite
-                          interval: 25, // Schrittweite für die angezeigten Werte (z. B. 0, 25, 50, 75, 100)
-                          getTitlesWidget: (double value, TitleMeta meta) {
-                            // Bedingte Logik für die Anzeige
-                            if (value % 25 == 0) {
-                              return Text(
-                                '${value.toInt()}', // Zeigt den Prozentwert an
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.black,
-                                ),
-                              );
-                            }
-                            return const SizedBox.shrink(); // Keine Anzeige für andere Werte
-                          },
-                        ),
-                      ),*/
                       rightTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: false, // Rechte Achse deaktivieren
+                        ),
+                      ),
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true, // Aktiviere die linke Achse
+                          reservedSize: 40, // Vergrößere den Platz links
+                          getTitlesWidget: (value, meta) {
+                            return Text(
+                              '${value.toInt()}%', // Beschriftung für linke Achse
+                              style: const TextStyle(fontSize: 10),
+                            );
+                          },
                         ),
                       ),
                       bottomTitles: AxisTitles(
@@ -284,7 +335,7 @@ class _SavingPlanState extends State<SavingPlan> {
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.black,
+                                  color: Theme.of(context).textTheme.bodyLarge?.color,
                                   fontFamily: 'Roboto',
                                 ),
                               );
@@ -295,21 +346,71 @@ class _SavingPlanState extends State<SavingPlan> {
                       ),
                       topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                     ),
-                    borderData: FlBorderData(show: false), // Keine Border anzeigen
+                    borderData: FlBorderData(
+                        show: true,
+                        border: const Border(
+                      left: BorderSide(
+                          color: Colors.black,
+                          width: 1), // Linke Linie
+                      bottom: BorderSide
+                        (color: Colors.black,
+                          width: 1), // Untere Linie
+                      top: BorderSide.none, // Keine obere Linie
+                      right: BorderSide.none, // Keine rechte Linie
+                    )), // Keine Border anzeigen
                     barGroups: _buildCategoryData(),
+                    gridData: FlGridData(
+                      show: true,
+                      drawHorizontalLine: true,
+                      drawVerticalLine: true,
+                      getDrawingHorizontalLine: (value) {
+                        return FlLine(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white.withOpacity(0.2) // Helle Linien im Dark Mode
+                              : Colors.black.withOpacity(0.1), // Dunkle Linien im Light Mode
+                          strokeWidth: 1,
+                        );
+                      },
+                      getDrawingVerticalLine: (value) {
+                        return FlLine(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white.withOpacity(0.2)
+                              : Colors.black.withOpacity(0.1),
+                          strokeWidth: 1,
+                        );
+                      },
+                    ),
                     barTouchData: BarTouchData(
                       touchTooltipData: BarTouchTooltipData(
+                        getTooltipColor: (BarChartGroupData group) {
+                          return Theme.of(context).colorScheme.onSecondary;
+                        },
+                        tooltipBorder: BorderSide(
+                          color: Colors.black, // Farbe des Randes
+                          width: 1, // Dicke des Randes
+                        ),
+                        tooltipPadding: EdgeInsets.all(8), // Abstand innerhalb des Tooltips
                         getTooltipItem: (group, groupIndex, rod, rodIndex) {
                           final category = categories[groupIndex];
-                          final double percentage =
-                              (category.budgetLimit! / totalIncome) * 100;
+                          final double percentage = (category.budgetLimit! / totalIncome) * 100;
                           return BarTooltipItem(
-                            '${category.name}\n${percentage.toStringAsFixed(1)}%', // Tooltip mit Prozentwert
-                            TextStyle(color: Colors.white), // Textfarbe des Tooltips
+                            '${category.name}\n'
+                                '📊 Anteil: ${percentage.toStringAsFixed(1)}%\n'
+                                '💰 Budget: ${category.budgetLimit!}€',
+                            TextStyle(
+                              color: category.color,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              /*foreground: Paint()
+                                ..style = PaintingStyle.stroke
+                                ..strokeWidth = 2 // Dicke der Umrandung
+                                ..color = Colors.white, // Farbe der Umrandung
+                            */),
                           );
                         },
                       ),
                     ),
+
                   ),
                 ),
               ),
@@ -327,7 +428,7 @@ class _SavingPlanState extends State<SavingPlan> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 20,
-                    color: Colors.grey,
+                    color: Theme.of(context).colorScheme.onPrimary,
                     fontFamily: 'Roboto',
                   ),
                 ),
@@ -339,16 +440,28 @@ class _SavingPlanState extends State<SavingPlan> {
                   (context, index) {
                 final category = categories[index];
                 final remaining = remainingBudget[index];
-                final spentPercent = 1 -
-                    (remaining / (category.budgetLimit ?? 1))
-                        .clamp(0.0, 1.0);
+                final spentAmount = (category.budgetLimit ?? 0) - remaining;
+                final spentPercent = 1 - (remaining / (category.budgetLimit ?? 1)).clamp(0.0, 1.0);
 
-                // Bedingte Nachricht je nach Budgetstatus
+                    // Neue Anzeige-Bedingung
+                    String spentMessage;
+                    if (remaining < 0) {
+                      spentMessage = "${(spentAmount).toStringAsFixed(2)}€ ausgegeben";
+                    } else if (remaining == 0) {
+                      spentMessage = "${(spentAmount).toStringAsFixed(2)}€ ausgegeben";
+                    } else {
+                      spentMessage = "${spentAmount.toStringAsFixed(2)}€ ausgegeben";
+                    }
+
+
+                    // Bedingte Nachricht je nach Budgetstatus
                 String statusMessage = remaining < 0
-                    ? "Limit überschritten!"
+                    ? "Limit um ${(remaining * -1).toStringAsFixed(2)}€ überschritten!"
+                    : remaining == 0
+                    ? "Limit optimal eingehalten!"
                     : remaining / (category.budgetLimit ?? 1) < 0.05
                     ? "Achtung, Limit bald überschritten!"
-                    : "Super!";
+                    : "Super! ${remaining.toStringAsFixed(2)}€ verfügbar";
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(
@@ -356,7 +469,7 @@ class _SavingPlanState extends State<SavingPlan> {
                   child: Container(
                     padding: const EdgeInsets.all(16.0),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(8),
                       boxShadow: [
                         BoxShadow(
@@ -377,33 +490,23 @@ class _SavingPlanState extends State<SavingPlan> {
                               category.icon,
                               color: category.color,
                               size: 31.0,
+                              shadows: [],
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                category.name ?? "Unbekannt",
+                                "${category.name}: ${category.budgetLimit.toString()}€"  ?? "Unbekannt",
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'Roboto',
-                                ),
+                                  /*foreground: Paint()
+                                    ..style = PaintingStyle.stroke
+                                    ..strokeWidth = 2 // Dicke der Umrandung
+                                    ..color = Colors.white, // Farbe der Umrandung
+                                */),
                               ),
                             ),
-                            // Nachricht rechts oben im Widget
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  '${streakCounterDictionary[category.id] ?? 0} ${streakCounterDictionary[category.id] == 1 ? "Monat" : "Monate"} in Folge',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey,
-                                    fontFamily: 'Roboto',
-                                  ),
-                                ),
-                              ],
-                            ),
-
                           ],
                         ),
 
@@ -415,18 +518,15 @@ class _SavingPlanState extends State<SavingPlan> {
                           children: [
                             Expanded(
                               child: Text(
-                                remaining < 0
-                                    ? 'Budget um ${(remaining * -1).toStringAsFixed(2)}€ überschritten'
-                                    : remaining == 0
-                                    ? "Budget optimal verwendet"
-                                    : '${remaining.toStringAsFixed(2)}€ von ${category.budgetLimit?.toStringAsFixed(2)}€ verfügbar',
+                                spentMessage,
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: remaining < 0 ? Colors.red : Colors.green,
+                                  color: Theme.of(context).textTheme.bodyLarge?.color,
                                   fontFamily: 'Roboto',
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
+
                             ),
                             const SizedBox(width: 10),
                             Text(
@@ -437,7 +537,12 @@ class _SavingPlanState extends State<SavingPlan> {
                                     ? Colors.red
                                     : Colors.green,
                                 fontFamily: 'Roboto',
-                              ),
+                                /*foreground: Paint()
+                                  ..style = PaintingStyle.stroke
+                                  ..strokeWidth = 2 // Dicke der Umrandung
+                                  ..color = Colors.white, // Farbe der Umrandung
+
+                              */),
                             ),
                           ],
                         ),
@@ -450,7 +555,7 @@ class _SavingPlanState extends State<SavingPlan> {
                         // LinearProgressIndicator
                         LinearProgressIndicator(
                           value: spentPercent, // Dieser Wert wird nun angepasst
-                          backgroundColor: Colors.teal[100],
+                          backgroundColor: Theme.of(context).colorScheme.onSecondary,
                           color: category.color,
                           minHeight: 8,
                         ),

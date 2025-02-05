@@ -11,8 +11,11 @@ import 'package:budget_management_app/backend/Transaction.dart' as testTrans;
 import 'package:budget_management_app/auth.dart';
 import 'package:budget_management_app/widget_tree.dart';
 import 'package:flutter/foundation.dart'; // For kIsWeb
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io'; // For File handling on mobile/desktop
 import 'dart:html' as html;
+import 'MoneyGuard/themeProvider.dart';
 import 'backend/ImportedTransaction.dart'; // For File handling on web
 
 
@@ -85,8 +88,14 @@ void main() async {
       }
     });
 
+    WidgetsFlutterBinding.ensureInitialized(); // Warte auf SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
     // Start the app
-    runApp(const MyApp());
+    runApp(ChangeNotifierProvider(
+      create: (context) => ThemeProvider(),
+      child: const MyApp(),
+    ),);
   } catch (e) {
     debugPrint("Firebase initialization failed: $e");
   }

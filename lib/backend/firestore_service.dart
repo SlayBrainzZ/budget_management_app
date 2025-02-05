@@ -297,7 +297,12 @@ class FirestoreService {
       final userBankAccountsRef = usersRef.doc(documentId).collection('bankAccounts');
       firestore.QuerySnapshot snapshot = await userBankAccountsRef.get();
       print("Abgerufene Konten: ${snapshot.docs.length}");
-      return snapshot.docs.map((doc) => BankAccount.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+      //return snapshot.docs.map((doc) => BankAccount.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+      // Filtere nur Konten mit gültigem Namen und gültigem Typ
+      return snapshot.docs
+          .map((doc) => BankAccount.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .where((account) => account.accountName != null && account.accountName!.isNotEmpty && account.accountType != 'unknown')
+          .toList();
     } catch (e) {
       print("Error getting user bank accounts: $e");
       return [];
@@ -441,6 +446,7 @@ class FirestoreService {
   /// from the user's `Categories` subcollection.
 
   Future<List<Category>> getUserCategories(String documentId) async {
+    //print("entered getUserCategories" );
     try {
       final userCategoriesRef = usersRef.doc(documentId).collection('Categories');
       firestore.QuerySnapshot snapshot = await userCategoriesRef.get();
@@ -449,6 +455,7 @@ class FirestoreService {
           return Category.fromMap(doc.data() as Map<String, dynamic>, doc.id);
         } catch (e) {
           print("Error parsing category: $e");
+          //print("left getUserCategories" );
           return null; // Handle gracefully
         }
       }).whereType<Category>().toList(); // Remove nulls from the list
@@ -475,7 +482,6 @@ class FirestoreService {
 
   Future<void> createDefaultCategories(String userId) async {
     final List<Map<String, dynamic>> defaultCategories = [
-      {'name': 'Einnahmen', 'icon': Icons.attach_money, 'color': Colors.green, 'budgetLimit': 0.0},
       {'name': 'Unterhaltung', 'icon': Icons.movie, 'color': Colors.blue, 'budgetLimit': 0.0},
       {'name': 'Lebensmittel', 'icon': Icons.restaurant, 'color': Colors.orange, 'budgetLimit': 0.0},
       {'name': 'Haushalt', 'icon': Icons.home, 'color': Colors.teal, 'budgetLimit': 0.0},
@@ -1185,63 +1191,33 @@ class FirestoreService {
     }
   }
 
-  /*
-  Future<double> calculateBankAccountBalance(String documentId, BankAccount bankAccount) async {
-    try {
-      // Starten mit dem aktuellen Kontostand im Bankkonto
-      double totalBalance = bankAccount.balance ?? 0.0;
-
-      // Abrufen aller Transaktionen für das spezifische Konto
-      List<Transaction> transactions = await FirestoreService()
-          .getTransactionsByAccountIds(documentId, [bankAccount.id!]);
-
-      // Berechnung des Gesamtguthabens basierend auf den Transaktionen
-      for (var transaction in transactions) {
-        // Einnahmen addieren
-        if (transaction.type == 'Einnahme') {
-          totalBalance += transaction.amount;
-        }
-        // Ausgaben subtrahieren
-        else if (transaction.type == 'Ausgabe') {
-          totalBalance -= transaction.amount;
-        }
-      }
-
-      print('balance ${bankAccount.balance}');
-
-      // Optional: Aktualisiere den Kontostand im BankAccount-Objekt
-      bankAccount.balance = totalBalance;
-      bankAccount.lastUpdated = DateTime.now();
-
-      return totalBalance;
-    } catch (e) {
-      print("Error calculating balance for bank account: $e");
-      return bankAccount.balance ?? 0.0;
-    }
-  }*/
 
   Future<double> calculateBankAccountBalance(String documentId, BankAccount bankAccount) async {
     try {
       // Start mit dem aktuellen Kontostand im Bankkonto
-      double totalBalance = bankAccount.balance ?? 0.0;
-
+      //double totalBalance = bankAccount.balance ?? 0.0;
+      double totalBalance = 0.0;
       // Letzter Aktualisierungszeitpunkt des Kontos
-      DateTime? lastUpdated = bankAccount.lastUpdated;
+      //DateTime? lastUpdated = bankAccount.lastUpdated;
 
       // Abrufen aller relevanten Transaktionen
       List<Transaction> transactions = await FirestoreService()
           .getTransactionsByAccountIds(documentId, [bankAccount.id!]);
-
+      transactions.forEach((transaction) {
+        totalBalance += transaction.amount;
+        //print("Transaction Amount: ${transaction.amount}");
+      });
+      /*
       for (var transaction in transactions) {
         // Überprüfen, ob die Transaktion nach der letzten Aktualisierung liegt
         if (lastUpdated == null || transaction.date.isAfter(lastUpdated)) {
           if (transaction.type == 'Einnahme') {
             totalBalance += transaction.amount;
           } else if (transaction.type == 'Ausgabe') {
-            totalBalance -= transaction.amount;
+            totalBalance += transaction.amount;
           }
         }
-      }
+      }*/
 
       // Kontostand und Aktualisierungszeitpunkt speichern
       bankAccount.balance = totalBalance;
@@ -1254,63 +1230,39 @@ class FirestoreService {
     }
   }
 
-/*
-  Future<double> calculateImportBankAccountBalance(String documentId, BankAccount bankAccount) async {
-    try {
-      // Starten mit dem aktuellen Kontostand im Bankkonto
-      double totalBalance = bankAccount.balance ?? 0.0;
 
-      // Abrufen aller Transaktionen für das spezifische Konto
-      List<ImportedTransaction> transactions = await FirestoreService()
-          .getImportedTransactionsByAccountIds(documentId, [bankAccount.id!]);
-
-      // Berechnung des Gesamtguthabens basierend auf den Transaktionen
-      for (var transaction in transactions) {
-        // Einnahmen addieren (inflow)
-        if (transaction.inflow > 0) {
-          totalBalance += transaction.inflow;
-        }
-        // Ausgaben subtrahieren (outflow)
-        if (transaction.outflow > 0) {
-          totalBalance -= transaction.outflow;
-        }
-      }
-
-      print('balance ${bankAccount.balance}');
-
-      // Optional: Aktualisiere den Kontostand im BankAccount-Objekt
-      bankAccount.balance = totalBalance;
-      bankAccount.lastUpdated = DateTime.now();
-
-      return totalBalance;
-    } catch (e) {
-      print("Error calculating balance for bank account: $e");
-      return bankAccount.balance ?? 0.0;
-    }
-  }*/
   Future<double> calculateImportBankAccountBalance(String documentId, BankAccount bankAccount) async {
     try {
       // Start mit dem aktuellen Kontostand im Bankkonto
-      double totalBalance = bankAccount.balance ?? 0.0;
+      double totalBalance = 0.0;
 
       // Letzter Aktualisierungszeitpunkt des Kontos
-      DateTime? lastUpdated = bankAccount.lastUpdated;
+      //DateTime? lastUpdated = bankAccount.lastUpdated;
 
       List<ImportedTransaction> transactions = await FirestoreService()
           .getImportedTransactionsByAccountIds(documentId, [bankAccount.id!]);
+      transactions.forEach((transaction) {
+        totalBalance += transaction.amount;
+        //print("Transaction Amount: ${transaction.amount}");
+      });
 
+/*
       // Berechnung des Gesamtguthabens basierend auf den Transaktionen
       for (var transaction in transactions) {
         if (lastUpdated == null || transaction.date.isAfter(lastUpdated)) {
+          totalBalance += transaction.amount;
           // Einnahmen addieren (inflow)
           if (transaction.inflow > 0) {
-            totalBalance += transaction.inflow;
+            totalBalance += transaction.amount;
+            print("balanceinflow: $totalBalance");
           }
           // Ausgaben subtrahieren (outflow)
           if (transaction.outflow > 0) {
-            totalBalance -= transaction.outflow;
+            totalBalance += transaction.amount;
+            print("balanceinflow: $totalBalance");
           }}
-      }
+      print("balance: $totalBalance");
+      }*/
 
       // Kontostand und Aktualisierungszeitpunkt speichern
       bankAccount.balance = totalBalance;
@@ -1359,8 +1311,9 @@ class FirestoreService {
     return totalSpending;
   }
 
-  Future<List<ImportedTransaction>> getImportedTransactionsByDateRange(String documentId, String type, DateTime startDate, DateTime endDate, String accountid) async {
-    print("getImportedTransactionsByDateRange");
+  Future<List<ImportedTransaction>> getImportedTransactionsByDateRange(String documentId, String type, DateTime startDate, DateTime endDate, String accountid, bool forBalance) async {
+    //print("getImportedTransactionsByDateRange");
+    firestore.Query query;
     try {
       // Setze startDate auf Mitternacht und endDate auf den letzten Moment des Tages
       startDate = DateTime.utc(startDate.year, startDate.month, startDate.day, 0, 0, 0).subtract(Duration(microseconds: 1));
@@ -1369,11 +1322,18 @@ class FirestoreService {
       // Zugriff auf die 'ImportedTransactions'-Unterkollektion des Nutzers
       final userImportedTransactionsRef = usersRef.doc(documentId).collection('ImportedTransactions');
 
-      // Basiskonfiguration der Abfrage
-      firestore.Query query = userImportedTransactionsRef
-          .where('date', isGreaterThanOrEqualTo: startDate.toIso8601String())
-          .where('date', isLessThanOrEqualTo: endDate.toIso8601String())
-          .orderBy('date', descending: true);
+
+      if (forBalance == false) {
+        // Basiskonfiguration der Abfrage
+        query = userImportedTransactionsRef
+            .where('date', isGreaterThanOrEqualTo: startDate.toIso8601String())
+            .where('date', isLessThanOrEqualTo: endDate.toIso8601String())
+            .orderBy('date', descending: true);
+      } else {
+        query = userImportedTransactionsRef
+            .where('date', isLessThan: startDate.toIso8601String())
+            .orderBy('date', descending: true);
+      }
 
       // Abfrage ausführen
       firestore.QuerySnapshot querySnapshot = await query.get();
@@ -1388,14 +1348,17 @@ class FirestoreService {
     }
   }
 
+
   /// Gets transactions within a specific date range for a specific user.
   ///
   /// This function takes the user's `documentId`, a `startDate`, and an `endDate` as input,
   /// and retrieves all transaction documents from the user's `Transactions` subcollection that fall
   /// within the given date range.
-  Future<List<Transaction>> getSpecificTransactionByDateRange(String documentId, String type, DateTime startDate, DateTime endDate, String accountid) async {
+  Future<List<Transaction>> getSpecificTransactionByDateRange(String documentId, String type, DateTime startDate, DateTime endDate, String accountid, bool forBalance) async {
 
-    print("getSpecificTransactionByDateRange");
+    //print("getSpecificTransactionByDateRange");
+
+    firestore.Query query;
     try {
       // Setze startDate auf Mitternacht (00:00:00) und endDate auf den letzten Moment des Tages (23:59:59)
       startDate = DateTime.utc(startDate.year, startDate.month, startDate.day, 0, 0, 0).subtract(Duration(microseconds: 1)); // Setze die Zeit auf 00:00
@@ -1403,12 +1366,17 @@ class FirestoreService {
       //print("STARTDATE: $startDate UND ENDDATE: $endDate");
       final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
 
-      // Basiskonfiguration der Abfrage
-      firestore.Query query = userTransactionsRef
-          .where('date', isGreaterThanOrEqualTo: startDate.toIso8601String())
-          .where('date', isLessThanOrEqualTo: endDate.toIso8601String())
-          .orderBy('date', descending: true);
 
+      if (forBalance == false) {
+        query = userTransactionsRef
+            .where('date', isGreaterThanOrEqualTo: startDate.toIso8601String())
+            .where('date', isLessThanOrEqualTo: endDate.toIso8601String())
+            .orderBy('date', descending: true);
+      } else {
+        query = userTransactionsRef
+            .where('date', isLessThan: startDate.toIso8601String())
+            .orderBy('date', descending: true);
+      }
       // Abfrage ausführen
       firestore.QuerySnapshot snapshot = await query.get();
 
@@ -1427,195 +1395,69 @@ class FirestoreService {
     }
   }
 
-  /// Calculates monthly spending for a given user.
-  ///
-  /// This function takes the user's `documentId` and a `year` as input,
-  /// and calculates the total spending for each month of the given year.
 
   Future<List<Map<String, double>>> calculateYearlyImportedSpendingByMonth(String documentId, String chosenYear, String accountId) async {
-    print("Entered calculateYearlyImportedSpendingByMonth");
+    //print("entered calculateYearlyImportedSpendingByMonth");
 
-    // Erstelle Maps zur Speicherung der Ergebnisse
+
+
+
+    // Initialisiere Maps für Einnahmen, Ausgaben und Nettoergebnis
     Map<String, double> incomeMap = {};
     Map<String, double> expenseMap = {};
     Map<String, double> netMap = {};
 
-    double cumulativeNetAmount = 0.0; // Startwert für den kumulierten Kontostand
+    double cumulativeNetAmount = 0.0; // Startwert für kumulierten Kontostand
+    double startBalance = 0.0;
 
-    // Iteriere über alle Monate
-    for (int month = 1; month <= 12; month++) {
-      // Setze Start- und Enddatum für den Monat
-      DateTime startDate = DateTime.utc(int.parse(chosenYear), month, 1);
-      DateTime endDate =
-      DateTime.utc(int.parse(chosenYear), month + 1, 1).subtract(Duration(days: 1));
+    int currentYear = DateTime.now().year;
+    int currentMonth = DateTime.now().month;
+    int maxMonth = (int.parse(chosenYear) == currentYear) ? currentMonth : 12;
 
-      // Hole die ImportedTransactions für den aktuellen Monat
-      List<ImportedTransaction> monthTransactions =
-      await getImportedTransactionsByDateRange(
-          documentId, "null", startDate, endDate, accountId);
+    // **1. Alle Transaktionen für das Jahr auf einmal abrufen**
+    DateTime startDate = DateTime.utc(int.parse(chosenYear), 1, 1);
+    DateTime endDate = DateTime.utc(int.parse(chosenYear), 12, 31);
 
+    //alle transactions vor dem gewünschtenZeitraumum den Kontostand zu berechnen
+    List<ImportedTransaction> allTransactionsforBalance = await getImportedTransactionsByDateRange(
+        documentId, "null", startDate, endDate, accountId, true); //ganz normal aufrufen
+    startBalance = allTransactionsforBalance.fold(0.0, (sum, transaction) => sum + transaction.amount);
+    print("StartBalance für calculateYearlyImportedSpendingByMonth $startBalance");
+    cumulativeNetAmount = startBalance;
+
+
+    //alle transaftions im gewünschten Zeitraum
+    List<ImportedTransaction> yearTransactions = await getImportedTransactionsByDateRange(
+        documentId, "null", startDate, endDate, accountId, false);
+
+    // **2. Transaktionen in einer Map nach Monat gruppieren**
+    Map<int, List<ImportedTransaction>> transactionsByMonth = {};
+
+    for (var transaction in yearTransactions) {
+      int month = transaction.date.month;
+      transactionsByMonth.putIfAbsent(month, () => []).add(transaction);
+    }
+
+    // **3. Iteration über Monate (1–12), falls keine Daten für einen Monat existieren, bleibt er leer**
+    for (int month = 1; month <= maxMonth; month++) {
+      String monthKey = "$chosenYear-${month.toString().padLeft(2, '0')}";
+
+      // Standardwerte für Monate ohne Transaktionen
       double monthIncome = 0.0;
       double monthExpense = 0.0;
 
-      // Berechne Einnahmen und Ausgaben für importierte Transaktionen
-      for (var transaction in monthTransactions) {
-        if (transaction.inflow > 0) {
-          monthIncome += transaction.inflow;
-        } else if (transaction.outflow != 0) {
-          monthExpense += transaction.outflow.abs();
+      if (transactionsByMonth.containsKey(month)) {
+        for (var transaction in transactionsByMonth[month]!) {
+          monthIncome += transaction.inflow > 0 ? transaction.inflow : 0;
+          monthExpense += transaction.outflow != 0 ? -transaction.outflow.abs() : 0;
         }
       }
 
-      // Netto für den aktuellen Monat berechnen
-      double netAmount = monthIncome - monthExpense;
-
-      // Kumulierten Kontostand aktualisieren
+      // Netto für den aktuellen Monat berechnen & kumulativen Betrag aktualisieren
+      double netAmount = monthIncome + monthExpense;
       cumulativeNetAmount += netAmount;
 
-      // Monatsschlüssel generieren
-      String monthKey = "${startDate.year}-${month.toString().padLeft(2, '0')}";
-
-      // Speichere die Ergebnisse in den Maps
-      incomeMap[monthKey] = monthIncome;
-      expenseMap[monthKey] = monthExpense;
-      netMap[monthKey] = cumulativeNetAmount;
-
-      print(
-          "Monat: $monthKey, Einnahmen: $monthIncome, Ausgaben: $monthExpense, Kontostand: $cumulativeNetAmount");
-    }
-
-    print("Finished calculateYearlyImportedSpendingByMonth");
-
-    return [incomeMap, expenseMap, netMap];
-  }
-  Future<List<Map<String, double>>> calculateYearlySpendingByMonth2(String documentId, String chosenYear, String accountid) async {
-    print("Entered calculateYearlySpendingByMonth2");
-
-    // Erstelle Maps zur Speicherung der Ergebnisse
-    Map<String, double> incomeMap = {};
-    Map<String, double> expenseMap = {};
-    Map<String, double> netMap = {};
-
-    // Kumulatives Netto
-    double cumulativeNetAmount = 0.0;
-
-    // Liste für parallele Futures
-    List<Future<Map<String, dynamic>>> futures = [];
-
-    // Erstelle Futures für alle Monate
-    for (int month = 1; month <= 12; month++) {
-      futures.add(Future(() async {
-        // Setze Start- und Enddatum für den Monat
-        DateTime startDate = DateTime.utc(int.parse(chosenYear), month, 1);
-        DateTime endDate = DateTime.utc(int.parse(chosenYear), month + 1, 1).subtract(Duration(days: 1));
-
-        // Hole die Transaktionen für den aktuellen Monat
-        List<Transaction> monthTransactions = await getSpecificTransactionByDateRange(documentId, "null", startDate, endDate, accountid);
-
-        double monthIncome = 0.0;
-        double monthExpense = 0.0;
-
-        for (var transaction in monthTransactions) {
-          if (transaction.type == "Einnahme") {
-            monthIncome += transaction.amount;
-          } else if (transaction.type == "Ausgabe") {
-            monthExpense += transaction.amount;
-          }
-        }
-
-        // Kumuliertes Netto berechnen
-        double netAmount = monthIncome - monthExpense;
-
-        // Monatsschlüssel generieren
-        String monthKey = "${startDate.year}-${month.toString().padLeft(2, '0')}";
-
-        return {
-          "monthKey": monthKey,
-          "monthIncome": monthIncome,
-          "monthExpense": monthExpense,
-          "netAmount": netAmount
-        };
-      }));
-    }
-
-    // Warte auf alle parallelen Futures
-    List<Map<String, dynamic>> results = await Future.wait(futures);
-
-    // Ergebnisse sammeln
-    for (var result in results) {
-      String monthKey = result["monthKey"];
-      double monthIncome = result["monthIncome"];
-      double monthExpense = result["monthExpense"];
-      double netAmount = result["netAmount"];
-
-      // Aktualisiere Maps und kumulatives Netto
-      incomeMap[monthKey] = monthIncome;
-      expenseMap[monthKey] = monthExpense;
-      cumulativeNetAmount += netAmount;
-      netMap[monthKey] = cumulativeNetAmount;
-
-      // Debug-Ausgabe
-      //print("Monat: $monthKey, Einnahmen: $monthIncome, Ausgaben: $monthExpense, Kumuliertes Netto: $cumulativeNetAmount");
-    }
-
-    print("Left calculateYearlySpendingByMonth2");
-    return [incomeMap, expenseMap, netMap];
-  }
-  Future<List<Map<String, double>>> combineYearlyCombinedSpendingByMonth(String documentId, String chosenYear, String accountId) async {
-    print("Entered combineYearlyCombinedSpendingByMonth");
-
-    // Initialisiere Maps für Einnahmen, Ausgaben und Netto
-    Map<String, double> incomeMap = {};
-    Map<String, double> expenseMap = {};
-    Map<String, double> netMap = {};
-
-    double cumulativeNetAmount = 0.0; // Startwert für den kumulierten Kontostand
-
-    // Liste für parallele Futures
-    for (int month = 1; month <= 12; month++) {
-      // Setze Start- und Enddatum für den Monat
-      DateTime startDate = DateTime.utc(int.parse(chosenYear), month, 1);
-      DateTime endDate = DateTime.utc(int.parse(chosenYear), month + 1, 1)
-          .subtract(Duration(days: 1));
-
-      // Hole reguläre und importierte Transaktionen
-      List<Transaction> monthTransactions =
-      await getSpecificTransactionByDateRange(documentId, "null", startDate, endDate, accountId);
-
-      List<ImportedTransaction> importedMonthTransactions =
-      await getImportedTransactionsByDateRange(documentId, "null", startDate, endDate, accountId);
-
-      double monthIncome = 0.0;
-      double monthExpense = 0.0;
-
-      // Berechne Einnahmen und Ausgaben für reguläre Transaktionen
-      for (var transaction in monthTransactions) {
-        if (transaction.type == "Einnahme") {
-          monthIncome += transaction.amount;
-        } else if (transaction.type == "Ausgabe") {
-          monthExpense += transaction.amount;
-        }
-      }
-
-      // Berechne Einnahmen und Ausgaben für importierte Transaktionen
-      for (var importedTransaction in importedMonthTransactions) {
-        if (importedTransaction.inflow != 0) {
-          monthIncome += importedTransaction.inflow.abs();
-        } else if (importedTransaction.outflow != 0) {
-          monthExpense += importedTransaction.outflow.abs();
-        }
-      }
-
-      // Berechne Netto für den Monat
-      double netAmount = monthIncome - monthExpense;
-
-      // Addiere den Netto-Wert zum kumulierten Kontostand
-      cumulativeNetAmount += netAmount;
-
-      // Generiere den Monatsschlüssel
-      String monthKey = "${startDate.year}-${month.toString().padLeft(2, '0')}";
-
-      // Speichere die Ergebnisse in den Maps
+      // **4. Ergebnisse in Maps speichern**
       incomeMap[monthKey] = monthIncome;
       expenseMap[monthKey] = monthExpense;
       netMap[monthKey] = cumulativeNetAmount;
@@ -1623,299 +1465,493 @@ class FirestoreService {
       print("Monat: $monthKey, Einnahmen: $monthIncome, Ausgaben: $monthExpense, Kontostand: $cumulativeNetAmount");
     }
 
-    print("Left combineYearlyCombinedSpendingByMonth");
+    print("Finished calculateYearlyImportedSpendingByMonth");
+
     return [incomeMap, expenseMap, netMap];
   }
 
 
-  Future<List<double>> calculateMonthlyImportedSpendingByDay(String documentId, String type, String chosenYear, String chosenMonth, double lastMonthBalance, String accountId) async {
-    print("Entered calculateMonthlyImportedSpendingByDay");
+  Future<List<Map<String, double>>> calculateYearlySpendingByMonth2(String documentId, String chosenYear, String accountid) async {
+    //print("entered calculateYearlySpendingByMonth2");
 
-    // Erster und letzter Tag des aktuellen Monats
-    DateTime startDate = DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth), 1);
-    DateTime endDate = DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth) + 1, 1)
-        .subtract(Duration(days: 1));
+    // Initialisiere Maps für Einnahmen, Ausgaben und Nettoergebnis
+    Map<String, double> incomeMap = {};
+    Map<String, double> expenseMap = {};
+    Map<String, double> netMap = {};
 
-    // Initialisierung der Liste für die Tage des Monats
-    List<double> monthlySpending = List.filled(endDate.day, 0.0);
+    double cumulativeNetAmount = 0.0; // Startwert für kumulierten Kontostand
+    double startBalance = 0.0;
 
-    // Hole alle ImportedTransactions für den aktuellen Monat
-    List<ImportedTransaction> monthTransactions = await getImportedTransactionsByDateRange(documentId, "null", startDate, endDate, accountId);
+    // **Bestimme das maximale Monat basierend auf dem Jahr**
+    int currentYear = DateTime.now().year;
+    int currentMonth = DateTime.now().month;
+    int maxMonth = (int.parse(chosenYear) == currentYear) ? currentMonth : 12;
 
-    // Liste für parallele Futures
-    List<Future<Map<String, dynamic>>> futures = [];
+    // **1. Alle Transaktionen für das Jahr auf einmal abrufen**
+    DateTime startDate = DateTime.utc(int.parse(chosenYear), 1, 1);
+    DateTime endDate = DateTime.utc(int.parse(chosenYear), 12, 31);
 
-    // Erstelle Futures für jeden Tag des Monats
-    for (int day = 1; day <= endDate.day; day++) {
-      futures.add(Future(() async {
-        DateTime currentDay = DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth), day)
-            .subtract(Duration(microseconds: 1));
+    List<Transaction> allTransactionsforBalance = await getSpecificTransactionByDateRange(
+        documentId, "null", startDate, endDate, accountid, true); //ganz normal aufrufen
+    print("allTransactionsforBalance ist $allTransactionsforBalance");
+    startBalance = allTransactionsforBalance.fold(0.0, (sum, transaction) => sum + transaction.amount);
+    print("StartBalance für calculateYearlySpendingByMonth2ist $startBalance");
+    cumulativeNetAmount = startBalance;
 
-        // Filtere ImportedTransactions für den aktuellen Tag
-        List<ImportedTransaction> dayTransactions = monthTransactions.where((transaction) {
-          return transaction.date.toUtc().year == currentDay.year &&
-              transaction.date.toUtc().month == currentDay.month &&
-              transaction.date.toUtc().day == currentDay.day;
-        }).toList();
 
-        double dayInflow = 0.0;
-        double dayOutflow = 0.0;
+    List<Transaction> yearTransactions = await getSpecificTransactionByDateRange(
+        documentId, "null", startDate, endDate, accountid,false);
 
-        for (var transaction in dayTransactions) {
-          if (transaction.inflow > 0) {
-            dayInflow += transaction.inflow;
-          } else if (transaction.outflow != 0) {
-            double number = transaction.outflow * transaction.outflow;
-            number = sqrt(number);
-            dayOutflow += number;
-          }
-        }
+    // **2. Transaktionen nach Monaten gruppieren**
+    Map<int, List<Transaction>> transactionsByMonth = {};
 
-        // Ergebnis zurückgeben
-        return {
-          "dayIndex": day - 1, // Liste ist 0-basiert
-          "dayInflow": dayInflow,
-          "dayOutflow": dayOutflow
-        };
-      }));
+    for (var transaction in yearTransactions) {
+      int month = transaction.date.month;
+      transactionsByMonth.putIfAbsent(month, () => []).add(transaction);
     }
 
-    // Warte auf alle parallelen Futures
-    List<Map<String, dynamic>> results = await Future.wait(futures);
+    // **3. Iteriere über alle Monate und berechne Einnahmen & Ausgaben**
+    for (int month = 1; month <= maxMonth; month++) {
+      String monthKey = "$chosenYear-${month.toString().padLeft(2, '0')}";
 
-    // Variablen zur Berechnung des kumulierten Netto-Guthabens
-    double cumulativeNetAmount = lastMonthBalance;
+      // Standardwerte für Monate ohne Transaktionen
+      double monthIncome = 0.0;
+      double monthExpense = 0.0;
 
-    // Ergebnisse sammeln
-    for (var result in results) {
-      int dayIndex = result["dayIndex"];
-      double dayInflow = result["dayInflow"];
-      double dayOutflow = result["dayOutflow"];
+      if (transactionsByMonth.containsKey(month)) {
+        for (var transaction in transactionsByMonth[month]!) {
+          switch (transaction.type) {
+            case "Einnahme":
+              monthIncome += transaction.amount;
+              break;
+            case "Ausgabe":
+              monthExpense += transaction.amount;
+              break;
+          }
+        }
+      }
+
+      // Netto für den aktuellen Monat berechnen & kumulativen Betrag aktualisieren
+      double netAmount = monthIncome + monthExpense; // Netto = Einnahmen - Ausgaben
+      cumulativeNetAmount += netAmount;
+
+      // **4. Ergebnisse in Maps speichern**
+      incomeMap[monthKey] = monthIncome;
+      expenseMap[monthKey] = monthExpense;
+      netMap[monthKey] = cumulativeNetAmount;
+
+      print("Monat: $monthKey, Einnahmen: $monthIncome, Ausgaben: $monthExpense, Kumuliertes Netto: $cumulativeNetAmount");
+    }
+
+    print("Finished calculateYearlySpendingByMonth2");
+
+    return [incomeMap, expenseMap, netMap];
+  }
+
+
+  Future<List<Map<String, double>>> combineYearlyCombinedSpendingByMonth(String documentId, String chosenYear, String accountId) async {
+    //print("entered combineYearlyCombinedSpendingByMonth");
+
+    // Initialisiere Maps für Einnahmen, Ausgaben und Netto
+    Map<String, double> incomeMap = {};
+    Map<String, double> expenseMap = {};
+    Map<String, double> netMap = {};
+
+    double cumulativeNetAmount = 0.0; // Startwert für kumulierten Kontostand
+
+    double importedStartBalance = 0.0;
+    double manuallyStartBalance = 0.0;
+
+    // **Bestimme das maximale Monat basierend auf dem Jahr**
+    int currentYear = DateTime.now().year;
+    int currentMonth = DateTime.now().month;
+    int maxMonth = (int.parse(chosenYear) == currentYear) ? currentMonth : 12;
+
+    // **1. Alle Transaktionen für das Jahr auf einmal abrufen**
+    DateTime startDate = DateTime.utc(int.parse(chosenYear), 1, 1);
+    DateTime endDate = DateTime.utc(int.parse(chosenYear), 12, 31);
+
+    DateTime? oldestImportedTransactionDate;
+    DateTime? oldestManualTransactionDate;
+    DateTime? oldestTransactionDate;
+
+
+
+    //alle importedtransactions vor dem gewünschtenZeitraumum den Kontostand zu berechnen
+    List<ImportedTransaction> allImportedTransactionsforBalance = await getImportedTransactionsByDateRange(
+        documentId, "null", startDate, endDate, accountId, true); //ganz normal aufrufen
+    importedStartBalance = allImportedTransactionsforBalance.fold(0.0, (sum, transaction) => sum + transaction.amount);
+    print("StartBalance für importedStartBalance  $importedStartBalance");
+
+    //alle manuallytransactions vor dem gewünschtenZeitraumum den Kontostand zu berechnen
+    List<Transaction> allManuallyTransactionsforBalance = await getSpecificTransactionByDateRange(
+        documentId, "null", startDate, endDate, accountId, true); //ganz normal aufrufen
+    manuallyStartBalance = allManuallyTransactionsforBalance.fold(0.0, (sum, transaction) => sum + transaction.amount);
+    print("StartBalance für manuallyStartBalance $manuallyStartBalance");
+
+    cumulativeNetAmount = importedStartBalance + manuallyStartBalance;
+    print("StartBalance insgesamt für große statistik $cumulativeNetAmount");
+
+
+    // Hole ALLE Transaktionen des Jahres auf einmal
+    List<Transaction> yearTransactions = await getSpecificTransactionByDateRange(documentId, "null", startDate, endDate, accountId, false);
+    List<ImportedTransaction> importedYearTransactions = await getImportedTransactionsByDateRange(documentId, "null", startDate, endDate, accountId, false);
+
+    // **2. Transaktionen nach Monaten gruppieren**
+    Map<int, List<Transaction>> transactionsByMonth = {};
+    Map<int, List<ImportedTransaction>> importedTransactionsByMonth = {};
+
+
+
+    for (var transaction in yearTransactions) {
+      int month = transaction.date.month;
+      transactionsByMonth.putIfAbsent(month, () => []).add(transaction);
+    }
+
+    for (var importedTransaction in importedYearTransactions) {
+      int month = importedTransaction.date.month;
+      importedTransactionsByMonth.putIfAbsent(month, () => []).add(importedTransaction);
+    }
+
+    // **3. Iteration über Monate und Berechnung der Werte**
+    for (int month = 1; month <= maxMonth; month++) {
+      String monthKey = "$chosenYear-${month.toString().padLeft(2, '0')}";
+
+      double monthIncome = 0.0;
+      double monthExpense = 0.0;
+
+      // **Verarbeite reguläre Transaktionen**
+      if (transactionsByMonth.containsKey(month)) {
+        for (var transaction in transactionsByMonth[month]!) {
+          if (transaction.type == "Einnahme") {
+            monthIncome += transaction.amount;
+          } else if (transaction.type == "Ausgabe") {
+            monthExpense += transaction.amount;
+          }
+        }
+      }
+
+      // **Verarbeite importierte Transaktionen**
+      if (importedTransactionsByMonth.containsKey(month)) {
+        for (var importedTransaction in importedTransactionsByMonth[month]!) {
+          monthIncome += importedTransaction.inflow;
+          monthExpense += -importedTransaction.outflow.abs();
+        }
+      }
+
+      // Netto für den aktuellen Monat berechnen & kumulatives Netto aktualisieren
+      double netAmount = monthIncome + monthExpense;
+      cumulativeNetAmount += netAmount;
+
+      // **4. Ergebnisse in Maps speichern**
+      incomeMap[monthKey] = monthIncome;
+      expenseMap[monthKey] = monthExpense;
+      netMap[monthKey] = cumulativeNetAmount;
+
+      print("Monat: $monthKey, Einnahmen: $monthIncome, Ausgaben: $monthExpense, Kontostand: $cumulativeNetAmount");
+    }
+
+    //print("left combineYearlyCombinedSpendingByMonth");
+    return [incomeMap, expenseMap, netMap];
+  }
+
+
+  Future<List<double>> calculateMonthlyImportedSpendingByDay(String documentId, String type, String chosenYear, String chosenMonth, String accountId) async {
+
+    //print("entered calculateMonthlyImportedSpendingByDay");
+
+    // Aktuelles Datum abrufen
+    DateTime now = DateTime.now();
+    int currentYear = now.year;
+    int currentMonth = now.month;
+    int currentDay = now.day;
+
+    // Start- und Enddatum des Monats berechnen
+    DateTime startDate = DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth), 1);
+    DateTime endDate = (int.parse(chosenYear) == currentYear && int.parse(chosenMonth) == currentMonth)
+        ? DateTime.utc(currentYear, currentMonth, currentDay) // Bis zum heutigen Tag begrenzen
+        : DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth) + 1, 1).subtract(Duration(days: 1));
+
+
+    double cumulativeNetAmount = 0.0;
+    double startBalance = 0.0;
+
+    //alle vorherigen transaction
+    List<ImportedTransaction> allMonthTransactionsforBalance = await getImportedTransactionsByDateRange(
+        documentId, "null", startDate, endDate, accountId, true);
+    startBalance = allMonthTransactionsforBalance.fold(0.0, (sum, transaction) => sum + transaction.amount);
+    print("StartBalance für calculateMonthlyImportedSpendingByDay $startBalance");
+    cumulativeNetAmount = startBalance;
+
+
+
+    // Initialisiere die Liste für tägliche Werte
+    List<double> monthlySpending = List.filled(endDate.day, 0.0);
+
+    // Hole alle Transaktionen für den Monat **auf einmal**
+    List<ImportedTransaction> monthTransactions = await getImportedTransactionsByDateRange(
+        documentId, "null", startDate, endDate, accountId, false);
+
+    // **1. Gruppiere Transaktionen nach Tagen**
+    Map<int, List<ImportedTransaction>> transactionsByDay = {};
+
+    for (var transaction in monthTransactions) {
+      int day = transaction.date.day;
+      transactionsByDay.putIfAbsent(day, () => []).add(transaction);
+    }
+
+    // **2. Berechnung der täglichen Werte**
+    //double cumulativeNetAmount = lastMonthBalance;
+
+    for (int day = 1; day <= endDate.day; day++) {
+      double dayInflow = 0.0;
+      double dayOutflow = 0.0;
+
+      if (transactionsByDay.containsKey(day)) {
+        for (var transaction in transactionsByDay[day]!) {
+          dayInflow += transaction.inflow > 0 ? transaction.inflow : 0;
+          dayOutflow += transaction.outflow.abs();
+        }
+      }
 
       if (type == "null") {
-        // Aktualisiere das kumulative Netto-Guthaben
         cumulativeNetAmount += (dayInflow - dayOutflow);
-        monthlySpending[dayIndex] = cumulativeNetAmount;
+        monthlySpending[day - 1] = cumulativeNetAmount; // Liste ist 0-basiert
       } else if (type == "Einnahme") {
-        monthlySpending[dayIndex] = dayInflow;
+        monthlySpending[day - 1] = dayInflow;
       } else if (type == "Ausgabe") {
-        monthlySpending[dayIndex] = dayOutflow;
+        monthlySpending[day - 1] = -dayOutflow;
       }
     }
 
-    print("Left calculateMonthlyImportedSpendingByDay");
+    //print("left calculateMonthlyImportedSpendingByDay");
     return monthlySpending;
   }
-  Future<List<double>> calculateMonthlySpendingByDay(String documentId, String type, String chosenYear, String chosenMonth, double lastMonthBalance, String accountid) async {
-    print("Entered calculateMonthlySpendingByDay");
 
-    // Erster und letzter Tag des aktuellen Monats
+
+
+  Future<List<double>> calculateMonthlySpendingByDay(String documentId, String type, String chosenYear, String chosenMonth, String accountid) async {
+
+    //print("entered calculateMonthlySpendingByDay");
+
+    // Aktuelles Datum abrufen
+    DateTime now = DateTime.now();
+    int currentYear = now.year;
+    int currentMonth = now.month;
+    int currentDay = now.day;
+
+    // Start- und Enddatum des Monats berechnen
     DateTime startDate = DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth), 1);
-    DateTime endDate = DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth) + 1, 1).subtract(Duration(days: 1));
+    DateTime endDate = (int.parse(chosenYear) == currentYear && int.parse(chosenMonth) == currentMonth)
+        ? DateTime.utc(currentYear, currentMonth, currentDay) // Begrenzung auf aktuellen Tag
+        : DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth) + 1, 1).subtract(Duration(days: 1));
 
-    // Initialisierung der Liste für die Tage des Monats
+
+
+
+    double cumulativeNetAmount = 0.0;
+    double startBalance = 0.0;
+
+    //alle vorherigen transaction
+    List<Transaction> allMonthTransactionsforBalance = await getSpecificTransactionByDateRange(
+        documentId, "null", startDate, endDate, accountid, true);
+    startBalance = allMonthTransactionsforBalance.fold(0.0, (sum, transaction) => sum + transaction.amount);
+    print("StartBalance für calculateMonthlyImportedSpendingByDay $startBalance");
+    cumulativeNetAmount = startBalance;
+
+
+    // Initialisiere die Liste für tägliche Werte
     List<double> monthlySpending = List.filled(endDate.day, 0.0);
 
-    // Hole alle Transaktionen für den aktuellen Monat
-    List<Transaction> monthTransactions = await getSpecificTransactionByDateRange(documentId, "null", startDate, endDate, accountid);
+    // Hole alle Transaktionen für den Monat **auf einmal**
+    List<Transaction> monthTransactions = await getSpecificTransactionByDateRange(
+        documentId, "null", startDate, endDate, accountid, false);
 
-    // Liste für parallele Futures
-    List<Future<Map<String, dynamic>>> futures = [];
+    // **1. Gruppiere Transaktionen nach Tagen**
+    Map<int, List<Transaction>> transactionsByDay = {};
 
-    // Erstelle Futures für jeden Tag des Monats
+    for (var transaction in monthTransactions) {
+      int day = transaction.date.day;
+      transactionsByDay.putIfAbsent(day, () => []).add(transaction);
+    }
+
+    // **2. Berechnung der täglichen Werte**
+    //double cumulativeNetAmount = lastMonthBalance;
+
     for (int day = 1; day <= endDate.day; day++) {
-      futures.add(Future(() async {
-        DateTime currentDay = DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth), day).subtract(Duration(microseconds: 1));
+      double dayIncome = 0.0;
+      double dayExpense = 0.0;
 
-        // Filtere Transaktionen für den aktuellen Tag
-        List<Transaction> dayTransactions = monthTransactions.where((transaction) {
-          return transaction.date.toUtc().year == currentDay.year &&
-              transaction.date.toUtc().month == currentDay.month &&
-              transaction.date.toUtc().day == currentDay.day;
-        }).toList();
-
-        double dayIncome = 0.0;
-        double dayExpense = 0.0;
-
-        for (var transaction in dayTransactions) {
+      if (transactionsByDay.containsKey(day)) {
+        for (var transaction in transactionsByDay[day]!) {
           if (transaction.type == "Einnahme") {
             dayIncome += transaction.amount;
           } else if (transaction.type == "Ausgabe") {
-            dayExpense += transaction.amount;
+            dayExpense += -transaction.amount;
           }
         }
-
-        // Ergebnis zurückgeben
-        return {
-          "dayIndex": day - 1, // Liste ist 0-basiert
-          "dayIncome": dayIncome,
-          "dayExpense": dayExpense
-        };
-      }));
-    }
-
-    // Warte auf alle parallelen Futures
-    List<Map<String, dynamic>> results = await Future.wait(futures);
-
-    // Variablen zur Berechnung des kumulierten Netto-Guthabens
-    double cumulativeNetAmount = lastMonthBalance;
-
-    // Ergebnisse sammeln
-    for (var result in results) {
-      int dayIndex = result["dayIndex"];
-      double dayIncome = result["dayIncome"];
-      double dayExpense = result["dayExpense"];
+      }
 
       if (type == "null") {
-        // Aktualisiere das kumulative Netto-Guthaben
         cumulativeNetAmount += (dayIncome - dayExpense);
-        monthlySpending[dayIndex] = cumulativeNetAmount;
+        monthlySpending[day - 1] = cumulativeNetAmount; // Liste ist 0-basiert
       } else if (type == "Einnahme") {
-        monthlySpending[dayIndex] = dayIncome;
+        monthlySpending[day - 1] = dayIncome;
       } else if (type == "Ausgabe") {
-        monthlySpending[dayIndex] = dayExpense;
+        monthlySpending[day - 1] = -dayExpense;
       }
     }
 
-    print("Left calculateMonthlySpendingByDay");
+    //print("left calculateMonthlySpendingByDay");
     return monthlySpending;
   }
-  Future<List<double>> calculateMonthlyCombinedSpendingByDay(String documentId, String type, String chosenYear, String chosenMonth, double lastMonthBalance, String accountId) async {
-    print("Entered calculateMonthlyCombinedSpendingByDay");
 
-    // Erster und letzter Tag des aktuellen Monats
+
+
+  Future<List<double>> calculateMonthlyCombinedSpendingByDay(String documentId, String type, String chosenYear, String chosenMonth, String accountId) async {
+
+    //print("entered calculateMonthlyCombinedSpendingByDay");
+
+    // Aktuelles Datum abrufen
+    DateTime now = DateTime.now();
+    int currentYear = now.year;
+    int currentMonth = now.month;
+    int currentDay = now.day;
+
+    // Start- und Enddatum des Monats berechnen
     DateTime startDate = DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth), 1);
-    DateTime endDate = DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth) + 1, 1)
-        .subtract(Duration(days: 1));
+    DateTime endDate = (int.parse(chosenYear) == currentYear && int.parse(chosenMonth) == currentMonth)
+        ? DateTime.utc(currentYear, currentMonth, currentDay) // Begrenzung auf aktuellen Tag
+        : DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth) + 1, 1).subtract(Duration(days: 1));
 
-    // Initialisierung der Liste für die Tage des Monats
+
+    double cumulativeNetAmount = 0.0;
+    double manuallytartBalance = 0.0;
+    double importedStartBalance = 0.0;
+
+
+
+    //alle vorherigen transaction
+    List<ImportedTransaction> allMonthImportedTransactionsforBalance = await getImportedTransactionsByDateRange(
+        documentId, "null", startDate, endDate, accountId, true);
+    importedStartBalance = allMonthImportedTransactionsforBalance.fold(0.0, (sum, transaction) => sum + transaction.amount);
+    print("StartBalance für calculateMonthlyImportedSpendingByDay $importedStartBalance");
+
+
+    //alle vorherigen transaction
+    List<Transaction> allMonthManuallyTransactionsforBalance = await getSpecificTransactionByDateRange(
+        documentId, "null", startDate, endDate, accountId, true);
+    manuallytartBalance = allMonthManuallyTransactionsforBalance.fold(0.0, (sum, transaction) => sum + transaction.amount);
+    print("StartBalance für calculateMonthlyImportedSpendingByDay $manuallytartBalance");
+    cumulativeNetAmount = manuallytartBalance + importedStartBalance;
+
+
+
+    // Initialisiere die Liste für tägliche Werte
     List<double> monthlySpending = List.filled(endDate.day, 0.0);
 
-    // Hole alle normalen und importierten Transaktionen für den aktuellen Monat
+    // Hole alle Transaktionen für den Monat **auf einmal**
     List<Transaction> normalTransactions = await getSpecificTransactionByDateRange(
-        documentId, "null", startDate, endDate, accountId);
+        documentId, "null", startDate, endDate, accountId, false);
 
     List<ImportedTransaction> importedTransactions = await getImportedTransactionsByDateRange(
-        documentId, "null", startDate, endDate, accountId);
+        documentId, "null", startDate, endDate, accountId, false);
 
-    // Liste für parallele Futures
-    List<Future<Map<String, dynamic>>> futures = [];
-
-    // Erstelle Futures für jeden Tag des Monats
-    for (int day = 1; day <= endDate.day; day++) {
-      futures.add(Future(() async {
-        DateTime currentDay = DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth), day)
-            .subtract(Duration(microseconds: 1));
-
-        // Filtere normale Transaktionen für den aktuellen Tag
-        List<Transaction> dayNormalTransactions = normalTransactions.where((transaction) {
-          return transaction.date.toUtc().year == currentDay.year &&
-              transaction.date.toUtc().month == currentDay.month &&
-              transaction.date.toUtc().day == currentDay.day;
-        }).toList();
-
-        // Filtere importierte Transaktionen für den aktuellen Tag
-        List<ImportedTransaction> dayImportedTransactions = importedTransactions.where((transaction) {
-          return transaction.date.toUtc().year == currentDay.year &&
-              transaction.date.toUtc().month == currentDay.month &&
-              transaction.date.toUtc().day == currentDay.day;
-        }).toList();
-
-        double dayIncome = 0.0;
-        double dayExpense = 0.0;
-
-        // Berechnung für normale Transaktionen
-        for (var transaction in dayNormalTransactions) {
-          if (transaction.type == "Einnahme") {
-            dayIncome += transaction.amount;
-          } else if (transaction.type == "Ausgabe") {
-            dayExpense += transaction.amount;
-          }
-        }
-
-        // Berechnung für importierte Transaktionen
-        for (var transaction in dayImportedTransactions) {
-          if (transaction.inflow > 0) {
-            dayIncome += transaction.inflow;
-          } else if (transaction.outflow != 0) {
-            double expense = transaction.outflow.abs();
-            dayExpense += expense;
-          }
-        }
-
-        // Ergebnis zurückgeben
-        return {
-          "dayIndex": day - 1, // Liste ist 0-basiert
-          "dayIncome": dayIncome,
-          "dayExpense": dayExpense
-        };
-      }));
+    // **1. Gruppiere normale Transaktionen nach Tagen**
+    Map<int, List<Transaction>> normalTransactionsByDay = {};
+    for (var transaction in normalTransactions) {
+      int day = transaction.date.day;
+      normalTransactionsByDay.putIfAbsent(day, () => []).add(transaction);
     }
 
-    // Warte auf alle parallelen Futures
-    List<Map<String, dynamic>> results = await Future.wait(futures);
+    // **2. Gruppiere importierte Transaktionen nach Tagen**
+    Map<int, List<ImportedTransaction>> importedTransactionsByDay = {};
+    for (var transaction in importedTransactions) {
+      int day = transaction.date.day;
+      importedTransactionsByDay.putIfAbsent(day, () => []).add(transaction);
+    }
 
-    // Variablen zur Berechnung des kumulierten Netto-Guthabens
-    double cumulativeNetAmount = lastMonthBalance;
+    // **3. Berechnung der täglichen Werte**
+    //double cumulativeNetAmount = lastMonthBalance;
 
-    // Ergebnisse sammeln
-    for (var result in results) {
-      int dayIndex = result["dayIndex"];
-      double dayIncome = result["dayIncome"];
-      double dayExpense = result["dayExpense"];
+    for (int day = 1; day <= endDate.day; day++) {
+      double dayIncome = 0.0;
+      double dayExpense = 0.0;
+
+      // Normale Transaktionen verarbeiten
+      if (normalTransactionsByDay.containsKey(day)) {
+        for (var transaction in normalTransactionsByDay[day]!) {
+          if (transaction.type == "Einnahme") {
+            dayIncome += transaction.amount.abs();
+          } else if (transaction.type == "Ausgabe") {
+            dayExpense += transaction.amount.abs();
+          }
+        }
+      }
+
+      // Importierte Transaktionen verarbeiten
+      if (importedTransactionsByDay.containsKey(day)) {
+        for (var transaction in importedTransactionsByDay[day]!) {
+          dayIncome += transaction.inflow > 0 ? transaction.inflow : 0;
+          dayExpense += transaction.outflow.abs();
+        }
+      }
 
       if (type == "null") {
-        // Aktualisiere das kumulative Netto-Guthaben
         cumulativeNetAmount += (dayIncome - dayExpense);
-        monthlySpending[dayIndex] = cumulativeNetAmount;
+        monthlySpending[day - 1] = cumulativeNetAmount; // Liste ist 0-basiert
       } else if (type == "Einnahme") {
-        monthlySpending[dayIndex] = dayIncome;
+        monthlySpending[day - 1] = dayIncome;
       } else if (type == "Ausgabe") {
-        monthlySpending[dayIndex] = dayExpense;
+        monthlySpending[day - 1] = -dayExpense;
       }
     }
 
-    print("Left calculateMonthlyCombinedSpendingByDay");
+    //print("left calculateMonthlyCombinedSpendingByDay");
     return monthlySpending;
   }
+
 
 
   Future<List<ImportedTransaction>> getImportedTransactionsByDateRangeAndCategory(String documentId, String categoryId, DateTime startDate, DateTime endDate, String accountId) async {
+    //print("Entering getImportedTransactionsByDateRangeAndCategory");
 
-    print("Entering getImportedTransactionsByDateRangeAndCategory");
     try {
       // Referenz zur Transaktionskollektion
-      final userTransactionsRef = usersRef.doc(documentId).collection('ImportedTransactions');
+      final userTransactionsRef =
+      usersRef.doc(documentId).collection('ImportedTransactions');
 
-      // Grundabfrage nur nach Kategorie
+      // Grundabfrage nur nach Datum
       firestore.Query query = userTransactionsRef
           .where('date', isGreaterThanOrEqualTo: startDate.toIso8601String())
           .where('date', isLessThanOrEqualTo: endDate.toIso8601String());
-          //.where('categoryId', isEqualTo: categoryId);
 
       // Query ausführen
       firestore.QuerySnapshot snapshot = await query.get();
 
       // Ergebnisse in Transaktionsobjekte umwandeln
       List<ImportedTransaction> transactions = snapshot.docs
-          .map((doc) => ImportedTransaction.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .map((doc) =>
+          ImportedTransaction.fromMap(doc.data() as Map<String, dynamic>, doc.id))
           .toList();
 
-      //print(transactions);
-
-      // Filterung nach Datum und accountId im Client
+      // Bedingtes Filtern nach `accountId` und `categoryId`
       return transactions.where((transaction) {
-        return transaction.categoryId == categoryId &&
-            (accountId.isEmpty || transaction.accountId == accountId);
+        final matchesCategory = categoryId == "null" || transaction.categoryId == categoryId;
+        final matchesAccount = accountId == "null" || transaction.accountId == accountId;
+        return matchesCategory && matchesAccount;
       }).toList();
     } catch (e) {
       print("Error getting transactions by date range: $e");
       return [];
     }
   }
+
+
+
   Future<List<Transaction>> getTransactionsByDateRangeAndCategory(String documentId, String categoryId, DateTime startDate, DateTime endDate, String accountId) async {
 
-    print("Entering getTransactionsByDateRangeAndCategory");
+    //print("Entering getTransactionsByDateRangeAndCategory");
     try {
       // Start- und Enddatum setzen
       startDate = DateTime.utc(startDate.year, startDate.month, startDate.day, 0, 0, 0)
@@ -1955,7 +1991,7 @@ class FirestoreService {
 
 
   Future<Map<int, double>> getCurrentMonthImportedTransactionsByDateRangeAndCategory(String documentId, String categoryId, String accountId) async {
-    print("Entering getCurrentMonthImportedTransactionsByDateRangeAndCategory");
+    //print("Entering getCurrentMonthImportedTransactionsByDateRangeAndCategory");
     Map<int, double> monthlyCategoryValues = {};
     try{
 
@@ -1965,7 +2001,8 @@ class FirestoreService {
 
 
       List<ImportedTransaction> transactions = await getImportedTransactionsByDateRangeAndCategory(documentId, categoryId, startDate, usableToday, accountId);
-      print(" nach sortieren nach kategorie $transactions");
+      //print(" nach sortieren nach kategorie $transactions");
+
       for (int day = 1; day <= usableToday.day; day++) {
         DateTime currentDay = DateTime(usableToday.year, usableToday.month, day).subtract(Duration(microseconds: 1));
 
@@ -1983,7 +2020,7 @@ class FirestoreService {
             .fold(0.0, (sum, transaction) => sum + sqrt(transaction.outflow * transaction.outflow));
 
         // Speichere die Ausgabe des Tages in der Map
-        monthlyCategoryValues[day] = dayExpense;
+        monthlyCategoryValues[day] = -dayExpense;
       }
     }  catch (e) {
     print("Fehler beim Abrufen der Monatsausgaben: $e");
@@ -1991,7 +2028,7 @@ class FirestoreService {
     return monthlyCategoryValues;
   }
   Future<Map<int, double>> getCurrentMonthTransactionsByDateRangeAndCategory(String documentId, String categoryId, String accountId) async {
-    print("Entering getCurrentMonthTransactionsByDateRangeAndCategory");
+    //print("Entering getCurrentMonthTransactionsByDateRangeAndCategory");
     Map<int, double> monthlyCategoryValues = {};
     DateTime today = DateTime.now();
     DateTime usableToday = DateTime(today.year, today.month, today.day);
@@ -2024,74 +2061,59 @@ class FirestoreService {
 
     return monthlyCategoryValues;
   }
-  Future<Map<int, double>> getCurrentMonthCombinedTransactionsByDateRangeAndCategory(String documentId, String categoryId, String accountId) async {
-    print("Entering getCurrentMonthCombinedTransactionsByDateRangeAndCategory");
+
+
+  Future<Map<int, double>> getCurrentMonthCombinedTransactionsByDateRangeAndCategory(
+      String documentId, String categoryId, String accountId) async {
+
+    //print("entered getCurrentMonthCombinedTransactionsByDateRangeAndCategory");
 
     // Map zur Speicherung der täglichen Ausgaben
     Map<int, double> monthlyCategoryValues = {};
+
     DateTime today = DateTime.now();
-    DateTime usableToday = DateTime(today.year, today.month, today.day);
     DateTime startDate = DateTime(today.year, today.month, 1);
 
     try {
-      // Lade reguläre Transaktionen
-      List<Transaction> transactions = await getTransactionsByDateRangeAndCategory(
-          documentId, categoryId, startDate, usableToday, accountId);
+      // **1. Lade alle Transaktionen für den Monat**
+      List<Transaction> transactions = await getTransactionsByDateRangeAndCategory(documentId, categoryId, startDate, today, accountId);
+      List<ImportedTransaction> importedTransactions = await getImportedTransactionsByDateRangeAndCategory(documentId, categoryId, startDate, today, accountId);
 
-      // Lade importierte Transaktionen
-      List<ImportedTransaction> importedTransactions =
-      await getImportedTransactionsByDateRangeAndCategory(
-          documentId, categoryId, startDate, usableToday, accountId);
+      // **2. Gruppiere Transaktionen nach Tagen**
+      Map<int, double> dailyExpenses = {};
 
-      // Iteriere über jeden Tag im aktuellen Monat
-      for (int day = 1; day <= usableToday.day; day++) {
-        DateTime currentDay = DateTime(usableToday.year, usableToday.month, day)
-            .subtract(Duration(microseconds: 1));
-
-        // Filtere reguläre Transaktionen für den aktuellen Tag
-        List<Transaction> dayTransactions = transactions.where((transaction) {
-          return transaction.date.toUtc().year == currentDay.year &&
-              transaction.date.toUtc().month == currentDay.month &&
-              transaction.date.toUtc().day == currentDay.day;
-        }).toList();
-
-        // Filtere importierte Transaktionen für den aktuellen Tag
-        List<ImportedTransaction> dayImportedTransactions =
-        importedTransactions.where((transaction) {
-          return transaction.date.toUtc().year == currentDay.year &&
-              transaction.date.toUtc().month == currentDay.month &&
-              transaction.date.toUtc().day == currentDay.day;
-        }).toList();
-
-        // Berechnung der Ausgaben für reguläre Transaktionen
-        double dayExpense = 0.0;
-        for (var transaction in dayTransactions) {
-          if (transaction.type == "Ausgabe") {
-            dayExpense += transaction.amount;
-          }
+      // Verarbeite reguläre Transaktionen
+      for (var transaction in transactions) {
+        if (transaction.type == "Ausgabe") {
+          int day = transaction.date.day;
+          dailyExpenses.update(day, (value) => value + transaction.amount, ifAbsent: () => transaction.amount);
         }
-
-        // Berechnung der Ausgaben für importierte Transaktionen
-        for (var transaction in dayImportedTransactions) {
-          if (transaction.outflow != 0) {
-            dayExpense += transaction.outflow.abs();
-          }
-        }
-
-        // Speichere die Gesamtausgaben des Tages in der Map
-        monthlyCategoryValues[day] = dayExpense;
       }
+
+      // Verarbeite importierte Transaktionen
+      for (var transaction in importedTransactions) {
+        int day = transaction.date.day;
+        double amount = transaction.outflow.abs();
+        dailyExpenses.update(day, (value) => value - amount, ifAbsent: () => -amount);
+      }
+
+      // **3. Setze die Ergebnisse in die finale Map**
+      for (int day = 1; day <= today.day; day++) {
+        monthlyCategoryValues[day] = dailyExpenses[day] ?? 0.0;
+      }
+
     } catch (e) {
       print("Fehler beim Abrufen der Monatsausgaben: $e");
     }
 
-    print("Leaving getCurrentMonthCombinedTransactionsByDateRangeAndCategory");
+    //print("Leaving getCurrentMonthCombinedTransactionsByDateRangeAndCategory");
     return monthlyCategoryValues;
   }
 
 
+
   Future<Map<int, double>> calculateYearlyCategoryImportedExpenses(String documentId, String categoryId, String chosenYear, String accountId) async {
-    print("Entering calculateMonthlyCategoryImportedExpenses");
+    //print("Entering calculateMonthlyCategoryImportedExpenses");
     Map<int, double> monthlyCategoryExpenses = {}; // Initialisiere das Dictionary
     try {
       for (int month = 1; month <= 12; month++) {
@@ -2105,20 +2127,22 @@ class FirestoreService {
 
         // Berechne die Gesamtausgaben für den aktuellen Monat
         double monthExpense = monthTransactions
-            .where((transaction) => transaction.outflow > 0) // Filtere Ausgaben (outflow > 0)
-            .fold(0.0, (sum, transaction) => sum + transaction.outflow);
+            .where((transaction) => transaction.outflow.abs() != 0) // Filtere Ausgaben (outflow > 0)
+            .fold(0.0, (sum, transaction) => sum + transaction.outflow.abs());
 
         // Speichere die Gesamtausgaben des Monats in der Map
-        monthlyCategoryExpenses[month] = monthExpense;
+        monthlyCategoryExpenses[month] = -monthExpense;
       }
     } catch (e) {
       print("Fehler beim Berechnen der monatlichen Ausgaben: $e");
     }
     return monthlyCategoryExpenses;
   }
+
+
   Future<Map<int, double>> calculateYearlyCategoryExpenses(String documentId, String categoryId, String chosenYear, String accountId) async {
 
-    print("Entering calculateMonthlyCategoryExpenses");
+    //print("Entering calculateMonthlyCategoryExpenses");
     Map<int, double> monthlyCategoryExpenses = {}; // Initialisiere das Dictionary
 
     for (int month = 1; month <= 12; month++) {
@@ -2144,61 +2168,59 @@ class FirestoreService {
 
     return monthlyCategoryExpenses;
   }
-  Future<Map<int, double>> calculateYearlyCombinedCategoryExpenses(String documentId, String categoryId, String chosenYear, String accountId) async {
-    print("Entering calculateYearlyCombinedCategoryExpenses");
 
-    // Map zur Speicherung der monatlichen Kategoriekosten
+  Future<Map<int, double>> calculateYearlyCombinedCategoryExpenses(String documentId, String categoryId, String chosenYear, String accountId) async {
+
+    //print("entered calculateYearlyCombinedCategoryExpenses");
+
     Map<int, double> monthlyCategoryExpenses = {};
 
     try {
-      for (int month = 1; month <= 12; month++) {
-        // Berechne den Start- und Endzeitpunkt für den aktuellen Monat
-        DateTime startDate = DateTime.utc(int.parse(chosenYear), month, 1);
-        DateTime endDate = DateTime.utc(int.parse(chosenYear), month + 1, 1)
-            .subtract(Duration(days: 1));
+      // **1. Lade alle Transaktionen für das Jahr auf einmal**
+      DateTime startDate = DateTime.utc(int.parse(chosenYear), 1, 1);
+      DateTime endDate = DateTime.utc(int.parse(chosenYear), 12, 31);
 
-        // Hole die regulären Transaktionen für den aktuellen Monat und die Kategorie
-        List<Transaction> regularTransactions = await getTransactionsByDateRangeAndCategory(
-            documentId, categoryId, startDate, endDate, accountId);
+      List<Transaction> regularTransactions = await getTransactionsByDateRangeAndCategory(documentId, categoryId, startDate, endDate, accountId);
+      List<ImportedTransaction> importedTransactions = await getImportedTransactionsByDateRangeAndCategory(documentId, categoryId, startDate, endDate, accountId);
 
-        // Hole die importierten Transaktionen für den aktuellen Monat und die Kategorie
-        List<ImportedTransaction> importedTransactions =
-        await getImportedTransactionsByDateRangeAndCategory(
-            documentId, categoryId, startDate, endDate, accountId);
+      // **2. Gruppiere Transaktionen nach Monaten**
+      Map<int, double> monthlyExpenses = {};
 
-        // Berechne die Gesamtausgaben für reguläre Transaktionen
-        double regularExpenses = 0.0;
-        for (var transaction in regularTransactions) {
-          if (transaction.type == "Ausgabe") {
-            regularExpenses += transaction.amount;
-          }
+      // Verarbeite reguläre Transaktionen
+      for (var transaction in regularTransactions) {
+        if (transaction.type == "Ausgabe") {
+          int month = transaction.date.month;
+          monthlyExpenses.update(month, (value) => value + transaction.amount, ifAbsent: () => transaction.amount);
         }
-
-        // Berechne die Gesamtausgaben für importierte Transaktionen
-        double importedExpenses = importedTransactions
-            .where((transaction) => transaction.outflow > 0) // Filtere Ausgaben (outflow > 0)
-            .fold(0.0, (sum, transaction) => sum + transaction.outflow);
-
-        // Summiere die Ausgaben von regulären und importierten Transaktionen
-        double totalExpenses = regularExpenses + importedExpenses;
-
-        // Speichere die Gesamtausgaben des Monats in der Map
-        monthlyCategoryExpenses[month] = totalExpenses;
       }
+
+      // Verarbeite importierte Transaktionen
+      for (var transaction in importedTransactions) {
+        int month = transaction.date.month;
+        double amount = transaction.outflow.abs();
+        monthlyExpenses.update(month, (value) => value - amount, ifAbsent: () => -amount);
+      }
+
+      // **3. Setze die Ergebnisse in die finale Map**
+      for (int month = 1; month <= 12; month++) {
+        monthlyCategoryExpenses[month] = monthlyExpenses[month] ?? 0.0;
+      }
+
     } catch (e) {
       print("Fehler beim Berechnen der jährlichen kombinierten Ausgaben: $e");
     }
 
-    print("Leaving calculateYearlyCombinedCategoryExpenses");
+    //print("Leaving calculateYearlyCombinedCategoryExpenses");
     return monthlyCategoryExpenses;
   }
+
 
 
 
   Future<Map<String, double>> fetchUrgentAndNonUrgentExpenses(String documentId, DateTime startDate, DateTime endDate, String accountId) async {
     try {
       // Hole alle Transaktionen im gegebenen Datumsbereich
-      List<Transaction> transactions = await getSpecificTransactionByDateRange(documentId, "null", startDate, endDate, accountId);
+      List<Transaction> transactions = await getSpecificTransactionByDateRange(documentId, "null", startDate, endDate, accountId, false);
 
       // Initialisiere Summen
       double urgentTotal = 0.0;
@@ -2231,6 +2253,7 @@ class FirestoreService {
   }
 
   Future<List<Category>> getUserCategoriesWithBudget(String documentId) async {
+    //print("entered getUserCategoriesWithBudget");
     try {
       final userCategoriesRef = usersRef.doc(documentId).collection('Categories');
       firestore.QuerySnapshot snapshot = await userCategoriesRef.get();
@@ -2248,6 +2271,7 @@ class FirestoreService {
           }
         } catch (e) {
           print("Error parsing category: $e");
+          //print("leave getUserCategoriesWithBudget");
           return null; // Handle gracefully
         }
       }).whereType<Category>().toList(); // Entferne nulls aus der Liste
@@ -2256,4 +2280,191 @@ class FirestoreService {
       return [];
     }
   }
+  Future<double> getCurrentMonthCombinedTransactions(String documentId, String categoryId, String accountId) async {
+    //print("Entering getCurrentMonthCombinedTransactions");
+
+    double totalExpense = 0.0;
+    DateTime now = DateTime.now();
+    DateTime startOfMonth = DateTime.utc(now.year, now.month, 1);
+    DateTime endOfMonth = DateTime.utc(now.year, now.month + 1, 0);
+
+    try {
+      // Lade reguläre Transaktionen
+      List<Transaction> transactions = await getTransactionsByDateRangeAndCategory(
+          documentId, categoryId, startOfMonth, endOfMonth, accountId);
+
+      // Lade importierte Transaktionen
+      List<ImportedTransaction> importedTransactions = await getImportedTransactionsByDateRangeAndCategory(
+          documentId, categoryId, startOfMonth, endOfMonth, accountId);
+
+      // Summiere reguläre Transaktionen
+      totalExpense -= transactions.fold(0.0, (sum, transaction) {
+        return sum + (transaction.type == "Ausgabe" ? transaction.amount : 0.0);
+      });
+
+      // Summiere importierte Transaktionen
+      totalExpense += importedTransactions.fold(0.0, (sum, transaction) {
+        return sum + transaction.outflow.abs();
+      });
+    } catch (e) {
+      print("Fehler beim Abrufen der kombinierten Transaktionen: $e");
+    }
+    print(totalExpense);
+    //print("Leaving getCurrentMonthCombinedTransactions");
+    return totalExpense;
+  }
+
+
+
+
+
+
+  Future<void> createNotification(String userId, String message, String type, {String? categoryId, String? accountId}) async {
+    try {
+      final userNotificationsRef = usersRef.doc(userId).collection('notifications');
+
+      // Notification-Dokument erstellen
+      firestore.DocumentReference docRef = await userNotificationsRef.add({
+        'message': message,
+        'isRead': false,
+        'timestamp': firestore.FieldValue.serverTimestamp(),
+        'categoryId': categoryId,
+        'accountId': accountId,
+        'type': type, // NEU: Typ der Benachrichtigung speichern
+      });
+
+      print("Notification erstellt: $message (Type: $type) - ID: ${docRef.id}");
+    } catch (e) {
+      print("Fehler beim Erstellen der Notification: $e");
+    }
+  }
+
+
+  Future<List<Map<String, dynamic>>> getUserNotifications(String userId) async {
+    try {
+      final userNotificationsRef = usersRef.doc(userId).collection('notifications');
+
+      // Notifications abrufen und nach Timestamp absteigend sortieren
+      firestore.QuerySnapshot snapshot = await userNotificationsRef
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        return {
+          'id': doc.id,
+          ...doc.data() as Map<String, dynamic>,
+        };
+      }).toList();
+    } catch (e) {
+      print("Fehler beim Abrufen der Notifications: $e");
+      return [];
+    }
+  }
+  Future<void> markNotificationAsRead(String userId, String notificationId) async {
+    try {
+      final notificationRef = usersRef.doc(userId).collection('notifications').doc(notificationId);
+      await notificationRef.update({'isRead': true});
+      print("Notification $notificationId als gelesen markiert.");
+    } catch (e) {
+      print("Fehler beim Aktualisieren der Notification: $e");
+    }
+  }
+
+
+
+
+  Future<bool> doesNotificationExist(String userId, String categoryId, String type) async {
+
+
+      //return existingNotifications.isNotEmpty;
+
+    try {
+      final notificationsRef = usersRef.doc(userId).collection('notifications');
+      DateTime now = DateTime.now();
+      DateTime firstDayOfMonth = DateTime(now.year, now.month, 1);
+
+      final querySnapshot = await notificationsRef
+          .where('categoryId', isEqualTo: categoryId)
+          .where('type', isEqualTo: type)
+          //.where('isRead', isEqualTo: false) // Nur ungelesene prüfen
+          .limit(1)
+          .get();
+
+      // Lokale Filterung nach Datum
+      final existingNotifications = querySnapshot.docs.where((doc) {
+        DateTime timestamp = (doc['timestamp'] as firestore.Timestamp).toDate();
+        return timestamp.isAfter(firstDayOfMonth);
+      }).toList();
+
+      print(existingNotifications);
+
+      return existingNotifications.isNotEmpty;
+
+      //return querySnapshot.docs.isNotEmpty;
+    } catch (e) {
+      print("Fehler beim Überprüfen der Benachrichtigung ($type): $e");
+      return false;
+    }
+  }
+
+  Stream<int> getUnreadNotificationsCount(String userId) {
+
+    return usersRef
+        .doc(userId)
+        .collection('notifications')
+        .where('isRead', isEqualTo: false)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+
+
+
+  Stream<List<Map<String, dynamic>>> getUserNotificationsStream(String userId) {
+    return usersRef
+        .doc(userId)
+        .collection('notifications')
+        .orderBy('timestamp', descending: true) // Sortierung nach Datum
+        .snapshots()
+        .map((snapshot) {
+      DateTime now = DateTime.now();
+      DateTime firstDayOfMonth = DateTime(now.year, now.month, 1);
+
+      return snapshot.docs
+          .map((doc) => {'id': doc.id, ...doc.data() as Map<String, dynamic>})
+          .where((notification) {
+        DateTime timestamp = (notification['timestamp'] as firestore.Timestamp).toDate();
+        return timestamp.isAfter(firstDayOfMonth);
+      })
+          .toList();
+    });
+  }
+
+
+  Future<Map<String, dynamic>> fetchCategoriesAndTransactions(String userId) async {
+    List<Category> userCategories = await getUserCategoriesWithBudget(userId);
+
+    if (userCategories.isEmpty) {
+      return {"categories": [], "spentAmounts": []};
+    }
+
+    List<Future<double>> transactionFutures = userCategories.map((category) {
+      return getCurrentMonthCombinedTransactions(
+        userId,
+        category.id!,
+        "null", // Account-ID optional
+      );
+    }).toList();
+
+    List<double> spentAmounts = await Future.wait(transactionFutures);
+
+    return {
+      "categories": userCategories,
+      "spentAmounts": spentAmounts,
+    };
+  }
+
+
+
 }
+
