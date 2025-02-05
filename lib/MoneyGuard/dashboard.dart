@@ -311,6 +311,7 @@ class AccountCreation extends StatelessWidget {
                       child: const Center(
                         child: Text(
                           "Konfigurierung durch Import von CSV Dateien",
+                          textAlign: TextAlign.center,
                           style: TextStyle(fontSize: 18, color: Colors.white),
                         ),
                       ),

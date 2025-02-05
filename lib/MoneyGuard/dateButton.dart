@@ -648,7 +648,9 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => AddTransactionPage(transaction: transaction),
+                    builder: (context) => AddTransactionPage(transaction: transaction.copyWith(
+                      amount: transaction.amount.abs(), // Remove negative sign here as well
+                    )),
                   ),
                 ).then((_) {
                   _fetchTransactions();
