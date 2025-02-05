@@ -217,7 +217,7 @@ class _SavingPlanState extends State<SavingPlan> {
         slivers: [
           // Statischer Bereich oben (Budgetlimit in einer SliverAppBar)
           SliverAppBar(
-            backgroundColor: Theme.of(context).colorScheme.onSecondary,
+            backgroundColor: Theme.of(context).colorScheme.surface,
             pinned: true,
             elevation: 2,
             expandedHeight: 120.0,
@@ -291,7 +291,7 @@ class _SavingPlanState extends State<SavingPlan> {
                 width: double.infinity,
                 height: 200,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.onSecondary,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: [
                     BoxShadow(
@@ -469,7 +469,7 @@ class _SavingPlanState extends State<SavingPlan> {
                   child: Container(
                     padding: const EdgeInsets.all(16.0),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.onSecondary,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(8),
                       boxShadow: [
                         BoxShadow(

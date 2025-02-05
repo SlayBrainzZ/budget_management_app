@@ -328,7 +328,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
         handleBuiltInTouches: true,
         touchTooltipData: LineTouchTooltipData(
           getTooltipColor: (LineBarSpot spot) {
-            return Theme.of(context).colorScheme.surface;
+            return Theme.of(context).colorScheme.onSecondary;
 
             //return Color.fromARGB(255, 255, 255, 255); // Weißer Hintergrund
           },
@@ -662,7 +662,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
         handleBuiltInTouches: true,
         touchTooltipData: LineTouchTooltipData(
           getTooltipColor: (LineBarSpot spot) {
-            return Theme.of(context).colorScheme.surface;
+            return Theme.of(context).colorScheme.onSecondary;
 
             return Color.fromARGB(255, 255, 255, 255);
           },
