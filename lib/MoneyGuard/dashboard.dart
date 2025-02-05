@@ -100,6 +100,8 @@ class _DashboardState extends State<Dashboard> {
   Widget _buildAccountCards(BuildContext context) {
     final theme = Theme.of(context);
     final primaryColor = theme.colorScheme.onSecondary;
+    final primaryColor2 = theme.colorScheme.onSurface;
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.all(10),
@@ -134,6 +136,14 @@ class _DashboardState extends State<Dashboard> {
                   decoration: BoxDecoration(
                     color: primaryColor,
                     borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1), // Weniger Deckkraft für einen sanfteren Schatten
+                        blurRadius: 6,  // Weniger Unschärfe für einen subtileren Schatten
+                        spreadRadius: 1, // Geringere Ausdehnung
+                        offset: Offset(2, 2), // Kleinere Verschiebung für einen dezenteren Schatten
+                      ),
+                    ],
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -146,15 +156,14 @@ class _DashboardState extends State<Dashboard> {
                                 ? Icons.account_balance
                                 : Icons.attach_money,
                             color: Colors.blue,
-                            size: 20,
+                            size: 18,
                           ),
                           const SizedBox(width: 5),
                           Text(
                             account.accountType,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: primaryColor2,
                             ),
                           ),
                         ],
@@ -162,9 +171,10 @@ class _DashboardState extends State<Dashboard> {
                       const SizedBox(height: 5),
                       Text(
                         account.accountName ?? '',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.black87,
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w500,
+                          color: primaryColor2,
                         ),
                       ),
                       const SizedBox(height: 5),
@@ -179,8 +189,8 @@ class _DashboardState extends State<Dashboard> {
                       Text(
                         account.forImport ? 'For Imports' : '',
                         style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.green,
+                          fontSize: 12,
+                          color: Color(0xFF388E3C),
                         ),
                       ),
                     ],
@@ -412,17 +422,6 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
             title: const Text("Aktueller Kontostand"),
             trailing: Text("$accountBalance EUR"),
             onTap: null,
-            /*
-            trailing: Text(
-              "$accountBalance EUR${widget.account?.forImport == true ? '' : ' >'}",
-            ),
-            onTap: widget.account?.forImport == true
-                ? null
-                : () {
-              _editField("Aktueller Kontostand", (value) {
-                setState(() => accountBalance = value);
-              });
-            },*/
           ),
           const SizedBox(height: 20),
           ListTile(

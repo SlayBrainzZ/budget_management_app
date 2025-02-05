@@ -36,7 +36,7 @@ class MyApp extends StatelessWidget {
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.teal,
+            backgroundColor: Colors.teal[300]!,
             foregroundColor: Colors.white,
             elevation: 5, // Erhöht den Button leicht für besseren Kontrast
             shadowColor: Colors.black.withOpacity(0.3), // Schatten hinzufügen
@@ -61,6 +61,14 @@ class MyApp extends StatelessWidget {
           onPrimary: Color(0xFF00695C), // appbar
           onSecondary: Color(0xFF90A4AE),
           onSurface: Colors.white,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.grey[500],
+            foregroundColor: Colors.white,
+            elevation: 5, // Erhöht den Button leicht für besseren Kontrast
+            shadowColor: Colors.black.withOpacity(0.3), // Schatten hinzufügen
+          ),
         ),
         textTheme: const TextTheme(
           bodyLarge: TextStyle(color: Colors.white),

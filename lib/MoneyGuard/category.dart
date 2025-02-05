@@ -79,9 +79,10 @@ class CategoryButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.3),
-                spreadRadius: 4,
-                blurRadius: 8,
+                color: Colors.black.withOpacity(0.1), // Weniger Deckkraft für einen sanfteren Schatten
+                blurRadius: 6,  // Weniger Unschärfe für einen subtileren Schatten
+                spreadRadius: 1, // Geringere Ausdehnung
+                offset: Offset(2, 2), // Kleinere Verschiebung für einen dezenteren Schatten
               ),
             ],
           ),
