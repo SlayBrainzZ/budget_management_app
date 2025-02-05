@@ -18,6 +18,8 @@ class DateButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final primaryColor = theme.colorScheme.onSecondary;
+    final theme2 = Theme.of(context);
+    final primaryColor2 = theme.colorScheme.onSurface;
     final DateTime now = DateTime.now();
     final String day = now.day.toString();
     final String month = _getMonthName(now.month);
@@ -25,9 +27,21 @@ class DateButton extends StatelessWidget {
 
     return Scaffold(
       body: Center(
-        child: SizedBox(
-          width: 250, // Feste Breite
-          height: 250, // Feste Höhe
+        child: Container(
+          width: 250,
+          height: 250,
+          decoration: BoxDecoration(
+            color: primaryColor,
+            borderRadius: BorderRadius.circular(10.0),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1), // Weniger Deckkraft für einen sanfteren Schatten
+                blurRadius: 6,  // Weniger Unschärfe für einen subtileren Schatten
+                spreadRadius: 1, // Geringere Ausdehnung
+                offset: Offset(2, 2), // Kleinere Verschiebung für einen dezenteren Schatten
+              ),
+            ],
+          ),
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryColor,
@@ -35,8 +49,7 @@ class DateButton extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10.0),
               ),
-              elevation: 5.0,
-              shadowColor: Colors.black.withOpacity(0.3),
+              elevation: 0, // Schatten kommt vom Container
             ),
             onPressed: () {
               Navigator.push(
@@ -51,7 +64,7 @@ class DateButton extends StatelessWidget {
                   month,
                   style: TextStyle(
                     fontSize: 25,
-                    color: Colors.black,
+                    color: primaryColor2,
                   ),
                 ),
                 SizedBox(height: 14),
@@ -619,7 +632,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                 ),*/
                   Text(
                     'Datum: ${_formatDate(transaction.date)}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[700]!),
+                    style: TextStyle(fontSize: 12, color: Colors.blueGrey),
                   ),
                 ],
               ),
@@ -635,7 +648,9 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => AddTransactionPage(transaction: transaction),
+                    builder: (context) => AddTransactionPage(transaction: transaction.copyWith(
+                      amount: transaction.amount.abs(), // Remove negative sign here as well
+                    )),
                   ),
                 ).then((_) {
                   _fetchTransactions();
@@ -704,7 +719,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                   ),
                 Text(
                   'Datum: ${_formatDate(importedTransaction.date)}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[700]!),
+                  style: TextStyle(fontSize: 12, color: Colors.blueGrey),
                 ),
               ],
             ),
