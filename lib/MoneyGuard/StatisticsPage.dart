@@ -24,8 +24,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
   String selectedYear = DateTime.now().year.toString();
 
   String selectedMonth = 'Monat';
-  final List<int> availableYears = List.generate(
-      100, (index) => 2000 + index); // letze 20 und nächste 80 jare
+
+  //final List<int> availableYears = List.generate(
+  //    100, (index) => 2000 + index); // letze 20 und nächste 80 jare
+  final List<int> availableYears =
+  List.generate(DateTime.now().year - 2023 + 1, (index) => 2023 + index);
+
+
   double urgentExpenses = 0.0;
   double nonUrgentExpenses = 0.0;
   final ScrollController _scrollController = ScrollController();
@@ -38,10 +43,10 @@ class _StatisticsPageState extends State<StatisticsPage> {
   //Map<String, LineChartData> chartCache = {};
   List<Category> categories = [];
   List<BankAccount> allBankAccounts = [];
-  double lastMonthBalance = 0.0;
+  //double lastMonthBalance = 0.0;
   Map<String, double> monthlyBalanceList = {};
   bool importedTypeOfBankAccount = false;
-
+  User? user1;
 
   @override
   void initState() {
@@ -86,6 +91,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
   Future<User?> _loadUser() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return null;
+
+
 
     try {
       return user;
@@ -186,6 +193,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
       print("Fehler beim Laden der Ausgaben: $e");
     }
   }
+
+
 
   Future<void> _loadAndSetExpenses(String chosenTime) async {
     await _loadExpenses(chosenTime);
@@ -375,21 +384,21 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
     try {
       print(monthlyBalanceList);
-      lastMonthBalance = findLastMonthBalance(monthlyBalanceList, chosenYear, chosenMonth);
-      print("lastMonthBalance nach Monatsangabe: $lastMonthBalance");
+      //lastMonthBalance = findLastMonthBalance(monthlyBalanceList, chosenYear, chosenMonth);
+      //print("lastMonthBalance nach Monatsangabe: $lastMonthBalance");
       if(importedTypeOfBankAccount == false) {
         if (selectedAccountID == "null") {
 
-          data = await _firestoreService.calculateMonthlyCombinedSpendingByDay(user.uid, type, chosenYear, chosenMonth, lastMonthBalance, selectedAccountID);
+          data = await _firestoreService.calculateMonthlyCombinedSpendingByDay(user.uid, type, chosenYear, chosenMonth, selectedAccountID);
 
         } else {
 
-          data = await _firestoreService.calculateMonthlySpendingByDay(user.uid, type, chosenYear, chosenMonth, lastMonthBalance, selectedAccountID);
+          data = await _firestoreService.calculateMonthlySpendingByDay(user.uid, type, chosenYear, chosenMonth, selectedAccountID);
 
         }
       }
       else if (importedTypeOfBankAccount == true){
-        data = await _firestoreService.calculateMonthlyImportedSpendingByDay(user.uid, type, chosenYear, chosenMonth, lastMonthBalance, selectedAccountID);
+        data = await _firestoreService.calculateMonthlyImportedSpendingByDay(user.uid, type, chosenYear, chosenMonth, selectedAccountID);
       }
 
 
@@ -411,7 +420,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
     List<List<FlSpot>> FlSpotListList = [];
 
-    List<double> data = [];
     Map<String, double> monthlySpending = {};
     List<Map<String, double>> monthlyTransactions = [];
 
@@ -433,6 +441,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
         for (int j = 0; j <= 2; j++) {
           Map<String, double> monthlySpending = monthlyTransactions[j];
           List<FlSpot> FlSpotlist = [];
+
+
           for (var entry in monthlySpending.entries) {
             String monthKey = entry.key; // Beispiel: "2024-01"
             DateTime dateTime = DateTime.parse(monthKey + "-01");
@@ -810,6 +820,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
         case 1:
           text = Text("${value.toString()}.${DateTime.now().month.toString().padLeft(2, '0')}", style: style);
           break;
+        case 3:
+          text = Text("${value.toString()}.${DateTime.now().month.toString().padLeft(2, '0')}", style: style);
+          break;
         case 5:
           text = Text("${value.toString()}.${DateTime.now().month.toString().padLeft(2, '0')}", style: style);
           break;
@@ -891,6 +904,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
         case 1:
           text = Text("${value.toString()}.${selectedMonth}", style: style);
           break;
+        case 3:
+          text = Text("${value.toString()}.${selectedMonth}", style: style);
+          break;
         case 5:
           text = Text("${value.toString()}.${selectedMonth}", style: style);
           break;
@@ -923,7 +939,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
 
 
-  double findLastMonthBalance(Map<String, double> data, String chosenYear, String chosenMonth) {
+  /*double findLastMonthBalance(Map<String, double> data, String chosenYear, String chosenMonth) {
     // Startwert für das vorherige Monatsguthaben
     double lastMonthBalance = 0.0;
 
@@ -957,7 +973,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
     }
 
     return lastMonthBalance;
-  }
+  }*/
   Map<String, dynamic> calculateExpenseSummary() {
     double totalExpenses = urgentExpenses + nonUrgentExpenses;
 
@@ -1001,6 +1017,10 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
   void _showMonthPicker(BuildContext context) {
+    int maxMonth = (selectedYear == DateTime.now().year.toString())
+        ? DateTime.now().month // Falls aktuelles Jahr → Nur bis zum aktuellen Monat
+        : 12; // Falls vergangenes Jahr → Alle 12 Monate
+
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
@@ -1008,40 +1028,36 @@ class _StatisticsPageState extends State<StatisticsPage> {
           height: 300, // Höhe des Containers
           child: CupertinoPicker(
             backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-            //backgroundColor: Colors.white,
-            itemExtent: 50.0,
-            // Höhe jedes Elements
+            itemExtent: 50.0, // Höhe jedes Elements
             scrollController: FixedExtentScrollController(
-              initialItem: selectedMonth == "Monat" ? 0 : int.parse(
-                  selectedMonth),
+              initialItem: selectedMonth == "Monat" ? 0 : int.parse(selectedMonth),
             ),
             onSelectedItemChanged: (int index) {
               setState(() {
-                selectedMonth =
-                index == 0 ? "Monat" : (index).toString().padLeft(2, '0');
+                selectedMonth = index == 0
+                    ? "Monat"
+                    : index.toString().padLeft(2, '0');
                 loadBigChartBarData(selectedYear, selectedMonth);
               });
             },
             children: [
               Center(child: Text("Monat",
                   style: TextStyle(fontSize: 18,
-                      //color: Colors.black
                       color: Theme.of(context).textTheme.bodyLarge?.color
                   ))),
-              // Standard "Monat" als ersten Eintrag
-              ...List.generate(12, (index) =>
+              // Dynamische Monatserzeugung basierend auf maxMonth
+              ...List.generate(maxMonth, (index) =>
                   Center(child: Text((index + 1).toString().padLeft(2, '0'),
                       style: TextStyle(fontSize: 18,
-                          //color: Colors.black
                           color: Theme.of(context).textTheme.bodyLarge?.color
                       )))),
-              // Monatszahlen
             ],
           ),
         );
       },
     );
   }
+
 
 
 
