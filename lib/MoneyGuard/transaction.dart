@@ -363,7 +363,10 @@ class _AddTransactionPageState extends State<AddTransactionPage>
           const SizedBox(height: 16),
           if (widget.transaction != null) // Zeige Löschen-Button nur bei existierenden Transaktionen
             ElevatedButton(
-              onPressed: _deleteTransaction,
+              onPressed: () {
+                _deleteTransaction(); // Löscht die Transaktion
+                Navigator.of(context).pop(); // Geht zurück zur vorherigen Seite
+              },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red[300]),
               child: const Text('Löschen',
                   style: TextStyle(color: Colors.white)),
