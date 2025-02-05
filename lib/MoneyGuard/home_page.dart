@@ -1,9 +1,11 @@
+import 'package:budget_management_app/MoneyGuard/themeProvider.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:budget_management_app/backend/firestore_service.dart';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'dashboard.dart';
 import 'saving_plan.dart';
 import 'StatisticsPage.dart';
@@ -21,12 +23,26 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-        useMaterial3: true,
+        brightness: Brightness.light,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.teal,
+          brightness: Brightness.light, // HELLIGKEIT HINZUGEFÜGT
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.teal,
+            foregroundColor: Colors.white,
+            elevation: 5, // Erhöht den Button leicht für besseren Kontrast
+            shadowColor: Colors.black.withOpacity(0.3), // Schatten hinzufügen
+          ),
+        ),
+
       ),
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
@@ -36,6 +52,38 @@ class MyApp extends StatelessWidget {
       supportedLocales: const [
         Locale('de', 'DE'),
       ],
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.dark(
+          primary: Colors.teal, // Hauptfarbe für Buttons & Akzente
+          secondary: Colors.tealAccent,
+          surface: Color(0xFF627D86), // Hellerer Hintergrund für Karten & Dialoge
+          background: Color(0xFF78909C),// Ein sehr helles Grau-Blau
+          onPrimary: Color(0xFF00695C), // appbar
+          onSecondary: Color(0xFF90A4AE),
+          onSurface: Colors.white,
+        ),
+        textTheme: const TextTheme(
+          bodyLarge: TextStyle(color: Colors.white),
+          bodyMedium: TextStyle(color: Colors.white),
+          bodySmall: TextStyle(color: Colors.white),
+          titleLarge: TextStyle(color: Colors.white),
+          titleMedium: TextStyle(color: Colors.white),
+          titleSmall: TextStyle(color: Colors.white),
+        ),
+        scaffoldBackgroundColor: const Color(0xFF2E3E46), // Hellerer Hintergrund für den gesamten Scaffold
+        cardColor: const Color(0xFFB0BEC5), // Helleres Grau für Karten
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF607D8B), // Etwas dunkleres Grau-Blau für die AppBar
+          foregroundColor: Colors.white,
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.white, // Schriftfarbe für TextButton weiß
+          ),
+        ),
+        useMaterial3: true,
+      ),
+      themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
       home: const MyHomePage(title: 'MoneyGuard'),
     );
   }

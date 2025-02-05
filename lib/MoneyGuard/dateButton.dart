@@ -16,6 +16,8 @@ import 'ImportButton.dart';
 class DateButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.onSecondary;
     final DateTime now = DateTime.now();
     final String day = now.day.toString();
     final String month = _getMonthName(now.month);
@@ -28,12 +30,13 @@ class DateButton extends StatelessWidget {
           height: 250, // Feste Höhe
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
+              backgroundColor: primaryColor,
               padding: EdgeInsets.all(0),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10.0),
               ),
               elevation: 5.0,
+              shadowColor: Colors.black.withOpacity(0.3),
             ),
             onPressed: () {
               Navigator.push(
@@ -306,6 +309,8 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.onSurface;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Einnahmen und Ausgaben'),
@@ -327,6 +332,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                   children: [
                     _buildMultiSelectDropdown(
                       title: "Konto wählen",
+                      color: primaryColor,
                       items: bankAccounts,
                       selectedItems: selectedAccounts,
                       onConfirm: (selected) {
@@ -369,8 +375,10 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
     required String title,
     required List<BankAccount> items,
     required List<BankAccount> selectedItems,
-    required Function(List<BankAccount>) onConfirm,
+    required Function(List<BankAccount>) onConfirm, required color,
   }) {
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.onSurface;
     return GestureDetector(
       onTap: () async {
         final selected = await showDialog<List<BankAccount>>(
@@ -419,7 +427,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                                   ),
                                   title: Text(
                                     account.accountName ?? "Unbenannt",
-                                    style: const TextStyle(color: Colors.black),
+                                    style: TextStyle(color: primaryColor),
                                   ),
                                   trailing: Checkbox(
                                     value: isSelected,
@@ -500,7 +508,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                   : selectedItems
                   .map((e) => e.accountName ?? "Unbenannt")
                   .join(", "), // Wenn Konten ausgewählt sind, zeige deren Namen
-              style: const TextStyle(color: Colors.black),
+              style: TextStyle(color: primaryColor),
               overflow: TextOverflow.ellipsis,
             ),
             const Icon(Icons.arrow_drop_down, color: Colors.grey),
@@ -526,6 +534,8 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
         ),
       );
     }
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.onSurface;
 
     return ListView.builder(
       itemCount: dailyTransactions.length,
@@ -581,10 +591,10 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                           ),
                           TextSpan(
                             text: transaction.note!,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.normal,
                               fontSize: 12, // Gleiche Schriftgröße für den Inhalt
-                              color: Colors.black,
+                              color: primaryColor,
                             ),
                           ),
                         ],
@@ -597,7 +607,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                         const SizedBox(width: 10),
                         Text(
                           '${bankAccount.accountName}',
-                          style: const TextStyle(color: Colors.black, fontSize: 13),
+                          style: TextStyle(color: primaryColor, fontSize: 13),
                         ),
                       ],
                     )
@@ -660,10 +670,10 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                       ),
                       TextSpan(
                         text: importedTransaction.payerOrRecipient ?? '',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.normal,
                           fontSize: 12, // Gleiche Schriftgröße für den Inhalt
-                          color: Colors.black,
+                          color: primaryColor,
                         ),
                       ),
                     ],
@@ -688,7 +698,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                       const SizedBox(width: 10),
                       Text(
                         '${bankAccount.accountName ?? 'Unbekannt'}',
-                        style: const TextStyle(color: Colors.black, fontSize: 13),
+                        style: TextStyle(color: primaryColor, fontSize: 13),
                       ),
                     ],
                   ),
@@ -704,10 +714,10 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                 mainAxisSize: MainAxisSize.max,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Imp',
                     style: TextStyle(
-                      color: Colors.black,
+                      color: primaryColor,
                       fontSize: 8,
                       fontWeight: FontWeight.bold,
                     ),

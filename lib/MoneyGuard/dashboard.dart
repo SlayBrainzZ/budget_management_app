@@ -98,6 +98,8 @@ class _DashboardState extends State<Dashboard> {
 
 
   Widget _buildAccountCards(BuildContext context) {
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.onSecondary;
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.all(10),
@@ -130,7 +132,7 @@ class _DashboardState extends State<Dashboard> {
                   width: 150,
                   height: 140,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: primaryColor,
                     borderRadius: BorderRadius.circular(15),
                   ),
                   child: Column(

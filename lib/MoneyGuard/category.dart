@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:budget_management_app/backend/firestore_service.dart';
 import 'package:budget_management_app/backend/Category.dart';
 import 'package:budget_management_app/backend/User.dart';
+import 'package:budget_management_app/MoneyGuard/home_page.dart';
 
 import '../backend/Transaction.dart';
 
@@ -56,8 +57,12 @@ final List<Color> availableColors = [
 ];
 
 class CategoryButton extends StatelessWidget {
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.onSecondary;
+
     return Center(
       child: GestureDetector(
         onTap: () {
@@ -70,7 +75,7 @@ class CategoryButton extends StatelessWidget {
           width: 250,
           height: 250,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: primaryColor,
             borderRadius: BorderRadius.circular(10),
             boxShadow: [
               BoxShadow(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:budget_management_app/backend/firestore_service.dart';
+import 'package:provider/provider.dart';
+import 'themeProvider.dart';
 
 class SettingsPage extends StatefulWidget {
   @override
@@ -8,7 +10,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool isDarkMode = false; // Zustand für den Dark Mode
+  //bool isDarkMode = false; // Zustand für den Dark Mode
   bool notificationsEnabled = true; // Zustand für Benachrichtigungen
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -65,12 +67,14 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: ListView(
           children: [
-            // Dark Mode Toggle
+            /*
             SwitchListTile(
               title: const Text("Dark Mode"),
               subtitle: const Text("Aktivieren Sie den dunklen Modus."),
@@ -82,8 +86,15 @@ class _SettingsPageState extends State<SettingsPage> {
                 // Aktualisiere das App-Theme
                 print("Dark Mode: $isDarkMode");
               },
+            ),*/
+            SwitchListTile(
+              title: const Text("Dark Mode"),
+              subtitle: const Text("Aktivieren Sie den dunklen Modus."),
+              value: themeProvider.isDarkMode,
+              onChanged: (value) {
+                themeProvider.toggleTheme();
+              },
             ),
-
             const Divider(),
 
             // Notifications Toggle
