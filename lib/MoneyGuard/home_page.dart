@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:budget_management_app/backend/firestore_service.dart';
 
 import 'package:flutter/material.dart';
 import 'dashboard.dart';
@@ -51,6 +51,23 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _selectedIndex = 0;
+  User? user;
+  final FirestoreService _firestoreService = FirestoreService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+
+  }
+
+
+
+  Future<void> _loadUser() async {
+    setState(() {
+      user = FirebaseAuth.instance.currentUser;
+    });
+  }
 
   void _tappedItem(int index) {
     setState(() {
@@ -66,21 +83,6 @@ class _MyHomePageState extends State<MyHomePage> {
     SavingPlan(),
     SettingsPage(),
   ];
-
-  Stream<int> _getUnreadNotificationsCount() {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return Stream.value(0); // Falls der Nutzer nicht eingeloggt ist, 0 zurückgeben
-
-    return FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('notifications')
-        .where('isRead', isEqualTo: false)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.length)
-        .handleError((_) => 0); // Falls ein Fehler auftritt, 0 zurückgeben
-  }
-
 
 
 
@@ -101,22 +103,17 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.white),
-            onPressed: () {
-              // Aktion für Benachrichtigungen
-            },
-          ),
-        /*[
-          StreamBuilder<int>(
-            stream: _getUnreadNotificationsCount(),
+
+          if (user != null) // Sicherstellen, dass user nicht null ist
+            StreamBuilder<int>(
+            stream: _firestoreService.getUnreadNotificationsCount(user!.uid),
             builder: (context, snapshot) {
               int unreadCount = snapshot.data ?? 0;
 
               return Stack(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.notifications, color: Colors.white),
+                    icon: const Icon(Icons.notifications, color: Colors.white, size: 32),
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -137,7 +134,12 @@ class _MyHomePageState extends State<MyHomePage> {
                 ],
               );
             },
-          ),*/
+          )
+          else
+            IconButton(
+            icon: const Icon(Icons.notifications, color: Colors.white),
+            onPressed: () {},
+            ),
         ],
 
 

@@ -88,7 +88,7 @@ class _SavingPlanState extends State<SavingPlan> {
         // Gesamteinnahmen berechnen
         totalIncome = categories.fold(0.0, (sum, category) => sum + (category.budgetLimit ?? 0));
       });
-/*
+
       // Prüfe Budgetüberschreitungen und sende Benachrichtigungen
       for (int index = 0; index < userCategories.length; index++) {
         double remaining = (userCategories[index].budgetLimit ?? 0) - spentAmounts[index];
@@ -100,6 +100,7 @@ class _SavingPlanState extends State<SavingPlan> {
             categoryId,
             "budget_overflow",
           );
+          //print("der Wert von bool ist $alreadyExists");
 
           if (!alreadyExists) {
             await _firestoreService.createNotification(
@@ -110,7 +111,7 @@ class _SavingPlanState extends State<SavingPlan> {
             );
           }
         }
-      }*/
+      }
 
 
     } catch (e) {
@@ -120,6 +121,45 @@ class _SavingPlanState extends State<SavingPlan> {
       );
     }
   }
+
+  /*Future<void> _loadUserAndCategories() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    setState(() {
+      categories = [];
+      remainingBudget = [];
+    });
+
+    try {
+      _userId = user.uid;
+
+      // Daten aus Firestore abrufen
+      Map<String, dynamic> data = await _firestoreService.fetchCategoriesAndTransactions(_userId!);
+      List<Category> userCategories = data["categories"];
+      List<double> spentAmounts = data["spentAmounts"];
+
+      setState(() {
+        categories = userCategories;
+
+        // Berechne verbleibende Budgets
+        remainingBudget = List.generate(userCategories.length, (index) {
+          double remaining = (userCategories[index].budgetLimit ?? 0) - spentAmounts[index];
+          return remaining;
+        });
+
+        // Gesamteinnahmen berechnen
+        totalIncome = categories.fold(0.0, (sum, category) => sum + (category.budgetLimit ?? 0));
+      });
+
+    } catch (e) {
+      print('Fehler beim Laden der Kategorien: ${e.toString()}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Fehler beim Laden der Daten")),
+      );
+    }
+  }*/
+
 
 
 

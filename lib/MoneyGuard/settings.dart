@@ -17,15 +17,21 @@ class _SettingsPageState extends State<SettingsPage> {
     try {
       await _auth.signOut();
       print("User ausgeloggt");
-      // Navigiere zur Login-Seite (ersetze 'LoginPage' mit deiner Login-Seite)
-      Navigator.of(context).pushReplacementNamed('/login');
+
+      // Stelle sicher, dass kein BuildContext verloren geht
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+      }
     } catch (e) {
       print("Fehler beim Logout: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Logout fehlgeschlagen. Bitte erneut versuchen.")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Logout fehlgeschlagen. Bitte erneut versuchen.")),
+        );
+      }
     }
   }
+
 
   void _deleteAccount() async {
     try {

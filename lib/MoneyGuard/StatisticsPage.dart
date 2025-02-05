@@ -35,7 +35,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
   List<LineChartBarData>? cachedYearlyLineChartData;
   List<double>? cachedImportantChartData;
   List<LineChartBarData>? cachedCategoryLineChartData;
-  Map<String, LineChartData> chartCache = {};
+  //Map<String, LineChartData> chartCache = {};
   List<Category> categories = [];
   List<BankAccount> allBankAccounts = [];
   double lastMonthBalance = 0.0;
@@ -195,11 +195,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
     try {
       if (chosenMonth == 'Monat') {
         // Zeige den Jahresverlauf
-        if (chartCache.containsKey(chosenYear)) {
+        /*if (chartCache.containsKey(chosenYear)) {
           setState(() {
             cachedYearlyLineChartData = chartCache[chosenYear]?.lineBarsData;
           });
-        } else {
+        } else {*/
           // Berechne die Jahresdaten
 
 
@@ -212,23 +212,23 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
           setState(() {
             cachedYearlyLineChartData = [einnahmeDaten, ausgabeDaten, gesamtDaten];
-            chartCache[chosenYear] = LineChartData(
+            /*chartCache[chosenYear] = LineChartData(
               lineBarsData: cachedYearlyLineChartData!,
               gridData: FlGridData(show: true),
               borderData: FlBorderData(show: true),
               titlesData: FlTitlesData(),
               lineTouchData: LineTouchData(handleBuiltInTouches: true),
-            );
+            );*/
           });
-        }
+        //}
       } else {
         // Zeige nur den Verlauf für den bestimmten Monat
-        if (chartCache.containsKey('$chosenYear-$chosenMonth')) {
+        /*if (chartCache.containsKey('$chosenYear-$chosenMonth')) {
           setState(() {
             cachedYearlyLineChartData =
                 chartCache['$chosenYear-$chosenMonth']?.lineBarsData;
           });
-        } else {
+        } else {*/
           List<FlSpot> FlSpotlist1 = await generateSpotsforMonth(
               chosenYear, chosenMonth, "Einnahme");
           List<FlSpot> FlSpotlist2 = await generateSpotsforMonth(
@@ -245,16 +245,16 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
           setState(() {
             cachedYearlyLineChartData = [einnahmeDaten, ausgabeDaten, gesamtDaten];
-            chartCache['$chosenYear-$chosenMonth'] = LineChartData(
+            /*chartCache['$chosenYear-$chosenMonth'] = LineChartData(
               lineBarsData: cachedYearlyLineChartData!,
               gridData: FlGridData(show: true),
               borderData: FlBorderData(show: true),
               titlesData: FlTitlesData(),
               lineTouchData: LineTouchData(handleBuiltInTouches: true),
-            );
+            );*/
           });
         }
-      }
+      //}
       print("leaving bigchartdata");
     } catch (e) {
       print('Fehler beim Laden der Diagrammdaten: ${e.toString()}');
@@ -1060,7 +1060,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                       }
 
                         // Reset cache to force data reload
-                        chartCache.clear();
+                        //chartCache.clear();
                         cachedYearlyLineChartData = null;
                       });
 
