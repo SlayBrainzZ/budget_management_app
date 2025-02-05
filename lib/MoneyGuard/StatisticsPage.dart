@@ -751,23 +751,26 @@ class _StatisticsPageState extends State<StatisticsPage> {
       }
     } else {
       switch (value.toInt()) {
+        case 1:
+          text = Text("${value.toString()}.${DateTime.now().month.toString().padLeft(2, '0')}", style: style);
+          break;
         case 5:
-          text = Text("${value.toString()}.${DateTime.now().month}", style: style);
+          text = Text("${value.toString()}.${DateTime.now().month.toString().padLeft(2, '0')}", style: style);
           break;
         case 10:
-          text = Text("${value.toString()}.${DateTime.now().month}", style: style);
+          text = Text("${value.toString()}.${DateTime.now().month.toString().padLeft(2, '0')}", style: style);
           break;
         case 15:
-          text = Text("${value.toString()}.${DateTime.now().month}", style: style);
+          text = Text("${value.toString()}.${DateTime.now().month.toString().padLeft(2, '0')}", style: style);
           break;
         case 20:
-          text = Text("${value.toString()}.${DateTime.now().month}", style: style);
+          text = Text("${value.toString()}.${DateTime.now().month.toString().padLeft(2, '0')}", style: style);
           break;
         case 25:
-          text = Text("${value.toString()}.${DateTime.now().month}", style: style);
+          text = Text("${value.toString()}.${DateTime.now().month.toString().padLeft(2, '0')}", style: style);
           break;
         case 30:
-          text = Text("${value.toString()}.${DateTime.now().month}", style: style);
+          text = Text("${value.toString()}.${DateTime.now().month.toString().padLeft(2, '0')}", style: style);
         default:
           text = const Text('');
           break;
@@ -829,6 +832,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
       }
     } else {
       switch (value.toInt()) {
+        case 1:
+          text = Text("${value.toString()}.${selectedMonth}", style: style);
+          break;
         case 5:
           text = Text("${value.toString()}.${selectedMonth}", style: style);
           break;
