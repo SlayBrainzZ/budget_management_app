@@ -42,7 +42,7 @@ final List<IconData> availableIcons = [
 ];
 
 final List<Color> availableColors = [
-  Colors.blueGrey,
+  Colors.grey,
   Colors.red,
   Colors.blue,
   Colors.green,
