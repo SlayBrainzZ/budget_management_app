@@ -289,11 +289,36 @@ class _StatisticsPageState extends State<StatisticsPage> {
           spots: categoryList,
         ),
       ],
-      gridData: FlGridData(show: true),
+      gridData: FlGridData(
+        show: true,
+        drawHorizontalLine: true,
+        drawVerticalLine: true,
+        getDrawingHorizontalLine: (value) {
+          return FlLine(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withOpacity(0.2) // Helle Linien im Dark Mode
+                : Colors.black.withOpacity(0.1), // Dunkle Linien im Light Mode
+            strokeWidth: 1,
+          );
+        },
+        getDrawingVerticalLine: (value) {
+          return FlLine(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withOpacity(0.2)
+                : Colors.black.withOpacity(0.1),
+            strokeWidth: 1,
+          );
+        },
+      ),
+
       borderData: FlBorderData(show: true,
         border: const Border(
-          left: BorderSide(color: Colors.black, width: 1), // Linke Linie
-          bottom: BorderSide(color: Colors.black, width: 1), // Untere Linie
+          left: BorderSide(
+              color: Colors.black,
+              width: 1), // Linke Linie
+          bottom: BorderSide(
+              color: Colors.black,
+              width: 1), // Untere Linie
           top: BorderSide.none, // Keine obere Linie
           right: BorderSide.none, // Keine rechte Linie
         ),
@@ -303,7 +328,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
         handleBuiltInTouches: true,
         touchTooltipData: LineTouchTooltipData(
           getTooltipColor: (LineBarSpot spot) {
-            return Color.fromARGB(255, 255, 255, 255); // Weißer Hintergrund
+            return Theme.of(context).colorScheme.surface;
+
+            //return Color.fromARGB(255, 255, 255, 255); // Weißer Hintergrund
           },
           tooltipBorder: BorderSide(
             color: Colors.black, // Farbe des Randes
@@ -321,7 +348,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: spot.bar.color ?? Colors.black,
+                  color: spot.bar.color ?? Theme.of(context).textTheme.bodyLarge?.color,
+
                 ),
               );
             }).toList();
@@ -594,12 +622,37 @@ class _StatisticsPageState extends State<StatisticsPage> {
       //maxY: 10000, // Bereich oben erweitern, damit "DEZ" nicht so nah am Rand ist
 
       lineBarsData: cachedYearlyLineChartData!,
-      gridData: FlGridData(show: true),
+      gridData: FlGridData(
+        show: true,
+        drawHorizontalLine: true,
+        drawVerticalLine: true,
+        getDrawingHorizontalLine: (value) {
+          return FlLine(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withOpacity(0.2) // Helle Linien im Dark Mode
+                : Colors.black.withOpacity(0.1), // Dunkle Linien im Light Mode
+            strokeWidth: 1,
+          );
+        },
+        getDrawingVerticalLine: (value) {
+          return FlLine(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withOpacity(0.2)
+                : Colors.black.withOpacity(0.1),
+            strokeWidth: 1,
+          );
+        },
+      ),
+
       borderData: FlBorderData(
         show: true,
         border: const Border(
-          left: BorderSide(color: Colors.black, width: 1), // Linke Linie
-          bottom: BorderSide(color: Colors.black, width: 1), // Untere Linie
+          left: BorderSide(
+              color: Colors.black,
+              width: 1), // Linke Linie
+          bottom: BorderSide
+            (color: Colors.black,
+              width: 1), // Untere Linie
           top: BorderSide.none, // Keine obere Linie
           right: BorderSide.none, // Keine rechte Linie
     ),
@@ -609,10 +662,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
         handleBuiltInTouches: true,
         touchTooltipData: LineTouchTooltipData(
           getTooltipColor: (LineBarSpot spot) {
-            return Color.fromARGB(255, 255, 255, 255);;
+            return Theme.of(context).colorScheme.surface;
+
+            return Color.fromARGB(255, 255, 255, 255);
           },
           tooltipBorder: BorderSide(
-            color: Colors.black, // Farbe des Randes
+            color: Colors.black,
+            //color: Theme.of(context).textTheme.bodyLarge?.color,// Farbe des Randes
             width: 1, // Dicke des Randes
           ),
           tooltipPadding: EdgeInsets.all(8), // Abstand innerhalb des Tooltips
@@ -629,7 +685,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: spot.bar.color ?? Colors.black,
+                    color: spot.bar.color ?? Theme.of(context).textTheme.bodyLarge?.color,
                 ),
               );
             }).toList();
@@ -923,6 +979,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
         return Container(
           height: 300, // Erhöhe die Höhe des Containers
           child: CupertinoPicker(
+            backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
             itemExtent: 50.0, // Erhöht die Höhe der Picker-Elemente
             scrollController: FixedExtentScrollController(
                 initialItem: initialYearIndex),
@@ -950,7 +1007,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
         return Container(
           height: 300, // Höhe des Containers
           child: CupertinoPicker(
-            backgroundColor: Colors.white,
+            backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+            //backgroundColor: Colors.white,
             itemExtent: 50.0,
             // Höhe jedes Elements
             scrollController: FixedExtentScrollController(
@@ -966,11 +1024,17 @@ class _StatisticsPageState extends State<StatisticsPage> {
             },
             children: [
               Center(child: Text("Monat",
-                  style: TextStyle(fontSize: 18, color: Colors.black))),
+                  style: TextStyle(fontSize: 18,
+                      //color: Colors.black
+                      color: Theme.of(context).textTheme.bodyLarge?.color
+                  ))),
               // Standard "Monat" als ersten Eintrag
               ...List.generate(12, (index) =>
                   Center(child: Text((index + 1).toString().padLeft(2, '0'),
-                      style: TextStyle(fontSize: 18, color: Colors.black)))),
+                      style: TextStyle(fontSize: 18,
+                          //color: Colors.black
+                          color: Theme.of(context).textTheme.bodyLarge?.color
+                      )))),
               // Monatszahlen
             ],
           ),
@@ -1000,7 +1064,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      //color: Colors.black,
+                      color: Theme.of(context).textTheme.bodyLarge?.color
                     ),
                   ),
 
@@ -1098,7 +1163,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     'Gesamtverlauf:  ',
                     style: TextStyle(fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black),
+                        //color: Colors.black
+                        color: Theme.of(context).textTheme.bodyLarge?.color
+                    ),
                   ),
                   const SizedBox(width: 10),
                   // Jahr Picker
@@ -1108,13 +1175,17 @@ class _StatisticsPageState extends State<StatisticsPage> {
                       padding: EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.surface,
+                        //color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.grey),
                       ),
                       child: Text(
                         selectedYear,
-                        style: TextStyle(fontSize: 16, color: Colors.black),
+                        style: TextStyle(fontSize: 16,
+                            //color: Colors.black
+                            color: Theme.of(context).textTheme.bodyLarge?.color
+                        ),
                       ),
                     ),
                   ),
@@ -1126,13 +1197,18 @@ class _StatisticsPageState extends State<StatisticsPage> {
                       padding: EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.surface,
+
+                        //color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.grey),
                       ),
                       child: Text(
                         selectedMonth,
-                        style: TextStyle(fontSize: 16, color: Colors.black),
+                        style: TextStyle(fontSize: 16,
+                            //color: Colors.black
+                            color: Theme.of(context).textTheme.bodyLarge?.color
+                        ),
                       ),
                     ),
                   ),
@@ -1146,7 +1222,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 width: double.infinity,
                 height: 300,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
+                  //color: Colors.white,
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: [
                     BoxShadow(
@@ -1170,7 +1247,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     'Kategorieausgaben:  ',
                     style: TextStyle(fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black),
+                        color: Theme.of(context).textTheme.bodyLarge?.color
+                        //color: Colors.black
+                    ),
                   ),
                   const SizedBox(width: 20),
                   GestureDetector(
@@ -1180,13 +1259,17 @@ class _StatisticsPageState extends State<StatisticsPage> {
                       padding: EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.surface,
+                        //color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.grey),
                       ),
                       child: Text(
                         selectedTimeCategory, // Zeigt "Monat" oder "Woche" an
-                        style: TextStyle(fontSize: 16, color: Colors.black),
+                        style: TextStyle(fontSize: 16,
+                            color: Theme.of(context).textTheme.bodyLarge?.color
+                            //color: Colors.black
+                        ),
                       ),
                     ),
                   ),
@@ -1297,43 +1380,15 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
 
-  void _showImportancePicker(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return Container(
-          height: 220,
-          child: CupertinoPicker(
-            backgroundColor: Colors.white,
-            itemExtent: 50.0,
-            scrollController: FixedExtentScrollController(
-              initialItem: selectedTimeImportance == "Monat" ? 0 : 1,
-            ),
-            onSelectedItemChanged: (int index) async {
-              selectedTimeImportance = index == 0 ? "Monat" : "Woche";
-              await _loadAndSetExpenses(selectedTimeImportance);
-            },
-            children: [
-              Center(
-                child: Text("Monat", style: TextStyle(fontSize: 18, color: Colors.black)),
-              ),
-              Center(
-                child: Text("Woche", style: TextStyle(fontSize: 18, color: Colors.black)),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-  void _showCategoryPicker(BuildContext context) {
+  /*void _showCategoryPicker(BuildContext context) {
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
         return Container(
           height: 220, // Höhe des Containers
           child: CupertinoPicker(
-            backgroundColor: Colors.white,
+            backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+            //backgroundColor: Colors.white,
             itemExtent: 50.0,
             // Höhe jedes Elements
             scrollController: FixedExtentScrollController(
@@ -1350,15 +1405,62 @@ class _StatisticsPageState extends State<StatisticsPage> {
             },
             children: [
               Center(child: Text("Monat",
-                  style: TextStyle(fontSize: 18, color: Colors.black))),
+                  style: TextStyle(fontSize: 18,
+                      color: Theme.of(context).textTheme.bodyLarge?.color
+                      //color: Colors.black
+                  ))),
               Center(child: Text("Jahr",
-                  style: TextStyle(fontSize: 18, color: Colors.black))),
+                  style: TextStyle(fontSize: 18,
+                      color: Theme.of(context).textTheme.bodyLarge?.color
+                      //color: Colors.black
+                  ))),
+            ],
+          ),
+        );
+      },
+    );
+  }*/
+  void _showCategoryPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          height: 220, // Höhe des Containers
+          child: CupertinoPicker(
+            backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+            //backgroundColor: Colors.white,
+            itemExtent: 50.0,
+            // Höhe jedes Elements
+            scrollController: FixedExtentScrollController(
+              initialItem: selectedTimeCategory == "Monat"
+                  ? 0
+                  : 1, // Setzt den initialen Wert (Monat oder Woche)
+            ),
+            onSelectedItemChanged: (int index) {
+              setState(() {
+                // "Monat" oder "Woche" auswählen
+                selectedTimeCategory = index == 0 ? "Monat" : "Jahr";
+                // Daten nach der Auswahl neu laden
+              });
+            },
+            children: [
+              Center(child: Text("Monat",
+                  style: TextStyle(fontSize: 18,
+                      color: Theme.of(context).textTheme.bodyLarge?.color
+                    //color: Colors.black
+                  ))),
+              Center(child: Text("Jahr",
+                  style: TextStyle(fontSize: 18,
+                      color: Theme.of(context).textTheme.bodyLarge?.color
+                    //color: Colors.black
+                  ))),
             ],
           ),
         );
       },
     );
   }
+
 
 }
 
@@ -1384,7 +1486,7 @@ class CategoryStatWidget extends StatelessWidget {
           return Center(
             child: Text(
               'Keine Daten für diese Kategorie verfügbar',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color),
               textAlign: TextAlign.center,
             ),
           );
@@ -1394,7 +1496,8 @@ class CategoryStatWidget extends StatelessWidget {
           padding: const EdgeInsets.all(12.0),
           width: 410,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
+            //color: Colors.white,
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
@@ -1414,7 +1517,8 @@ class CategoryStatWidget extends StatelessWidget {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      color: category.color,
+                      color: Theme.of(context).textTheme.bodyLarge?.color
+                      //color: category.color,
                     ),
                   ),
                   const SizedBox(width: 5),
@@ -1429,7 +1533,8 @@ class CategoryStatWidget extends StatelessWidget {
               Container(
                 height: 220,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
+                  //color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: LineChart(snapshot.data!),

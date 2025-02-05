@@ -213,12 +213,11 @@ class _SavingPlanState extends State<SavingPlan> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       body: CustomScrollView(
         slivers: [
           // Statischer Bereich oben (Budgetlimit in einer SliverAppBar)
           SliverAppBar(
-            backgroundColor: Colors.white,
+            backgroundColor: Theme.of(context).colorScheme.onSecondary,
             pinned: true,
             elevation: 2,
             expandedHeight: 120.0,
@@ -238,7 +237,7 @@ class _SavingPlanState extends State<SavingPlan> {
                           style: TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
                             //fontFamily: 'Roboto,
                           ),
                         ),
@@ -248,7 +247,7 @@ class _SavingPlanState extends State<SavingPlan> {
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
                             //fontFamily: 'Roboto',
                           ),
                         ),
@@ -259,7 +258,7 @@ class _SavingPlanState extends State<SavingPlan> {
                       'monatliches Budget',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Colors.grey[600],
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
                         //fontFamily: 'Roboto',
                       ),
                     ),
@@ -292,7 +291,7 @@ class _SavingPlanState extends State<SavingPlan> {
                 width: double.infinity,
                 height: 200,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSecondary,
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: [
                     BoxShadow(
@@ -313,7 +312,18 @@ class _SavingPlanState extends State<SavingPlan> {
                           showTitles: false, // Rechte Achse deaktivieren
                         ),
                       ),
-                      //leftTitles: ,
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true, // Aktiviere die linke Achse
+                          reservedSize: 40, // Vergrößere den Platz links
+                          getTitlesWidget: (value, meta) {
+                            return Text(
+                              '${value.toInt()}%', // Beschriftung für linke Achse
+                              style: const TextStyle(fontSize: 10),
+                            );
+                          },
+                        ),
+                      ),
                       bottomTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: false, // Kategorienamen unter dem Balken anzeigen
@@ -325,7 +335,7 @@ class _SavingPlanState extends State<SavingPlan> {
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.black,
+                                  color: Theme.of(context).textTheme.bodyLarge?.color,
                                   fontFamily: 'Roboto',
                                 ),
                               );
@@ -336,12 +346,44 @@ class _SavingPlanState extends State<SavingPlan> {
                       ),
                       topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                     ),
-                    borderData: FlBorderData(show: false), // Keine Border anzeigen
+                    borderData: FlBorderData(
+                        show: true,
+                        border: const Border(
+                      left: BorderSide(
+                          color: Colors.black,
+                          width: 1), // Linke Linie
+                      bottom: BorderSide
+                        (color: Colors.black,
+                          width: 1), // Untere Linie
+                      top: BorderSide.none, // Keine obere Linie
+                      right: BorderSide.none, // Keine rechte Linie
+                    )), // Keine Border anzeigen
                     barGroups: _buildCategoryData(),
+                    gridData: FlGridData(
+                      show: true,
+                      drawHorizontalLine: true,
+                      drawVerticalLine: true,
+                      getDrawingHorizontalLine: (value) {
+                        return FlLine(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white.withOpacity(0.2) // Helle Linien im Dark Mode
+                              : Colors.black.withOpacity(0.1), // Dunkle Linien im Light Mode
+                          strokeWidth: 1,
+                        );
+                      },
+                      getDrawingVerticalLine: (value) {
+                        return FlLine(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white.withOpacity(0.2)
+                              : Colors.black.withOpacity(0.1),
+                          strokeWidth: 1,
+                        );
+                      },
+                    ),
                     barTouchData: BarTouchData(
                       touchTooltipData: BarTouchTooltipData(
                         getTooltipColor: (BarChartGroupData group) {
-                          return Color.fromARGB(255, 255, 255, 255); // Leicht verblasstes Türkisgrün
+                          return Theme.of(context).colorScheme.onSecondary;
                         },
                         tooltipBorder: BorderSide(
                           color: Colors.black, // Farbe des Randes
@@ -359,7 +401,11 @@ class _SavingPlanState extends State<SavingPlan> {
                               color: category.color,
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
-                            ),
+                              /*foreground: Paint()
+                                ..style = PaintingStyle.stroke
+                                ..strokeWidth = 2 // Dicke der Umrandung
+                                ..color = Colors.white, // Farbe der Umrandung
+                            */),
                           );
                         },
                       ),
@@ -382,7 +428,7 @@ class _SavingPlanState extends State<SavingPlan> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 20,
-                    color: Colors.grey,
+                    color: Theme.of(context).colorScheme.onPrimary,
                     fontFamily: 'Roboto',
                   ),
                 ),
@@ -423,7 +469,7 @@ class _SavingPlanState extends State<SavingPlan> {
                   child: Container(
                     padding: const EdgeInsets.all(16.0),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSecondary,
                       borderRadius: BorderRadius.circular(8),
                       boxShadow: [
                         BoxShadow(
@@ -444,6 +490,7 @@ class _SavingPlanState extends State<SavingPlan> {
                               category.icon,
                               color: category.color,
                               size: 31.0,
+                              shadows: [],
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -453,8 +500,11 @@ class _SavingPlanState extends State<SavingPlan> {
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'Roboto',
-                                  color: category.color,
-                                ),
+                                  /*foreground: Paint()
+                                    ..style = PaintingStyle.stroke
+                                    ..strokeWidth = 2 // Dicke der Umrandung
+                                    ..color = Colors.white, // Farbe der Umrandung
+                                */),
                               ),
                             ),
                           ],
@@ -471,7 +521,7 @@ class _SavingPlanState extends State<SavingPlan> {
                                 spentMessage,
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: Colors.black,
+                                  color: Theme.of(context).textTheme.bodyLarge?.color,
                                   fontFamily: 'Roboto',
                                 ),
                                 overflow: TextOverflow.ellipsis,
@@ -487,7 +537,12 @@ class _SavingPlanState extends State<SavingPlan> {
                                     ? Colors.red
                                     : Colors.green,
                                 fontFamily: 'Roboto',
-                              ),
+                                /*foreground: Paint()
+                                  ..style = PaintingStyle.stroke
+                                  ..strokeWidth = 2 // Dicke der Umrandung
+                                  ..color = Colors.white, // Farbe der Umrandung
+
+                              */),
                             ),
                           ],
                         ),
@@ -500,7 +555,7 @@ class _SavingPlanState extends State<SavingPlan> {
                         // LinearProgressIndicator
                         LinearProgressIndicator(
                           value: spentPercent, // Dieser Wert wird nun angepasst
-                          backgroundColor: Colors.teal[100],
+                          backgroundColor: Theme.of(context).colorScheme.onSecondary,
                           color: category.color,
                           minHeight: 8,
                         ),
