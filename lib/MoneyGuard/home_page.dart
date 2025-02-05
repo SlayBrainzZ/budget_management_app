@@ -32,6 +32,7 @@ class MyApp extends StatelessWidget {
         brightness: Brightness.light,
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.teal,
+          onPrimary: Colors.teal,
           brightness: Brightness.light, // HELLIGKEIT HINZUGEFÜGT
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(

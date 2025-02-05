@@ -595,7 +595,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                       text: TextSpan(
                         children: [
                           TextSpan(
-                            text: 'Notiz: ',
+                            text: 'Notiz:  ',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 12, // Kleinere Schriftgröße für das Label
@@ -626,10 +626,6 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                     )
                   else
                     const Text('Konto: Unbekannt', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                  /*Text(
-                  'Datum: ${transaction.date.toLocal().toIso8601String()}',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),*/
                   Text(
                     'Datum: ${_formatDate(transaction.date)}',
                     style: TextStyle(fontSize: 12, color: Colors.blueGrey),
