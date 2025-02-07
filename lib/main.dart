@@ -18,8 +18,6 @@ import 'dart:html' as html;
 import 'MoneyGuard/themeProvider.dart';
 import 'backend/ImportedTransaction.dart'; // For File handling on web
 
-
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Ensure bindings are initialized for Firebase
 
@@ -43,8 +41,6 @@ void main() async {
       await Firebase.initializeApp();
     }
 
-
-
     // Listen to auth state changes
     Auth().authStateChanges.listen((user) async {
       if (user != null) {
@@ -62,22 +58,6 @@ void main() async {
 
         if (accounts.isNotEmpty) {
           String? firstAccountId = accounts[0].id;
-
-          /* // 1. Fetch the first five categories
-          List<testCat.Category> allCategories = await firestoreService.getUserCategories(user.uid);
-          List<String> firstFiveCategoryIds = allCategories.sublist(0, 5).map((category) => category.id!).toList();
-
-          // 2. Fetch transactions with the filters
-          List<testTrans.Transaction> filteredTransactions = await firestoreService.getFilteredTransactions(
-            user.uid,
-            categoryIds: firstFiveCategoryIds,
-          );
-
-          // 3. Print the filtered transactions
-          print("Filtered transactions:");
-          for (var transaction in filteredTransactions) {
-            print(transaction.toMap());
-          } */
 
         } else {
           print("No bank accounts found for this user.");
@@ -100,72 +80,6 @@ void main() async {
     debugPrint("Firebase initialization failed: $e");
   }
 }
-
-
-
-/*
-// Perform Combined Test: Register a user, create a category, transaction, and display them
- Future<void> performCombinedTest() async {
-  try {
-    // Step 1: Listen for auth state changes and create user document
-    Auth().authStateChanges.listen((user) async {
-      if (user != null) {
-        print('User registered: ${user.email}');
-
-        // Create the User document in Firestore
-        await FirestoreService().createUser(testUser.User(
-          userId: user.uid,
-          email: user.email!,
-          createdDate: DateTime.now(),
-        ));
-
-        // Step 2: Create a category for the user
-        testCat.Category newCategory = testCat.Category(
-          userId: user.uid,
-          name: "Groceries",
-          budgetLimit: 500.0,
-        );
-        String categoryId = await FirestoreService().createCategory(user.uid, newCategory);
-        newCategory.id = categoryId; // Assign the ID to the category object
-
-        print('Category created: ${newCategory.name} (ID: ${newCategory.id})');
-
-        // Step 3: Create a transaction under the created category
-        testTrans.Transaction newTransaction = testTrans.Transaction(
-          userId: user.uid,
-          amount: 100.0,
-          date: DateTime.now(),
-          categoryId: newCategory.id,
-          type: 'Expense',
-          importance: false,
-        );
-        await FirestoreService().createTransactionUnderCategory(
-          user.uid,
-          newTransaction,
-          newCategory.id!,
-        );
-
-        print('Transaction created under category ${newCategory.name}');
-
-        // Step 4: Retrieve and print the created category
-        List<testCat.Category> categories = await FirestoreService().getUserCategories(user.uid);
-        print('Categories for user ${user.email}:');
-        for (var category in categories) {
-          print(category.toMap());
-        }
-
-        // Step 5: Retrieve and print transactions under the created category
-        List<testTrans.Transaction> transactions = await FirestoreService().getCategoryTransactions(user.uid, newCategory.id!);
-        print('Transactions for category ${newCategory.name}:');
-        for (var transaction in transactions) {
-          print(transaction.toMap());
-        }
-      }
-    });
-  } catch (e) {
-    print("Error performing combined test: $e");
-  }
-}*/
 
 // Main application widget
 class MyApp extends StatelessWidget {
