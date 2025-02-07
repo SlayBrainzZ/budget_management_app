@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:budget_management_app/backend/firestore_service.dart';
 import 'package:budget_management_app/backend/Category.dart';
-import 'package:budget_management_app/backend/User.dart';
-import 'package:budget_management_app/MoneyGuard/home_page.dart';
+
 
 import '../backend/Transaction.dart';
 
@@ -79,10 +78,10 @@ class CategoryButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1), // Weniger Deckkraft für einen sanfteren Schatten
-                blurRadius: 6,  // Weniger Unschärfe für einen subtileren Schatten
-                spreadRadius: 1, // Geringere Ausdehnung
-                offset: Offset(2, 2), // Kleinere Verschiebung für einen dezenteren Schatten
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 6,
+                spreadRadius: 1,
+                offset: Offset(2, 2),
               ),
             ],
           ),
@@ -151,8 +150,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
   /// Liste der Kategorien anzeigen
   Widget _buildCategoryList() {
-    final double fabHeight = 56.0; // Standardhöhe des FloatingActionButton
-    final double fabPadding = 16.0; // Abstand zwischen Liste und FAB
+    final double fabHeight = 56.0;
+    final double fabPadding = 16.0;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -168,14 +167,14 @@ class _CategoryScreenState extends State<CategoryScreen> {
             } else {
               var categories = snapshot.data ?? [];
 
-              // Standardkategorien zuerst sortieren
+
               categories.sort((a, b) {
                 if (a.isDefault && !b.isDefault) return -1;
                 if (!a.isDefault && b.isDefault) return 1;
                 return 0;
               });
 
-              // Beschränke die Liste auf den Platz oberhalb des FAB
+
               return ConstrainedBox(
                 constraints: BoxConstraints(maxHeight: maxHeight),
                 child: ListView.builder(
@@ -364,9 +363,6 @@ class _CategoryScreenState extends State<CategoryScreen> {
   }
 
 
-
-
-  /// Kategorie-Budget bearbeiten
   void _editCategoryBudget(Category category) {
     double budgetAmount = category.budgetLimit ?? 0.0;
 
