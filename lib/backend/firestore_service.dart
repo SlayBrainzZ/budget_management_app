@@ -850,11 +850,6 @@ class FirestoreService {
     }
   }
 
-
-  /// Deletes a transaction from Firestore for a specific user.
-  ///
-  /// This function takes the user's `documentId` and the `transactionId` as input,
-  /// and deletes the corresponding transaction document from the user's `Transactions` subcollection.
   Future<void> deleteTransaction(String documentId, String transactionId) async {
     try {
       final userTransactionsRef = usersRef.doc(documentId).collection('Transactions');
@@ -872,7 +867,6 @@ class FirestoreService {
       print("Error deleting transaction: $e");
     }
   }
-
 
   Future<double> calculateBankAccountBalance(String documentId, BankAccount bankAccount) async {
     try {
@@ -911,7 +905,6 @@ class FirestoreService {
       return bankAccount.balance ?? 0.0;
     }
   }
-
 
   Future<double> calculateImportBankAccountBalance(String documentId, BankAccount bankAccount) async {
     try {
@@ -957,17 +950,10 @@ class FirestoreService {
     }
   }
 
-
-
   // =======================
   //  Summary and Utility Functions
   // =======================
 
-
-  /// Calculates the total balance for a specific user based on their transactions.
-  ///
-  /// This function takes the user's `documentId` as input and calculates the sum of all
-  /// transaction amounts for that user.
   Future<double> calculateTotalBalance(String documentId) async {
     List<Transaction> transactions = await getUserTransactions(documentId);
     double totalBalance = 0.0;
@@ -978,10 +964,6 @@ class FirestoreService {
   }
 
 
-  /// Calculates the total spending for a specific user and category.
-  ///
-  /// This function takes the user's `documentId` and a `categoryId` as input,
-  /// and calculates the sum of all expense amounts for that user within the specified category.
   Future<double> calculateCategorySpending(String documentId, String categoryId) async {
     List<Transaction> categoryTransactions = await getTransactionsByCategory(documentId, categoryId);
     double totalSpending = 0.0;
@@ -1031,11 +1013,6 @@ class FirestoreService {
   }
 
 
-  /// Gets transactions within a specific date range for a specific user.
-  ///
-  /// This function takes the user's `documentId`, a `startDate`, and an `endDate` as input,
-  /// and retrieves all transaction documents from the user's `Transactions` subcollection that fall
-  /// within the given date range.
   Future<List<Transaction>> getSpecificTransactionByDateRange(String documentId, String type, DateTime startDate, DateTime endDate, String accountid, bool forBalance) async {
 
     //print("getSpecificTransactionByDateRange");
@@ -1080,9 +1057,6 @@ class FirestoreService {
 
   Future<List<Map<String, double>>> calculateYearlyImportedSpendingByMonth(String documentId, String chosenYear, String accountId) async {
     //print("entered calculateYearlyImportedSpendingByMonth");
-
-
-
 
     // Initialisiere Maps für Einnahmen, Ausgaben und Nettoergebnis
     Map<String, double> incomeMap = {};
@@ -1152,7 +1126,6 @@ class FirestoreService {
     return [incomeMap, expenseMap, netMap];
   }
 
-
   Future<List<Map<String, double>>> calculateYearlySpendingByMonth2(String documentId, String chosenYear, String accountid) async {
     //print("entered calculateYearlySpendingByMonth2");
 
@@ -1179,7 +1152,6 @@ class FirestoreService {
     startBalance = allTransactionsforBalance.fold(0.0, (sum, transaction) => sum + transaction.amount);
     print("StartBalance für calculateYearlySpendingByMonth2ist $startBalance");
     cumulativeNetAmount = startBalance;
-
 
     List<Transaction> yearTransactions = await getSpecificTransactionByDateRange(
         documentId, "null", startDate, endDate, accountid,false);
@@ -1256,7 +1228,6 @@ class FirestoreService {
     DateTime? oldestImportedTransactionDate;
     DateTime? oldestManualTransactionDate;
     DateTime? oldestTransactionDate;
-
 
 
     //alle importedtransactions vor dem gewünschtenZeitraumum den Kontostand zu berechnen
@@ -1337,7 +1308,6 @@ class FirestoreService {
     return [incomeMap, expenseMap, netMap];
   }
 
-
   Future<List<double>> calculateMonthlyImportedSpendingByDay(String documentId, String type, String chosenYear, String chosenMonth, String accountId) async {
 
     //print("entered calculateMonthlyImportedSpendingByDay");
@@ -1353,7 +1323,6 @@ class FirestoreService {
     DateTime endDate = (int.parse(chosenYear) == currentYear && int.parse(chosenMonth) == currentMonth)
         ? DateTime.utc(currentYear, currentMonth, currentDay) // Bis zum heutigen Tag begrenzen
         : DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth) + 1, 1).subtract(Duration(days: 1));
-
 
     double cumulativeNetAmount = 0.0;
     double startBalance = 0.0;
@@ -1410,8 +1379,6 @@ class FirestoreService {
     return monthlySpending;
   }
 
-
-
   Future<List<double>> calculateMonthlySpendingByDay(String documentId, String type, String chosenYear, String chosenMonth, String accountid) async {
 
     //print("entered calculateMonthlySpendingByDay");
@@ -1429,8 +1396,6 @@ class FirestoreService {
         : DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth) + 1, 1).subtract(Duration(days: 1));
 
 
-
-
     double cumulativeNetAmount = 0.0;
     double startBalance = 0.0;
 
@@ -1440,7 +1405,6 @@ class FirestoreService {
     startBalance = allMonthTransactionsforBalance.fold(0.0, (sum, transaction) => sum + transaction.amount);
     print("StartBalance für calculateMonthlyImportedSpendingByDay $startBalance");
     cumulativeNetAmount = startBalance;
-
 
     // Initialisiere die Liste für tägliche Werte
     List<double> monthlySpending = List.filled(endDate.day, 0.0);
@@ -1488,8 +1452,6 @@ class FirestoreService {
     return monthlySpending;
   }
 
-
-
   Future<List<double>> calculateMonthlyCombinedSpendingByDay(String documentId, String type, String chosenYear, String chosenMonth, String accountId) async {
 
     //print("entered calculateMonthlyCombinedSpendingByDay");
@@ -1506,11 +1468,9 @@ class FirestoreService {
         ? DateTime.utc(currentYear, currentMonth, currentDay) // Begrenzung auf aktuellen Tag
         : DateTime.utc(int.parse(chosenYear), int.parse(chosenMonth) + 1, 1).subtract(Duration(days: 1));
 
-
     double cumulativeNetAmount = 0.0;
     double manuallytartBalance = 0.0;
     double importedStartBalance = 0.0;
-
 
 
     //alle vorherigen transaction
@@ -1593,8 +1553,6 @@ class FirestoreService {
     return monthlySpending;
   }
 
-
-
   Future<List<ImportedTransaction>> getImportedTransactionsByDateRangeAndCategory(String documentId, String categoryId, DateTime startDate, DateTime endDate, String accountId) async {
     //print("Entering getImportedTransactionsByDateRangeAndCategory");
 
@@ -1628,8 +1586,6 @@ class FirestoreService {
       return [];
     }
   }
-
-
 
   Future<List<Transaction>> getTransactionsByDateRangeAndCategory(String documentId, String categoryId, DateTime startDate, DateTime endDate, String accountId) async {
 
@@ -1670,7 +1626,6 @@ class FirestoreService {
       return [];
     }
   }
-
 
   Future<Map<int, double>> getCurrentMonthImportedTransactionsByDateRangeAndCategory(String documentId, String categoryId, String accountId) async {
     //print("Entering getCurrentMonthImportedTransactionsByDateRangeAndCategory");
@@ -1744,7 +1699,6 @@ class FirestoreService {
     return monthlyCategoryValues;
   }
 
-
   Future<Map<int, double>> getCurrentMonthCombinedTransactionsByDateRangeAndCategory(
       String documentId, String categoryId, String accountId) async {
 
@@ -1792,8 +1746,6 @@ class FirestoreService {
     return monthlyCategoryValues;
   }
 
-
-
   Future<Map<int, double>> calculateYearlyCategoryImportedExpenses(String documentId, String categoryId, String chosenYear, String accountId) async {
     //print("Entering calculateMonthlyCategoryImportedExpenses");
     Map<int, double> monthlyCategoryExpenses = {}; // Initialisiere das Dictionary
@@ -1820,7 +1772,6 @@ class FirestoreService {
     }
     return monthlyCategoryExpenses;
   }
-
 
   Future<Map<int, double>> calculateYearlyCategoryExpenses(String documentId, String categoryId, String chosenYear, String accountId) async {
 
@@ -1895,9 +1846,6 @@ class FirestoreService {
     //print("Leaving calculateYearlyCombinedCategoryExpenses");
     return monthlyCategoryExpenses;
   }
-
-
-
 
   Future<Map<String, double>> fetchUrgentAndNonUrgentExpenses(String documentId, DateTime startDate, DateTime endDate, String accountId) async {
     try {
@@ -1997,10 +1945,6 @@ class FirestoreService {
   }
 
 
-
-
-
-
   Future<void> createNotification(String userId, String message, String type, {String? categoryId, String? accountId}) async {
     try {
       final userNotificationsRef = usersRef.doc(userId).collection('notifications');
@@ -2053,8 +1997,6 @@ class FirestoreService {
   }
 
 
-
-
   Future<bool> doesNotificationExist(String userId, String categoryId, String type) async {
 
 
@@ -2099,9 +2041,6 @@ class FirestoreService {
         .map((snapshot) => snapshot.docs.length);
   }
 
-
-
-
   Stream<List<Map<String, dynamic>>> getUserNotificationsStream(String userId) {
     return usersRef
         .doc(userId)
@@ -2121,7 +2060,6 @@ class FirestoreService {
           .toList();
     });
   }
-
 
   Future<Map<String, dynamic>> fetchCategoriesAndTransactions(String userId) async {
     List<Category> userCategories = await getUserCategoriesWithBudget(userId);
@@ -2145,8 +2083,5 @@ class FirestoreService {
       "spentAmounts": spentAmounts,
     };
   }
-
-
-
 }
 
