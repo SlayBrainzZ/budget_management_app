@@ -636,7 +636,7 @@ class FirestoreService {
 
       // 2. Berechne die aktuellen Ausgaben vor der Transaktion
       double totalSpentBefore =
-      await _getCurrentMonthTotalSpent(userId, transaction.categoryId!);
+      await getCurrentMonthTotalSpent(userId, transaction.categoryId!);
 
       // 3. Speichere die Transaktion
       await createTransaction2(userId, transaction,
@@ -647,7 +647,7 @@ class FirestoreService {
 
       // 5. Berechne die neuen Ausgaben nach der Transaktion
       double totalSpentAfter =
-      await _getCurrentMonthTotalSpent(userId, transaction.categoryId!);
+      await getCurrentMonthTotalSpent(userId, transaction.categoryId!);
 
       // 6. Hole das Budgetlimit der Kategorie
       Category? category = await getCategory(userId, transaction.categoryId!);
@@ -679,7 +679,7 @@ class FirestoreService {
 
 
 
-  Future<double> _getCurrentMonthTotalSpent(String userId, String categoryId) async {
+  Future<double> getCurrentMonthTotalSpent(String userId, String categoryId) async {
     return await getCurrentMonthCombinedTransactions(userId, categoryId, "null");
   }
 
@@ -896,6 +896,26 @@ class FirestoreService {
     }
   }
 
+  Future<void> handleTransactionUpdateAndBudgetCheck(
+      String userId, String transactionId, Transaction transaction, String categoryId, double budget) async {
+    try {
+      double totalSpentBefore = budget;
+
+      // 1. Transaktion aktualisieren
+      await updateTransaction(userId, transactionId, transaction);
+
+      // 2. Neue Ausgaben abrufen
+      double totalSpentAfter = await getCurrentMonthTotalSpent(userId, categoryId);
+
+      // 3. Budget-Prüfung & Benachrichtigung
+      await _checkAndHandleBudgetNotifications(userId, categoryId, totalSpentBefore, totalSpentAfter);
+
+    } catch (e) {
+      print("Fehler bei der Aktualisierung der Transaction: $e");
+    }
+  }
+
+
   Future<void> updateImportedTransaction(String userId, String transactionId, ImportedTransaction transaction) async {
     try {
       final userImportedTransactionsRef = usersRef
@@ -916,6 +936,25 @@ class FirestoreService {
       print("Error updating imported transaction: $e");
     }
   }
+  Future<void> handleImportedTransactionUpdateAndBudgetCheck(
+      String userId, String transactionId, ImportedTransaction transaction, String categoryId, double budget) async {
+    try {
+      double totalSpentBefore = budget;
+
+      // 1. Importierte Transaktion aktualisieren
+      await updateImportedTransaction(userId, transactionId, transaction);
+
+      // 2. Neue Ausgaben abrufen
+      double totalSpentAfter = await getCurrentMonthTotalSpent(userId, categoryId);
+
+      // 3. Budget-Prüfung & Benachrichtigung
+      await _checkAndHandleBudgetNotifications(userId, categoryId, totalSpentBefore, totalSpentAfter);
+
+    } catch (e) {
+      print("Fehler bei der Aktualisierung der Imported Transaction: $e");
+    }
+  }
+
 
   Future<void> deleteTransaction(String documentId, String transactionId) async {
     try {
@@ -927,27 +966,24 @@ class FirestoreService {
   }
 
   Future<void> handleTransactionDeletionAndBudgetCheck(
-      String userId, String transactionId, String categoryId) async {
+      String userId, String transactionId, String categoryId, double budget) async {
     try {
-      // 1. Berechne die Gesamtausgaben vor der Löschung
-      double totalSpentBefore = await _getCurrentMonthTotalSpent(userId, categoryId);
-
-      // 2. Lösche die Transaktion
+      // 1. Vorherige Ausgaben berechnen
+      //double totalSpentBefore = await getCurrentMonthTotalSpent(userId, categoryId);
+      double totalSpentBefore = budget;
+      // 2. Transaktion direkt löschen
       await deleteTransaction(userId, transactionId);
 
-      // 3. Warte kurz, damit Firestore die Änderung verarbeitet
-      await Future.delayed(Duration(milliseconds: 500));
+      // 3. Neue Ausgaben abrufen (kein `Future.delayed()`)
+      double totalSpentAfter = await getCurrentMonthTotalSpent(userId, categoryId);
 
-      // 4. Berechne die neuen Ausgaben nach der Löschung
-      double totalSpentAfter = await _getCurrentMonthTotalSpent(userId, categoryId);
-
-      // 5. Hole das Budgetlimit der Kategorie
+      // 4. Budgetlimit abrufen
       Category? category = await getCategory(userId, categoryId);
       double? budgetLimit = category?.budgetLimit;
 
       if (budgetLimit == null || budgetLimit == 0) return;
 
-      // 6. Falls das Budget zuvor überschritten war, aber jetzt wieder innerhalb des Limits liegt:
+      // 5. Falls Budget vorher überschritten war, aber jetzt nicht mehr
       if (totalSpentBefore > budgetLimit && totalSpentAfter <= budgetLimit) {
         bool alreadyExists = await doesNotificationExist(userId, categoryId, "budget_overflow");
 
@@ -960,6 +996,7 @@ class FirestoreService {
       print("Fehler bei der Bearbeitung der Transaktionslöschung: $e");
     }
   }
+
 
 
 
@@ -2176,6 +2213,42 @@ class FirestoreService {
           .toList();
     });
   }
+
+  Future<void> _checkAndHandleBudgetNotifications(
+      String userId, String categoryId, double totalSpentBefore, double totalSpentAfter) async {
+
+    Category? category = await getCategory(userId, categoryId);
+    double? budgetLimit = category?.budgetLimit;
+
+    if (budgetLimit == null || budgetLimit == 0) return;
+
+    // 1. Falls Budget überschritten war, aber jetzt nicht mehr
+    if (totalSpentBefore > budgetLimit && totalSpentAfter <= budgetLimit) {
+      bool alreadyExists = await doesNotificationExist(userId, categoryId, "budget_overflow");
+
+      if (alreadyExists) {
+        await deleteNotification(userId, categoryId, "budget_overflow");
+        print("Benachrichtigung entfernt: Budget wieder im Limit.");
+      }
+    }
+
+    // 2. Falls Budget jetzt überschritten wurde
+    else if (totalSpentBefore <= budgetLimit && totalSpentAfter > budgetLimit) {
+      bool alreadyExists = await doesNotificationExist(userId, categoryId, "budget_overflow");
+
+      if (!alreadyExists) {
+        await createNotification(
+          userId,
+          "Budget für ${category!.name} überschritten um ${(totalSpentAfter - budgetLimit).toStringAsFixed(2)}€!",
+          "budget_overflow",
+          categoryId: categoryId,
+        );
+        print("Neue Benachrichtigung erstellt: Budgetlimit überschritten.");
+      }
+    }
+  }
+
+
 
   Future<Map<String, dynamic>> fetchCategoriesAndTransactions(String userId) async {
     List<Category> userCategories = await getUserCategoriesWithBudget(userId);

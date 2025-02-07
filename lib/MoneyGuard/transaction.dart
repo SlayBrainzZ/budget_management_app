@@ -152,22 +152,40 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     });
   }
 
+  Future<double> checkBudgetBefore() async {
+    double totalSpentBefore = 0.0; // Standardwert setzen
 
-  void _deleteTransaction() {
+    try {
+      totalSpentBefore = await _firestoreService.getCurrentMonthTotalSpent(
+          _userId!,
+          widget.transaction!.categoryId!
+      );
+      print("Gesamtausgaben vor Löschung: $totalSpentBefore");
+    } catch (e) {
+      print("Fehler beim Abrufen des Budgets: $e");
+    }
+
+    return totalSpentBefore; // Rückgabe des Werts
+  }
+
+
+  void _deleteTransaction(double budget) {
     if (widget.transaction == null) return;
 
 
 
     _firestoreService
-        .handleTransactionDeletionAndBudgetCheck(_userId!, widget.transaction!.id!, widget.transaction!.categoryId!)
+        .handleTransactionDeletionAndBudgetCheck(_userId!, widget.transaction!.id!, widget.transaction!.categoryId!, budget)
+
         //.deleteTransaction(_userId!, widget.transaction!.id!)
         .then((_) {
+
     });
 
 
   }
 
-  void _saveOrUpdateTransaction(String type) {
+  void _saveOrUpdateTransaction(String type) async {
     if (_selectedAccount == null || _selectedCategory == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -177,6 +195,8 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       );
       return;
     }
+
+    double budget = await checkBudgetBefore();
 
     double amount = double.tryParse(_amountController.text) ?? 0.0;
     if (type == 'Ausgabe' && amount > 0) {
@@ -197,7 +217,8 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       print("Updated Transaction: ${updatedTransaction.toString()}");
 
       _firestoreService
-          .updateTransaction(_userId!, widget.transaction!.id!, updatedTransaction)
+          .handleTransactionUpdateAndBudgetCheck(_userId!, widget.transaction!.id!, updatedTransaction, widget.transaction!.categoryId! ,budget)
+          //.updateTransaction(_userId!, widget.transaction!.id!, updatedTransaction)
           .then((_) {
         Navigator.of(context).pop();
       }).catchError((e) {
@@ -369,15 +390,16 @@ class _AddTransactionPageState extends State<AddTransactionPage>
           const SizedBox(height: 16),
           if (widget.transaction != null) // Zeige Löschen-Button nur bei existierenden Transaktionen
             ElevatedButton(
-              onPressed: () {
-                _deleteTransaction(); // Löscht die Transaktion
-                Navigator.of(context).pop();
-                // Geht zurück zur vorherigen Seite
+              onPressed: () async { // Muss async sein, weil wir await verwenden
+                double budget = await checkBudgetBefore(); // Warte auf den Wert
+                _deleteTransaction(budget); // Löscht die Transaktion mit korrektem Budget
+                Navigator.of(context).pop(); // Zurück zur vorherigen Seite
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red[300]),
               child: const Text('Löschen',
                   style: TextStyle(color: Colors.white)),
             ),
+
         ],
       ),
     );

@@ -811,14 +811,17 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                       try {
                         // Aktualisiere die Kategorie in der Transaktion
                         transaction.categoryId = selectedCategory!.id;
-
+                        double budget = await checkBudgetBefore(transaction.categoryId!);
+                        //print("budget für diese kategorie: ${transaction.categoryId!} ist: $budget");
                         // Speichere die Transaktion in Firestore
                         final currentUser = FirebaseAuth.instance.currentUser;
                         if (currentUser != null && transaction.id != null) {
-                          await FirestoreService().updateImportedTransaction(
+                          await FirestoreService().handleImportedTransactionUpdateAndBudgetCheck(
                             currentUser.uid,
                             transaction.id!,
                             transaction,
+                            transaction.categoryId!,
+                            budget
                           );
                         }
 
@@ -958,4 +961,22 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
     );
   }
 
+}
+Future<double> checkBudgetBefore(String categoryId) async {
+  double totalSpentBefore = 0.0; // Standardwert setzen
+  final currentUser = FirebaseAuth.instance.currentUser;
+  if (currentUser == null) {
+    throw Exception('Kein Benutzer angemeldet.');
+  }
+  try {
+    totalSpentBefore = await FirestoreService().getCurrentMonthTotalSpent(
+        currentUser.uid,
+        categoryId
+    );
+    print("Gesamtausgaben vor Löschung: $totalSpentBefore");
+  } catch (e) {
+    print("Fehler beim Abrufen des Budgets: $e");
+  }
+
+  return totalSpentBefore; // Rückgabe des Werts
 }
