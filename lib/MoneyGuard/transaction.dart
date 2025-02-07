@@ -1,6 +1,7 @@
 import 'package:budget_management_app/MoneyGuard/dateButton.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:budget_management_app/backend/Transaction.dart';
 import 'package:budget_management_app/backend/Category.dart';
@@ -9,7 +10,7 @@ import 'home_page.dart';
 import 'package:budget_management_app/backend/BankAccount.dart';
 
 class AddTransactionPage extends StatefulWidget {
-  final Transaction? transaction; // Optional: übergebene Transaktion
+  final Transaction? transaction;
 
   const AddTransactionPage({Key? key, this.transaction}) : super(key: key);
 
@@ -37,7 +38,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    //_loadUserAndData();
+
 
     if (widget.transaction != null) {
       final transaction = widget.transaction!;
@@ -118,12 +119,12 @@ class _AddTransactionPageState extends State<AddTransactionPage>
 
     double amount = double.tryParse(_amountController.text) ?? 0.0;
     if (type == 'Ausgabe' && amount > 0) {
-      amount = -amount; // Betrag negativ machen für Ausgaben
+      amount = -amount;
     }
 
     final transaction = Transaction(
       userId: _userId!,
-      amount: amount,//double.tryParse(_amountController.text) ?? 0.0,
+      amount: amount,
       date: _selectedDate,
       categoryId: _selectedCategory,
       type: type,
@@ -135,7 +136,6 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     print(transaction.userId!);
     _firestoreService
         .createTransactionAndCheckBudgetLimit(_userId!, transaction, categoryId: _selectedCategory)
-        //.createTransaction2(_userId!, transaction, categoryId: _selectedCategory)
         .then((_) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => MyHomePage(title: 'MoneyGuard')),
@@ -153,7 +153,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
   }
 
   Future<double> checkBudgetBefore() async {
-    double totalSpentBefore = 0.0; // Standardwert setzen
+    double totalSpentBefore = 0.0;
 
     try {
       totalSpentBefore = await _firestoreService.getCurrentMonthTotalSpent(
@@ -165,7 +165,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       print("Fehler beim Abrufen des Budgets: $e");
     }
 
-    return totalSpentBefore; // Rückgabe des Werts
+    return totalSpentBefore;
   }
 
 
@@ -176,8 +176,6 @@ class _AddTransactionPageState extends State<AddTransactionPage>
 
     _firestoreService
         .handleTransactionDeletionAndBudgetCheck(_userId!, widget.transaction!.id!, widget.transaction!.categoryId!, budget)
-
-        //.deleteTransaction(_userId!, widget.transaction!.id!)
         .then((_) {
 
     });
@@ -200,17 +198,15 @@ class _AddTransactionPageState extends State<AddTransactionPage>
 
     double amount = double.tryParse(_amountController.text) ?? 0.0;
     if (type == 'Ausgabe' && amount > 0) {
-      amount = -amount; // Betrag negativ machen für Ausgaben
+      amount = -amount;
     }
 
     if (widget.transaction != null) {
-      // Update bestehende Transaktion
       final updatedTransaction = widget.transaction!.copyWith(
-        amount: amount,//double.tryParse(_amountController.text) ?? 0.0,
+        amount: amount,
         date: _selectedDate,
         categoryId: _selectedCategory,
         type: type,
-        //importance: _isUrgent,
         note: _noteController.text,
         accountId: _selectedAccount,
       );
@@ -218,7 +214,6 @@ class _AddTransactionPageState extends State<AddTransactionPage>
 
       _firestoreService
           .handleTransactionUpdateAndBudgetCheck(_userId!, widget.transaction!.id!, updatedTransaction, widget.transaction!.categoryId! ,budget)
-          //.updateTransaction(_userId!, widget.transaction!.id!, updatedTransaction)
           .then((_) {
         Navigator.of(context).pop();
       }).catchError((e) {
@@ -280,7 +275,10 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                   width: 100,
                   child: TextField(
                     controller: _amountController,
-                    keyboardType: TextInputType.number,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+                    ],
                     decoration: const InputDecoration(
                       labelText: 'Betrag',
                       border: OutlineInputBorder(),
@@ -316,7 +314,6 @@ class _AddTransactionPageState extends State<AddTransactionPage>
               onChanged: (value) => setState(() => _selectedAccount = value),
             )
           else
-          // Zeige das feste Bankkonto (Nicht änderbar)
             Row(
               children: [
                 Icon(
@@ -324,12 +321,12 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                       ? Icons.attach_money
                       : Icons.account_balance,
                   color: Colors.blue,
-                ), // Symbol anzeigen
+                ),
                 const SizedBox(width: 8),
                 Text(
                   userAccounts.firstWhere((account) => account.id == widget.transaction!.accountId).accountName ?? 'Unbenanntes Konto',
                   style: const TextStyle(fontSize: 16),
-                ), // Kontoname anzeigen
+                ),
               ],
             ),
           const SizedBox(height: 16),
@@ -369,15 +366,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
             decoration: const InputDecoration(labelText: 'Notiz hinzufügen'),
           ),
           const SizedBox(height: 16),
-          /*SwitchListTile(
-            title: const Text('Dringend'),
-            value: _isUrgent,
-            onChanged: (bool value) {
-              setState(() {
-                _isUrgent = value;
-              });
-            },
-          ),*/
+
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
@@ -388,18 +377,17 @@ class _AddTransactionPageState extends State<AddTransactionPage>
             child: const Text('Speichern'),
           ),
           const SizedBox(height: 16),
-          if (widget.transaction != null) // Zeige Löschen-Button nur bei existierenden Transaktionen
+          if (widget.transaction != null)
             ElevatedButton(
-              onPressed: () async { // Muss async sein, weil wir await verwenden
-                double budget = await checkBudgetBefore(); // Warte auf den Wert
-                _deleteTransaction(budget); // Löscht die Transaktion mit korrektem Budget
-                Navigator.of(context).pop(); // Zurück zur vorherigen Seite
+              onPressed: () async {
+                double budget = await checkBudgetBefore();
+                _deleteTransaction(budget);
+                Navigator.of(context).pop();
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red[300]),
               child: const Text('Löschen',
                   style: TextStyle(color: Colors.white)),
             ),
-
         ],
       ),
     );

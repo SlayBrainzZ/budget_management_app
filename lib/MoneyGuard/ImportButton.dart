@@ -5,7 +5,7 @@ import 'package:budget_management_app/backend/BankAccount.dart';
 
 
 class ImportButton extends StatelessWidget {
-  final VoidCallback onImportCompleted; // Callback, das nach dem Import aufgerufen wird
+  final VoidCallback onImportCompleted;
 
   const ImportButton({Key? key, required this.onImportCompleted}) : super(key: key);
 
@@ -78,7 +78,6 @@ class ImportButton extends StatelessWidget {
                   ],
                 );
               }
-
               return _buildBankAccountDialog(context, importAccounts);
             }
           },
@@ -157,28 +156,6 @@ class ImportButton extends StatelessWidget {
                     final userId = FirebaseAuth.instance.currentUser?.uid;
                     if (userId != null && selectedAccount != null) {
                       FirestoreService firestoreService = FirestoreService();
-/*
-                      // Zeige Ladefenster an
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (_) => AlertDialog(
-                          content: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              CircularProgressIndicator(),
-                              SizedBox(height: 10),
-                              Text('Importiere Transaktionen...'),
-                            ],
-                          ),
-                        ),
-                      );
-*//*
-                      // Importiere die Transaktionen
-                      int importedCount = await firestoreService.importCsvTransactions(
-                        userId,
-                        selectedAccount!,
-                      );*/
 
                       int importedCount = await firestoreService.importCsvTransactions(
                         context, // Kontext übergeben
@@ -186,15 +163,12 @@ class ImportButton extends StatelessWidget {
                         selectedAccount!,
                       );
 
-                      // Schließe das Ladefenster und Dialog
                       Navigator.pop(context);
 
                       if (importedCount > 0) {
-                        // Erfolgsmeldung und Callback
                         onImportCompleted();
-                        Navigator.pop(context); // Schließt das Kontoauswahl-Dialog
+                        Navigator.pop(context);
                       } else {
-                        // Zeige eine Fehlermeldung an, wenn nichts importiert wurde
                         showDialog(
                           context: context,
                           builder: (_) => AlertDialog(

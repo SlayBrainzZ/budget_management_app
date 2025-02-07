@@ -1,10 +1,7 @@
 import 'package:budget_management_app/MoneyGuard/themeProvider.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:budget_management_app/backend/firestore_service.dart';
-
-import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dashboard.dart';
 import 'saving_plan.dart';
@@ -12,7 +9,6 @@ import 'StatisticsPage.dart';
 import 'transaction.dart';
 import 'settings.dart';
 import 'notifications_page.dart';
-
 import 'package:flutter_localizations/flutter_localizations.dart'; // Dieser Import ist notwendig
 
 
@@ -33,14 +29,14 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.teal,
           onPrimary: Colors.teal,
-          brightness: Brightness.light, // HELLIGKEIT HINZUGEFÜGT
+          brightness: Brightness.light,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.teal[300]!,
             foregroundColor: Colors.white,
-            elevation: 5, // Erhöht den Button leicht für besseren Kontrast
-            shadowColor: Colors.black.withOpacity(0.3), // Schatten hinzufügen
+            elevation: 5,
+            shadowColor: Colors.black.withOpacity(0.3),
           ),
         ),
 
@@ -55,11 +51,11 @@ class MyApp extends StatelessWidget {
       ],
       darkTheme: ThemeData(
         colorScheme: ColorScheme.dark(
-          primary: Colors.teal, // Hauptfarbe für Buttons & Akzente
+          primary: Colors.teal,
           secondary: Colors.tealAccent,
-          surface: Color(0xFF627D86), // Hellerer Hintergrund für Karten & Dialoge
-          background: Color(0xFF78909C),// Ein sehr helles Grau-Blau
-          onPrimary: Color(0xFF00695C), // appbar
+          surface: Color(0xFF627D86),
+          background: Color(0xFF78909C),
+          onPrimary: Color(0xFF00695C),
           onSecondary: Color(0xFF90A4AE),
           onSurface: Colors.white,
         ),
@@ -67,8 +63,8 @@ class MyApp extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.grey[500],
             foregroundColor: Colors.white,
-            elevation: 5, // Erhöht den Button leicht für besseren Kontrast
-            shadowColor: Colors.black.withOpacity(0.3), // Schatten hinzufügen
+            elevation: 5,
+            shadowColor: Colors.black.withOpacity(0.3),
           ),
         ),
         textTheme: const TextTheme(
@@ -79,15 +75,15 @@ class MyApp extends StatelessWidget {
           titleMedium: TextStyle(color: Colors.white),
           titleSmall: TextStyle(color: Colors.white),
         ),
-        scaffoldBackgroundColor: const Color(0xFF2E3E46), // Hellerer Hintergrund für den gesamten Scaffold
-        cardColor: const Color(0xFFB0BEC5), // Helleres Grau für Karten
+        scaffoldBackgroundColor: const Color(0xFF2E3E46),
+        cardColor: const Color(0xFFB0BEC5),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF607D8B), // Etwas dunkleres Grau-Blau für die AppBar
+          backgroundColor: Color(0xFF607D8B),
           foregroundColor: Colors.white,
         ),
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
-            foregroundColor: Colors.white, // Schriftfarbe für TextButton weiß
+            foregroundColor: Colors.white,
           ),
         ),
         useMaterial3: true,
