@@ -60,10 +60,7 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  void _changeLanguage() {
-    // Logik für das Ändern der Sprache
-    print("Sprache geändert");
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -74,19 +71,7 @@ class _SettingsPageState extends State<SettingsPage> {
         padding: const EdgeInsets.all(16.0),
         child: ListView(
           children: [
-            /*
-            SwitchListTile(
-              title: const Text("Dark Mode"),
-              subtitle: const Text("Aktivieren Sie den dunklen Modus."),
-              value: isDarkMode,
-              onChanged: (value) {
-                setState(() {
-                  isDarkMode = value;
-                });
-                // Aktualisiere das App-Theme
-                print("Dark Mode: $isDarkMode");
-              },
-            ),*/
+
             SwitchListTile(
               title: const Text("Dark Mode"),
               subtitle: const Text("Aktivieren Sie den dunklen Modus."),
@@ -97,30 +82,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const Divider(),
 
-            // Notifications Toggle
-            SwitchListTile(
-              title: const Text("Benachrichtigungen"),
-              subtitle: const Text("Aktivieren oder deaktivieren Sie Benachrichtigungen."),
-              value: notificationsEnabled,
-              onChanged: (value) {
-                setState(() {
-                  notificationsEnabled = value;
-                });
-                print("Benachrichtigungen: $notificationsEnabled");
-              },
-            ),
-
             const Divider(),
-
-            // Sprache ändern
-            /*ListTile(
-              title: const Text("Sprache ändern"),
-              subtitle: const Text("Aktuelle Sprache: Deutsch"),
-              trailing: const Icon(Icons.language),
-              onTap: _changeLanguage,
-            ),
-
-            const Divider(),*/
 
             // Logout Button
             ListTile(
