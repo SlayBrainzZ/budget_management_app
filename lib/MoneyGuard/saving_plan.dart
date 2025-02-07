@@ -89,29 +89,7 @@ class _SavingPlanState extends State<SavingPlan> {
         totalIncome = categories.fold(0.0, (sum, category) => sum + (category.budgetLimit ?? 0));
       });
 
-      // Prüfe Budgetüberschreitungen und sende Benachrichtigungen
-      /*for (int index = 0; index < userCategories.length; index++) {
-        double remaining = (userCategories[index].budgetLimit ?? 0) - spentAmounts[index];
-        String categoryId = userCategories[index].id ?? "";
 
-        if (remaining < 0) {
-          bool alreadyExists = await _firestoreService.doesNotificationExist(
-            _userId!,
-            categoryId,
-            "budget_overflow",
-          );
-          //print("der Wert von bool ist $alreadyExists");
-
-          if (!alreadyExists) {
-            await _firestoreService.createNotification(
-              _userId!,
-              "Budget für ${userCategories[index].name} überschritten um ${(remaining * -1).toStringAsFixed(2)}€!",
-              "budget_overflow",
-              categoryId: categoryId,
-            );
-          }
-        }
-      }*/
 
 
     } catch (e) {
@@ -121,52 +99,6 @@ class _SavingPlanState extends State<SavingPlan> {
       );
     }
   }
-
-  /*Future<void> _loadUserAndCategories() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    setState(() {
-      categories = [];
-      remainingBudget = [];
-    });
-
-    try {
-      _userId = user.uid;
-
-      // Daten aus Firestore abrufen
-      Map<String, dynamic> data = await _firestoreService.fetchCategoriesAndTransactions(_userId!);
-      List<Category> userCategories = data["categories"];
-      List<double> spentAmounts = data["spentAmounts"];
-
-      setState(() {
-        categories = userCategories;
-
-        // Berechne verbleibende Budgets
-        remainingBudget = List.generate(userCategories.length, (index) {
-          double remaining = (userCategories[index].budgetLimit ?? 0) - spentAmounts[index];
-          return remaining;
-        });
-
-        // Gesamteinnahmen berechnen
-        totalIncome = categories.fold(0.0, (sum, category) => sum + (category.budgetLimit ?? 0));
-      });
-
-    } catch (e) {
-      print('Fehler beim Laden der Kategorien: ${e.toString()}');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Fehler beim Laden der Daten")),
-      );
-    }
-  }*/
-
-
-
-
-
-
-
-
 
 
 
@@ -401,11 +333,7 @@ class _SavingPlanState extends State<SavingPlan> {
                               color: category.color,
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
-                              /*foreground: Paint()
-                                ..style = PaintingStyle.stroke
-                                ..strokeWidth = 2 // Dicke der Umrandung
-                                ..color = Colors.white, // Farbe der Umrandung
-                            */),
+                              ),
                           );
                         },
                       ),
@@ -500,11 +428,7 @@ class _SavingPlanState extends State<SavingPlan> {
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'Roboto',
-                                  /*foreground: Paint()
-                                    ..style = PaintingStyle.stroke
-                                    ..strokeWidth = 2 // Dicke der Umrandung
-                                    ..color = Colors.white, // Farbe der Umrandung
-                                */),
+                                 ),
                               ),
                             ),
                           ],

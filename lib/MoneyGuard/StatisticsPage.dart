@@ -67,9 +67,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
     print("NAME UND ID: $selectedAccount, $selectedAccountID, $importedTypeOfBankAccount");
   }
-
-
-
   Future<void> _reloadAllStatistics() async {
     try {
       await _loadCategories();
@@ -85,6 +82,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
       );
     }
   }
+
 
   Future<User?> _loadUser() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -164,15 +162,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
   Future<void> loadBigChartBarData(String chosenYear, String chosenMonth) async {
     try {
       if (chosenMonth == 'Monat') {
-        // Zeige den Jahresverlauf
-        /*if (chartCache.containsKey(chosenYear)) {
-          setState(() {
-            cachedYearlyLineChartData = chartCache[chosenYear]?.lineBarsData;
-          });
-        } else {*/
-          // Berechne die Jahresdaten
-
-
           List<List<FlSpot>> FlSpotListList = await generateSpotsforYear(chosenYear, chosenMonth, "null");
 
           LineChartBarData einnahmeDaten = await defineLineChartBarData(Colors.greenAccent.shade700, chosenYear, "Monat", "Einnahme", FlSpotListList[0]);
@@ -182,23 +171,10 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
           setState(() {
             cachedYearlyLineChartData = [einnahmeDaten, ausgabeDaten, gesamtDaten];
-            /*chartCache[chosenYear] = LineChartData(
-              lineBarsData: cachedYearlyLineChartData!,
-              gridData: FlGridData(show: true),
-              borderData: FlBorderData(show: true),
-              titlesData: FlTitlesData(),
-              lineTouchData: LineTouchData(handleBuiltInTouches: true),
-            );*/
           });
-        //}
+
       } else {
-        // Zeige nur den Verlauf für den bestimmten Monat
-        /*if (chartCache.containsKey('$chosenYear-$chosenMonth')) {
-          setState(() {
-            cachedYearlyLineChartData =
-                chartCache['$chosenYear-$chosenMonth']?.lineBarsData;
-          });
-        } else {*/
+
           List<FlSpot> FlSpotlist1 = await generateSpotsforMonth(
               chosenYear, chosenMonth, "Einnahme");
           List<FlSpot> FlSpotlist2 = await generateSpotsforMonth(
@@ -215,16 +191,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
           setState(() {
             cachedYearlyLineChartData = [einnahmeDaten, ausgabeDaten, gesamtDaten];
-            /*chartCache['$chosenYear-$chosenMonth'] = LineChartData(
-              lineBarsData: cachedYearlyLineChartData!,
-              gridData: FlGridData(show: true),
-              borderData: FlBorderData(show: true),
-              titlesData: FlTitlesData(),
-              lineTouchData: LineTouchData(handleBuiltInTouches: true),
-            );*/
           });
         }
-      //}
       print("leaving bigchartdata");
     } catch (e) {
       print('Fehler beim Laden der Diagrammdaten: ${e.toString()}');
@@ -522,63 +490,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
       spots: spotsList,
     );
   }
-  PieChartData definePiechartData() {
-    final summary = calculateExpenseSummary();
-
-    if (summary['totalExpenses'] == 0) {
-      return PieChartData(
-        sections: [
-          PieChartSectionData(
-            title: "Keine Daten",
-            value: 1, // Dummy-Wert, damit das Diagramm nicht crasht
-            color: Colors.grey,
-          ),
-        ],
-        sectionsSpace: 2,
-        centerSpaceRadius: 50,
-      );
-    }
-
-    return PieChartData(
-      sections: [
-        PieChartSectionData(
-          title: "Dringend (${summary['urgentPercentage'].toStringAsFixed(1)}%)",
-          value: urgentExpenses,
-          color: Colors.red,
-        ),
-        PieChartSectionData(
-          title: "Nicht dringend (${summary['nonUrgentPercentage'].toStringAsFixed(1)}%)",
-          value: nonUrgentExpenses,
-          color: Colors.blue,
-        ),
-      ],
-      sectionsSpace: 2,
-      centerSpaceRadius: 50,
-    );
-  }
-
-  Widget buildPieChart() {
-    final summary = calculateExpenseSummary();
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        PieChart(definePiechartData()),
-        Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'Gesamt',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              '${summary['totalExpenses'].toStringAsFixed(2)} €',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
   LineChartData get chartData { //getterfunktion für die große Statistik
     if (cachedYearlyLineChartData == null || cachedYearlyLineChartData!.isEmpty) {
       return LineChartData(
@@ -588,10 +499,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
       );
     }
     return LineChartData(
-
-      //minY: 1, // Bereich unten erweitern
-      //maxY: 10000, // Bereich oben erweitern, damit "DEZ" nicht so nah am Rand ist
-
       lineBarsData: cachedYearlyLineChartData!,
       gridData: FlGridData(
         show: true,
@@ -898,57 +805,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
   }
 
 
-
-
-  /*double findLastMonthBalance(Map<String, double> data, String chosenYear, String chosenMonth) {
-    // Startwert für das vorherige Monatsguthaben
-    double lastMonthBalance = 0.0;
-
-    // Berechne den Monat vor dem gewählten Monat
-    int currentMonth = int.parse(chosenMonth);
-
-    int previousMonth = currentMonth - 1;
-
-    String previousYear = chosenYear;
-
-    // Wenn der aktuelle Monat Januar ist, wechsel zum Dezember des Vorjahres
-    if (previousMonth == 0) {
-      previousMonth = 12;
-      previousYear = (int.parse(chosenYear) - 1).toString();
-    }
-
-    // Formatiere den Schlüssel für den vorherigen Monat (z. B. "2023-12")
-    String previousMonthKey = "$previousYear-${previousMonth.toString().padLeft(
-        2, '0')}";
-
-    // Überprüfen, ob der Schlüssel existiert
-    if (data.containsKey(previousMonthKey)) {
-      lastMonthBalance = data[previousMonthKey]!;
-      print("Vorheriger Monat gefunden: $previousMonthKey, Guthaben: $lastMonthBalance");
-    } else {
-      print("Kein Guthaben für den vorherigen Monat $previousMonthKey gefunden, weil er mit ${data} nicht übereinstimt.");
-      print("previousMonthKey: $previousMonthKey");
-      print("Der Typ lautet ${previousMonthKey.runtimeType} ");
-      print("Der erste Schlüssel von data ist: ${data.keys.first}");
-      print("Der Typ des ersten Schlüssels: ${data.keys.first.runtimeType}");
-    }
-
-    return lastMonthBalance;
-  }*/
-  Map<String, dynamic> calculateExpenseSummary() {
-    double totalExpenses = urgentExpenses + nonUrgentExpenses;
-
-    double urgentPercentage =
-    totalExpenses == 0 ? 0 : (urgentExpenses / totalExpenses) * 100;
-    double nonUrgentPercentage =
-    totalExpenses == 0 ? 0 : (nonUrgentExpenses / totalExpenses) * 100;
-
-    return {
-      'totalExpenses': totalExpenses,
-      'urgentPercentage': urgentPercentage,
-      'nonUrgentPercentage': nonUrgentPercentage,
-    };
-  }
   void _showYearPicker(BuildContext context) {int initialYearIndex = availableYears.indexOf(int.parse(selectedYear));
     showModalBottomSheet(
       context: context,
@@ -1280,76 +1136,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 ),
               ),
               const SizedBox(height: 40),
-
-              /*
-              importedTypeOfBankAccount
-                  ? Container() // Wenn CSV-Konto ausgewählt ist, zeige nichts
-                  : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const SizedBox(width: 30),
-                      Text(
-                        'Ausgabenverteilung:  ',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      GestureDetector(
-                        onTap: () => _showImportancePicker(context),
-                        child: Container(
-                          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.grey),
-                          ),
-                          child: Text(
-                            selectedTimeImportance,
-                            style: TextStyle(fontSize: 16, color: Colors.black),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  urgentExpenses == 0.0 && nonUrgentExpenses == 0.0
-                      ? Center(child: CircularProgressIndicator())
-                      : Container(
-                    width: double.infinity,
-                    height: 300,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 6,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 45),
-                        Container(
-                          height: 220,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: buildPieChart(),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),*/
             ],
           ),
         ),
@@ -1357,46 +1143,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
 
-  /*void _showCategoryPicker(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return Container(
-          height: 220, // Höhe des Containers
-          child: CupertinoPicker(
-            backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-            //backgroundColor: Colors.white,
-            itemExtent: 50.0,
-            // Höhe jedes Elements
-            scrollController: FixedExtentScrollController(
-              initialItem: selectedTimeCategory == "Monat"
-                  ? 0
-                  : 1, // Setzt den initialen Wert (Monat oder Woche)
-            ),
-            onSelectedItemChanged: (int index) {
-              setState(() {
-                // "Monat" oder "Woche" auswählen
-                selectedTimeCategory = index == 0 ? "Monat" : "Jahr";
-                // Daten nach der Auswahl neu laden
-              });
-            },
-            children: [
-              Center(child: Text("Monat",
-                  style: TextStyle(fontSize: 18,
-                      color: Theme.of(context).textTheme.bodyLarge?.color
-                      //color: Colors.black
-                  ))),
-              Center(child: Text("Jahr",
-                  style: TextStyle(fontSize: 18,
-                      color: Theme.of(context).textTheme.bodyLarge?.color
-                      //color: Colors.black
-                  ))),
-            ],
-          ),
-        );
-      },
-    );
-  }*/
   void _showCategoryPicker(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -1424,12 +1170,12 @@ class _StatisticsPageState extends State<StatisticsPage> {
               Center(child: Text("Monat",
                   style: TextStyle(fontSize: 18,
                       color: Theme.of(context).textTheme.bodyLarge?.color
-                    //color: Colors.black
+                      //color: Colors.black
                   ))),
               Center(child: Text("Jahr",
                   style: TextStyle(fontSize: 18,
                       color: Theme.of(context).textTheme.bodyLarge?.color
-                    //color: Colors.black
+                      //color: Colors.black
                   ))),
             ],
           ),
