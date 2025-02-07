@@ -5,16 +5,10 @@ import 'package:budget_management_app/backend/User.dart';
 import 'package:budget_management_app/backend/Transaction.dart';
 import 'package:budget_management_app/backend/Category.dart';
 import 'package:budget_management_app/backend/BankAccount.dart';
-import 'package:budget_management_app/backend/Subscriptions.dart';
-import 'package:flutter/foundation.dart' as csv;
 import 'package:flutter/material.dart';
-import '../MoneyGuard/category.dart';
-import 'dart:io';
-import 'dart:convert';
 import 'package:csv/csv.dart';
 import 'dart:html' as html;
 import 'ImportedTransaction.dart';
-import 'web_file_reader.dart' if (dart.library.html) 'stub_file_reader.dart';
 
 class FirestoreService {
   final firestore.FirebaseFirestore _db = firestore.FirebaseFirestore.instance;
