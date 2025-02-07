@@ -1,4 +1,3 @@
-import 'package:budget_management_app/backend/User.dart';
 import 'package:flutter/material.dart';
 import 'package:budget_management_app/backend/firestore_service.dart';
 import 'package:budget_management_app/backend/Category.dart';
