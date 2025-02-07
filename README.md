@@ -1,16 +1,20 @@
-# budget_management_app
+# Budget-Management-App
 
-A new Flutter project.
+Unsere App hilft Nutzern, Einnahmen und Ausgaben zu verwalten, Budgets zu setzen und finanzielle Ziele zu erreichen. Sie bietet Analyse-Tools, Warnungen und eine einfache Möglichkeit zur manuellen sowie automatisierten Datenerfassung.
 
-## Getting Started
+## Installation
 
-This project is a starting point for a Flutter application.
+Voraussetzungen:
 
-A few resources to get you started if this is your first Flutter project:
+- Flutter installiert (https://www.tutorialspoint.com/flutter/flutter_installation.htm)
+- Android Studio oder VS Code mit Flutter-Plugin
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Schritte zur Ausführung
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+1) Repository klonen:
+- git clone <REPO-URL>
+- cd budget_management_app
+2) Abhängigkeiten installieren:
+- flutter pub get
+3) App starten:
+- flutter run

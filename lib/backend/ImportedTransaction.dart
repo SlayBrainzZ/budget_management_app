@@ -8,7 +8,6 @@ class ImportedTransaction {
   String? categoryId;
   double amount;
   final DateTime date;
-  //String? categoryId;
   final String description;  // Description of the transaction (Buchungstext)
   final String payerOrRecipient;  // The payer or recipient (Auftraggeber/Empfänger)
   final double outflow;  // Amount for outgoing transactions (Ausgang)

@@ -15,7 +15,6 @@ class BankAccount {
   final String accountType;
   bool exclude;
   bool forImport; // New field for import flag
-  //String? importFilePath;
 
   BankAccount({
     this.id,
@@ -26,7 +25,6 @@ class BankAccount {
     required this.accountType,
     this.exclude = false,
     this.forImport = false,
-    //this.importFilePath,
   });
 
   Map<String, dynamic> toMap() {
@@ -39,7 +37,6 @@ class BankAccount {
       'accountType': accountType,
       'exclude': exclude,
       'forImport': forImport,
-      //'importFilePath': importFilePath,
     };
   }
 
