@@ -52,17 +52,6 @@ void main() async {
           createdDate: DateTime.now(),
         ));
 
-        // Get user's bank accounts
-        FirestoreService firestoreService = FirestoreService();
-        List<BankAccount> accounts = await firestoreService.getUserBankAccounts2(user.uid);
-
-        if (accounts.isNotEmpty) {
-          String? firstAccountId = accounts[0].id;
-
-        } else {
-          print("No bank accounts found for this user.");
-        }
-
       } else {
         print("No user logged in. Please log in.");
       }
