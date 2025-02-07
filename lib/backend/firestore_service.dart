@@ -927,6 +927,65 @@ class FirestoreService {
       print("Error creating transaction: $e");
     }
   }
+
+  Future<void> createTransactionAndCheckBudgetLimit(
+      String userId, Transaction transaction,
+      {String? categoryId, String? accountId}) async {
+    try {
+      // 1. Setze `categoryId` und `accountId` **vor der Budgetprüfung**
+      if (categoryId != null) transaction.categoryId = categoryId;
+      if (accountId != null) transaction.accountId = accountId;
+
+      // 2. Berechne die aktuellen Ausgaben vor der Transaktion
+      double totalSpentBefore =
+      await _getCurrentMonthTotalSpent(userId, transaction.categoryId!);
+
+      // 3. Speichere die Transaktion
+      await createTransaction2(userId, transaction,
+          categoryId: categoryId, accountId: accountId);
+
+      // 4. Warte kurz, damit Firestore die Transaktion speichert
+      await Future.delayed(Duration(milliseconds: 500));
+
+      // 5. Berechne die neuen Ausgaben nach der Transaktion
+      double totalSpentAfter =
+      await _getCurrentMonthTotalSpent(userId, transaction.categoryId!);
+
+      // 6. Hole das Budgetlimit der Kategorie
+      Category? category = await getCategory(userId, transaction.categoryId!);
+      double? budgetLimit = category?.budgetLimit;
+
+      if (budgetLimit == null || budgetLimit == 0) return;
+
+      // 7. Überprüfung, ob das Budget überschritten wurde
+      if (totalSpentBefore <= budgetLimit && totalSpentAfter > budgetLimit) {
+        // 8. Prüfen, ob bereits eine Benachrichtigung existiert
+        bool alreadyExists =
+        await doesNotificationExist(userId, transaction.categoryId!, "budget_overflow");
+
+        // 9. Falls keine Benachrichtigung existiert, eine neue erstellen
+        if (!alreadyExists) {
+          await createNotification(
+            userId,
+            "Budget für ${category!.name} überschritten um ${(totalSpentAfter - budgetLimit).toStringAsFixed(2)}€!",
+            "budget_overflow",
+            categoryId: transaction.categoryId!,
+          );
+          print("Neue Benachrichtigung erstellt: Budgetlimit überschritten.");
+        }
+      }
+    } catch (e) {
+      print("Fehler bei der Budgetlimit-Prüfung: $e");
+    }
+  }
+
+
+
+  Future<double> _getCurrentMonthTotalSpent(String userId, String categoryId) async {
+    return await getCurrentMonthCombinedTransactions(userId, categoryId, "null");
+  }
+
+
   ///TEST
   ///update: Test successfully done. This function does exactly what it's named.
   Future<void> createTransactionUnderCategory(String userId, Transaction transaction, String categoryId) async {
@@ -1181,6 +1240,46 @@ class FirestoreService {
       print("Error deleting transaction: $e");
     }
   }
+
+  Future<void> handleTransactionDeletionAndBudgetCheck(
+      String userId, String transactionId, String categoryId) async {
+    try {
+      // 1. Berechne die Gesamtausgaben vor der Löschung
+      double totalSpentBefore = await _getCurrentMonthTotalSpent(userId, categoryId);
+
+      // 2. Lösche die Transaktion
+      await deleteTransaction(userId, transactionId);
+
+      // 3. Warte kurz, damit Firestore die Änderung verarbeitet
+      await Future.delayed(Duration(milliseconds: 500));
+
+      // 4. Berechne die neuen Ausgaben nach der Löschung
+      double totalSpentAfter = await _getCurrentMonthTotalSpent(userId, categoryId);
+
+      // 5. Hole das Budgetlimit der Kategorie
+      Category? category = await getCategory(userId, categoryId);
+      double? budgetLimit = category?.budgetLimit;
+
+      if (budgetLimit == null || budgetLimit == 0) return;
+
+      // 6. Falls das Budget zuvor überschritten war, aber jetzt wieder innerhalb des Limits liegt:
+      if (totalSpentBefore > budgetLimit && totalSpentAfter <= budgetLimit) {
+        bool alreadyExists = await doesNotificationExist(userId, categoryId, "budget_overflow");
+
+        if (alreadyExists) {
+          await deleteNotification(userId, categoryId, "budget_overflow");
+          print("Benachrichtigung entfernt: Budget ist wieder innerhalb des Limits.");
+        }
+      }
+    } catch (e) {
+      print("Fehler bei der Bearbeitung der Transaktionslöschung: $e");
+    }
+  }
+
+
+
+
+
 
   Future<void> deleteImportedTransaction(String documentId, String transactionId) async {
     try {
@@ -2215,42 +2314,36 @@ class FirestoreService {
   }
 
 
-
-
-  Future<Map<String, double>> fetchUrgentAndNonUrgentExpenses(String documentId, DateTime startDate, DateTime endDate, String accountId) async {
+  Future<void> updateNotificationPreference(String userId, bool isEnabled) async {
     try {
-      // Hole alle Transaktionen im gegebenen Datumsbereich
-      List<Transaction> transactions = await getSpecificTransactionByDateRange(documentId, "null", startDate, endDate, accountId, false);
-
-      // Initialisiere Summen
-      double urgentTotal = 0.0;
-      double nonUrgentTotal = 0.0;
-
-      // Lokales Filtern nach "Ausgabe" und Summieren der Beträge
-      List<Transaction> expenseTransactions =
-      transactions.where((transaction) => transaction.type == "Ausgabe").toList();
-
-      for (var transaction in expenseTransactions) {
-        if (transaction.importance) {
-          urgentTotal += transaction.amount; // Dringend
-        } else {
-          nonUrgentTotal += transaction.amount; // Nicht dringend
-        }
-      }
-
-      // Ergebnisse zurückgeben
-      return {
-        "Dringend": urgentTotal,
-        "Nicht dringend": nonUrgentTotal,
-      };
+      final userRef = usersRef.doc(userId);
+      await userRef.update({'notificationsEnabled': isEnabled});
+      print("Benachrichtigungsstatus aktualisiert: $isEnabled");
     } catch (e) {
-      print("Fehler beim Abrufen und Filtern der Transaktionen: $e");
-      return {
-        "Dringend": 0.0,
-        "Nicht dringend": 0.0,
-      };
+      print("Fehler beim Aktualisieren der Benachrichtigungseinstellung: $e");
     }
   }
+
+  Future<bool> getNotificationPreference(String userId) async {
+    try {
+      final userRef = usersRef.doc(userId);
+      final snapshot = await userRef.get();
+
+      if (snapshot.exists) {
+        Map<String, dynamic>? userData = snapshot.data() as Map<String, dynamic>?; // Casten
+        if (userData != null && userData.containsKey('notificationsEnabled')) {
+          return userData['notificationsEnabled'] as bool;
+        }
+      }
+      return true; // Standardwert, wenn keine Einstellung gespeichert wurde
+    } catch (e) {
+      print("Fehler beim Abrufen der Benachrichtigungseinstellung: $e");
+      return true;
+    }
+  }
+
+
+
 
   Future<List<Category>> getUserCategoriesWithBudget(String documentId) async {
     //print("entered getUserCategoriesWithBudget");
@@ -2370,6 +2463,33 @@ class FirestoreService {
     }
   }
 
+
+  Future<void> deleteNotification(String userId, String categoryId, String type) async {
+    try {
+      final notificationsRef = usersRef.doc(userId).collection('notifications');
+
+      // Suche nach der entsprechenden Benachrichtigung
+      final querySnapshot = await notificationsRef
+          .where("categoryId", isEqualTo: categoryId)
+          .where("type", isEqualTo: type)
+          .get();
+
+      if (querySnapshot.docs.isEmpty) {
+        print("Keine passende Benachrichtigung gefunden zum Löschen.");
+        return;
+      }
+
+      // Alle gefundenen Benachrichtigungen löschen
+      for (var doc in querySnapshot.docs) {
+        await doc.reference.delete();
+        print("Benachrichtigung gelöscht: ${doc.id}");
+      }
+
+      print("Alle relevanten Benachrichtigungen erfolgreich gelöscht.");
+    } catch (e) {
+      print("Fehler beim Löschen der Benachrichtigung: $e");
+    }
+  }
 
 
 

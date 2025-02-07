@@ -63,7 +63,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
       importedTypeOfBankAccount = false;
     });
 
-    await _loadAndSetExpenses(selectedTimeImportance);
     await loadBigChartBarData(selectedYear, selectedMonth);
 
     print("NAME UND ID: $selectedAccount, $selectedAccountID, $importedTypeOfBankAccount");
@@ -74,7 +73,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
   Future<void> _reloadAllStatistics() async {
     try {
       await _loadCategories();
-      await _loadAndSetExpenses(selectedTimeImportance);
       await loadBigChartBarData(selectedYear, selectedMonth);
 
 
@@ -159,47 +157,10 @@ class _StatisticsPageState extends State<StatisticsPage> {
       );
     }
   }
-  Future<void> _loadExpenses(String chosenTime) async {
-    final user = await _loadUser();
-    if (user == null) {
-      print("Kein Benutzer gefunden.");
-      return;
-    }
-
-    DateTime today = DateTime.now();
-    DateTime startdate;
-    DateTime enddate;
-    Map<String, double> expenses = {"Dringend": 0.0, "Nicht dringend": 0.0}; // Standardwerte setzen
-
-    if (chosenTime == "Woche") {
-      startdate = today.subtract(Duration(days: today.weekday - 1)); // Montag
-      enddate = startdate.add(Duration(days: 6)); // Sonntag
-    } else if (chosenTime == "Monat") {
-      startdate = DateTime(today.year, today.month, 1); // Erster Tag des Monats
-      enddate = DateTime(today.year, today.month + 1, 0); // Letzter Tag des Monats
-    } else {
-      print("Ungültiger Zeitraum angegeben.");
-      return;
-    }
-
-    try {
-      expenses = await _firestoreService.fetchUrgentAndNonUrgentExpenses(user.uid, startdate, enddate, selectedAccountID) ?? {"Dringend": 0.0, "Nicht dringend": 0.0};
-
-      setState(() {
-        urgentExpenses = expenses["Dringend"] ?? 0.0;
-        nonUrgentExpenses = expenses["Nicht dringend"] ?? 0.0;
-      });
-    } catch (e) {
-      print("Fehler beim Laden der Ausgaben: $e");
-    }
-  }
 
 
 
-  Future<void> _loadAndSetExpenses(String chosenTime) async {
-    await _loadExpenses(chosenTime);
-    setState(() {}); // Aktualisiert den Zustand nach dem Laden
-  }
+
   Future<void> loadBigChartBarData(String chosenYear, String chosenMonth) async {
     try {
       if (chosenMonth == 'Monat') {

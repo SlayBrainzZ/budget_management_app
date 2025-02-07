@@ -90,7 +90,7 @@ class _SavingPlanState extends State<SavingPlan> {
       });
 
       // Prüfe Budgetüberschreitungen und sende Benachrichtigungen
-      for (int index = 0; index < userCategories.length; index++) {
+      /*for (int index = 0; index < userCategories.length; index++) {
         double remaining = (userCategories[index].budgetLimit ?? 0) - spentAmounts[index];
         String categoryId = userCategories[index].id ?? "";
 
@@ -111,7 +111,7 @@ class _SavingPlanState extends State<SavingPlan> {
             );
           }
         }
-      }
+      }*/
 
 
     } catch (e) {

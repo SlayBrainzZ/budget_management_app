@@ -134,7 +134,8 @@ class _AddTransactionPageState extends State<AddTransactionPage>
 
     print(transaction.userId!);
     _firestoreService
-        .createTransaction2(_userId!, transaction, categoryId: _selectedCategory)
+        .createTransactionAndCheckBudgetLimit(_userId!, transaction, categoryId: _selectedCategory)
+        //.createTransaction2(_userId!, transaction, categoryId: _selectedCategory)
         .then((_) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => MyHomePage(title: 'MoneyGuard')),
@@ -155,10 +156,15 @@ class _AddTransactionPageState extends State<AddTransactionPage>
   void _deleteTransaction() {
     if (widget.transaction == null) return;
 
+
+
     _firestoreService
-        .deleteTransaction(_userId!, widget.transaction!.id!)
+        .handleTransactionDeletionAndBudgetCheck(_userId!, widget.transaction!.id!, widget.transaction!.categoryId!)
+        //.deleteTransaction(_userId!, widget.transaction!.id!)
         .then((_) {
     });
+
+
   }
 
   void _saveOrUpdateTransaction(String type) {
@@ -365,7 +371,8 @@ class _AddTransactionPageState extends State<AddTransactionPage>
             ElevatedButton(
               onPressed: () {
                 _deleteTransaction(); // Löscht die Transaktion
-                Navigator.of(context).pop(); // Geht zurück zur vorherigen Seite
+                Navigator.of(context).pop();
+                // Geht zurück zur vorherigen Seite
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red[300]),
               child: const Text('Löschen',
