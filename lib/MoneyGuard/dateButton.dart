@@ -916,9 +916,13 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                   Text(
                     'Einnahmen: ${data['einnahmen']!.toStringAsFixed(2)} €',
                     style: const TextStyle(fontSize: 16, color: Colors.green),
-                  ),
+                  ),/*
                   Text(
                     'Ausgaben: -${data['ausgaben']!.toStringAsFixed(2)} €',
+                    style: const TextStyle(fontSize: 16, color: Colors.red),
+                  ),*/
+                  Text(
+                    'Ausgaben: ${data['ausgaben']! > 0 ? '-${data['ausgaben']!.toStringAsFixed(2)}' : data['ausgaben']!.toStringAsFixed(2)} €',
                     style: const TextStyle(fontSize: 16, color: Colors.red),
                   ),
                   Text(
