@@ -2197,7 +2197,6 @@ class FirestoreService {
 
       if (alreadyExists) {
         await deleteNotification(userId, categoryId, "budget_overflow");
-        print("🟢 Benachrichtigung entfernt: Budgetlimit wieder im Limit.");
       }
 
       await createNotification(
@@ -2218,7 +2217,6 @@ class FirestoreService {
           "budget_overflow",
           categoryId: categoryId,
         );
-        print("🛑 Neue Benachrichtigung erstellt: Budgetlimit überschritten.");
       }
     }
 
@@ -2245,7 +2243,6 @@ class FirestoreService {
           "balance_low",
           accountId: accountId,
         );
-        print("🚨 Neue Benachrichtigung erstellt: Kontostand unter 0 gefallen.");
       }
     }
 
@@ -2259,7 +2256,6 @@ class FirestoreService {
           "balance_still_low",
           accountId: accountId,
         );
-        print("⚠️ Neue Benachrichtigung erstellt: Kontostand bleibt negativ.");
       }
     }
 
@@ -2267,11 +2263,10 @@ class FirestoreService {
       await deleteNotification(userId, accountId, "balance_low");
       await createNotification(
         userId,
-        "🎉 Gute Nachrichten! Ihr Kontostand ist wieder positiv: ${totalBalanceAfter.toStringAsFixed(2)}€.",
+        "Gute Nachrichten! Ihr Kontostand ist wieder positiv: ${totalBalanceAfter.toStringAsFixed(2)}€.",
         "balance_recovered",
         accountId: accountId,
       );
-      print("✅ Benachrichtigung entfernt: Konto ist wieder positiv.");
     }
   }
 
