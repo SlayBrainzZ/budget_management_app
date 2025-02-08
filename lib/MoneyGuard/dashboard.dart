@@ -31,7 +31,7 @@ class _DashboardState extends State<Dashboard> {
     if (currentUser != null) {
       List<BankAccount> accounts = await FirestoreService().getUserBankAccounts(currentUser!.uid);
 
-      // Falls noch kein Konto existiert, erstelle ein Standardkonto "Mein Konto"
+
       if (accounts.isEmpty) {
         final defaultAccount = BankAccount(
           userId: currentUser!.uid,
@@ -43,7 +43,7 @@ class _DashboardState extends State<Dashboard> {
         );
 
         await FirestoreService().createBankAccount(currentUser!.uid, defaultAccount);
-        _fetchBankAccounts(); // Aktualisiere die Liste
+        _fetchBankAccounts();
       }
     }
   }
@@ -54,15 +54,11 @@ class _DashboardState extends State<Dashboard> {
 
 
       for (BankAccount account in accounts) {
-        // Überprüfe, ob das Konto für den Import vorgesehen ist
         if (account.forImport) {
-          // Berechne den Kontostand für importierte Konten
           await FirestoreService().calculateImportBankAccountBalance(currentUser!.uid, account);
-          //MyApp();
+
         } else {
-          // Berechne den Kontostand für normale Konten
           await FirestoreService().calculateBankAccountBalance(currentUser!.uid, account);
-          //MyApp();
         }
       }
 
@@ -78,7 +74,7 @@ class _DashboardState extends State<Dashboard> {
 
     if (accountData['name'] == null || accountData['name']!.trim().isEmpty) {
         print("FEHLER: Name des Kontos ist leer!");
-        return; // Konto wird nicht erstellt
+        return;
       }
 
       final account = BankAccount(
@@ -138,10 +134,10 @@ class _DashboardState extends State<Dashboard> {
                     borderRadius: BorderRadius.circular(15),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1), // Weniger Deckkraft für einen sanfteren Schatten
-                        blurRadius: 6,  // Weniger Unschärfe für einen subtileren Schatten
-                        spreadRadius: 1, // Geringere Ausdehnung
-                        offset: Offset(2, 2), // Kleinere Verschiebung für einen dezenteren Schatten
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 6,
+                        spreadRadius: 1,
+                        offset: Offset(2, 2),
                       ),
                     ],
                   ),
@@ -486,7 +482,7 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
                     } else {
                       widget.onAccountCreated(accountData);
                     }
-                    //Navigator.pop(context);
+
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
@@ -586,7 +582,6 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
             TextButton(
               onPressed: () async {
                 if (widget.account != null) {
-                  // Ladefenster anzeigen
                   showDialog(
                     context: context,
                     barrierDismissible: false,
@@ -604,7 +599,6 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
 
                   try {
                     if (widget.account!.forImport) {
-                      // Importierte Transaktionen löschen
                       List<ImportedTransaction> importedTransactions =
                       await FirestoreService().getImportedTransactionsByAccountIds(
                           widget.account!.userId, [widget.account!.id!]);
@@ -614,7 +608,6 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
                             widget.account!.userId, transaction.id!);
                       }
                     } else {
-                      // Normale Transaktionen löschen
                       List<Transaction> transactions = await FirestoreService()
                           .getTransactionsByAccountIds(
                           widget.account!.userId, [widget.account!.id!]);
@@ -625,16 +618,15 @@ class _AccountDetailsScreen extends State<AccountDetailsScreen> {
                       }
                     }
 
-                    // Konto löschen
                     await FirestoreService().deleteBankAccount(
                         widget.account!.userId, widget.account!.id!);
 
-                    // Ansicht aktualisieren
+
                     widget.onAccountDeleted?.call();
                   } finally {
-                    // Ladefenster schließen
-                    Navigator.pop(context); // Schließt das Ladefenster
-                    Navigator.pop(context); // Schließt den Bestätigungsdialo
+
+                    Navigator.pop(context);
+                    Navigator.pop(context);
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => MyApp()),

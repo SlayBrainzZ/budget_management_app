@@ -8,10 +8,9 @@ import 'package:budget_management_app/backend/Category.dart';
 import 'package:budget_management_app/backend/BankAccount.dart';
 import 'package:budget_management_app/backend/ImportedTransaction.dart';
 import 'package:multi_select_flutter/multi_select_flutter.dart';
-
-
-
+import '../main.dart';
 import 'ImportButton.dart';
+
 
 class DateButton extends StatelessWidget {
   @override
@@ -35,10 +34,10 @@ class DateButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(10.0),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1), // Weniger Deckkraft für einen sanfteren Schatten
-                blurRadius: 6,  // Weniger Unschärfe für einen subtileren Schatten
-                spreadRadius: 1, // Geringere Ausdehnung
-                offset: Offset(2, 2), // Kleinere Verschiebung für einen dezenteren Schatten
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 6,
+                spreadRadius: 1,
+                offset: Offset(2, 2),
               ),
             ],
           ),
@@ -49,7 +48,7 @@ class DateButton extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10.0),
               ),
-              elevation: 0, // Schatten kommt vom Container
+              elevation: 0,
             ),
             onPressed: () {
               Navigator.push(
@@ -109,6 +108,7 @@ class DateButton extends StatelessWidget {
 }
 
 
+
 class DateButtonScreen extends StatefulWidget {
   @override
   _DateButtonScreenState createState() => _DateButtonScreenState();
@@ -120,11 +120,11 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
 
   bool isLoading = true;
 
-// Dropdown-Werte
-  List<Category> selectedCategories = []; // Vollständige Category-Objekte
+
+  List<Category> selectedCategories = [];
   List<BankAccount> selectedAccounts = [];
 
-// Kategorien und Konten
+
   List<Category> categories = [];
   List<BankAccount> bankAccounts = [];
 
@@ -132,20 +132,11 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    /*
-    _tabController.addListener(() {
-      if (_tabController.index == 1) { // Monatlich ausgewählt
-        setState(() {
-          _generateMonthlyData(); // Daten berechnen
-        });
-      }
-    }*/// Listener für Tab-Wechsel
     _tabController.addListener(() {
       setState(() {}); // UI aktualisieren, wenn sich der Tab ändert
     });
     _fetchBankAccounts();
     _fetchTransactions();
-    //_fetchCategories();
   }
 
   @override
@@ -160,7 +151,6 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
     return '${dateFormat.format(date)} um ${timeFormat.format(date)}';
   }
 
-//Monthly ##########################
   Map<int, Map<String, double>> _generateMonthlyData() {
     Map<int, Map<String, double>> monthlyData = {};
 
@@ -197,7 +187,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
     return monthlyData;
   }
 
-// Für multiselect
+
   Future<void> _fetchBankAccounts() async {
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
@@ -232,7 +222,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
       final firestoreService = FirestoreService();
       final userId = currentUser.uid;
 
-      // Extrahiere die IDs der ausgewählten Konten
+
       List<String> selectedAccountIds =
       selectedAccounts.map((account) => account.id!).toList();
 
@@ -240,16 +230,13 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
       List<ImportedTransaction> importedTransactions = [];
 
       if (selectedAccounts.isEmpty) {
-        // Falls keine Konten ausgewählt sind, lade alle Transaktionen
         transactions = await firestoreService.getUserTransactions(userId);
         importedTransactions = await firestoreService.getImportedTransactions(userId);
       } else {
-        // Falls Konten ausgewählt sind, filtere nach diesen
         transactions = await firestoreService.getTransactionsByAccountIds(userId, selectedAccountIds);
         importedTransactions = await firestoreService.getImportedTransactionsByAccountIds(userId, selectedAccountIds);
       }
 
-      // Kategorie- und Kontodaten für jede Transaktion laden
       for (var transaction in transactions) {
         if (transaction.accountId != null) {
           final bankAccount = await firestoreService.getBankAccount(userId, transaction.accountId!);
@@ -261,7 +248,6 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
         }
       }
 
-      // Importierte Transaktionen verarbeiten
       for (var importedTransaction in importedTransactions) {
         if (importedTransaction.accountId != null) {
           final bankAccount = await firestoreService.getBankAccount(userId, importedTransaction.accountId!);
@@ -284,7 +270,6 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
         }),
       ];
 
-      // Sortiere die Transaktionen nach Datum
       combinedTransactions.sort((a, b) {
         final aDate = a['type'] == 'regular'
             ? (a['data'] as Transaction).date
@@ -330,7 +315,12 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pop(context); // Zurück zum vorherigen Bildschirm
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => MyApp(),
+              ),
+            );
           },
         ),
         bottom: PreferredSize(
@@ -409,8 +399,8 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                     padding: const EdgeInsets.all(16.0),
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
-                        maxWidth: 400, // Dialog breiter machen
-                        maxHeight: 500, // Dialoghöhe anpassen
+                        maxWidth: 400,
+                        maxHeight: 500,
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -517,10 +507,10 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
           children: [
             Text(
               selectedItems.isEmpty
-                  ? title // Wenn keine Konten ausgewählt sind, zeige den Titel
+                  ? title
                   : selectedItems
                   .map((e) => e.accountName ?? "Unbenannt")
-                  .join(", "), // Wenn Konten ausgewählt sind, zeige deren Namen
+                  .join(", "),
               style: TextStyle(color: primaryColor),
               overflow: TextOverflow.ellipsis,
             ),
@@ -530,8 +520,6 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
       ),
     );
   }
-
-
 
 
 
@@ -598,7 +586,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                             text: 'Notiz:  ',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 12, // Kleinere Schriftgröße für das Label
+                              fontSize: 12,
                               color: Colors.blueGrey,
                             ),
                           ),
@@ -606,7 +594,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                             text: transaction.note!,
                             style: TextStyle(
                               fontWeight: FontWeight.normal,
-                              fontSize: 12, // Gleiche Schriftgröße für den Inhalt
+                              fontSize: 12,
                               color: primaryColor,
                             ),
                           ),
@@ -645,7 +633,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                   context,
                   MaterialPageRoute(
                     builder: (context) => AddTransactionPage(transaction: transaction.copyWith(
-                      amount: transaction.amount.abs(), // Remove negative sign here as well
+                      amount: transaction.amount.abs(),
                     )),
                   ),
                 ).then((_) {
@@ -667,7 +655,6 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-               // Text('Empfänger: ${importedTransaction.payerOrRecipient}'),
                 RichText(
                   text: TextSpan(
                     children: [
@@ -675,7 +662,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                         text: 'Empfänger: ',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 12, // Kleinere Schriftgröße für das Label
+                          fontSize: 12,
                           color: Colors.blueGrey,
                         ),
                       ),
@@ -683,7 +670,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                         text: importedTransaction.payerOrRecipient ?? '',
                         style: TextStyle(
                           fontWeight: FontWeight.normal,
-                          fontSize: 12, // Gleiche Schriftgröße für den Inhalt
+                          fontSize: 12,
                           color: primaryColor,
                         ),
                       ),
@@ -694,12 +681,12 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                   Row(
                     children: [
                       Icon(
-                        category?.icon ?? Icons.help_outline, // Standard-Icon für keine Kategorie
-                        color: category?.color ?? Colors.grey, // Standard-Farbe für keine Kategorie
+                        category?.icon ?? Icons.help_outline,
+                        color: category?.color ?? Colors.grey,
                         size: 24,
                       ),
                       const SizedBox(width: 8),
-                      Text(category?.name ?? 'Keine Kategorie'), // Standard-Text für keine Kategorie
+                      Text(category?.name ?? 'Keine Kategorie'),
                     ],
                   ),
                 if (bankAccount != null)
@@ -763,14 +750,13 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
     if (transaction.categoryId != null) {
       selectedCategory = categories.firstWhere(
             (category) => category.id == transaction.categoryId,
-        //orElse: () => null,
       );
     }
 
     await showDialog(
       context: context,
       builder: (BuildContext context) {
-        return StatefulBuilder( // Nutze StatefulBuilder, um den Dialog dynamisch zu aktualisieren
+        return StatefulBuilder(
           builder: (BuildContext context, StateSetter setState) {
             return AlertDialog(
               title: const Text('Kategorie zuweisen'),
@@ -809,13 +795,13 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                   onPressed: () async {
                     if (selectedCategory != null) {
                       try {
-                        // Aktualisiere die Kategorie in der Transaktion
                         transaction.categoryId = selectedCategory!.id;
                         double budget = await checkBudgetBefore(transaction.categoryId!);
                         double balance = await checkBalanceBefore(transaction);
                         //print("budget für diese kategorie: ${transaction.categoryId!} ist: $budget");
                         // Speichere die Transaktion in Firestore
                         final currentUser = FirebaseAuth.instance.currentUser;
+
                         if (currentUser != null && transaction.id != null) {
                           await FirestoreService().handleImportedTransactionUpdateAndBudgetCheck(
                             currentUser.uid,
@@ -861,7 +847,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
       );
     } else {
       return Icon(
-        Icons.help_outline, // Using a help icon for unknown accounts
+        Icons.help_outline,
         color: Colors.grey,
         size: 16,
       );
@@ -965,7 +951,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
 
 }
 Future<double> checkBudgetBefore(String categoryId) async {
-  double totalSpentBefore = 0.0; // Standardwert setzen
+  double totalSpentBefore = 0.0;
   final currentUser = FirebaseAuth.instance.currentUser;
   if (currentUser == null) {
     throw Exception('Kein Benutzer angemeldet.');
@@ -980,7 +966,7 @@ Future<double> checkBudgetBefore(String categoryId) async {
     print("Fehler beim Abrufen des Budgets: $e");
   }
 
-  return totalSpentBefore; // Rückgabe des Werts
+  return totalSpentBefore;
 }
 
 Future<double> checkBalanceBefore(ImportedTransaction transaction) async {
