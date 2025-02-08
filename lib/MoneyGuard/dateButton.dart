@@ -961,7 +961,6 @@ Future<double> checkBudgetBefore(String categoryId) async {
         currentUser.uid,
         categoryId
     );
-    print("Gesamtausgaben vor Löschung: $totalSpentBefore");
   } catch (e) {
     print("Fehler beim Abrufen des Budgets: $e");
   }
@@ -972,19 +971,16 @@ Future<double> checkBudgetBefore(String categoryId) async {
 Future<double> checkBalanceBefore(ImportedTransaction transaction) async {
   double balanceBefore = 0.0;
   final currentUser = FirebaseAuth.instance.currentUser;
-
   if (currentUser == null) {
     print("Fehler: Kein Benutzer angemeldet.");
-    return balanceBefore; // Rückgabe von 0.0, falls kein Nutzer eingeloggt ist
+    return balanceBefore;
   }
-
   BankAccount? bankA = await FirestoreService().getBankAccount(currentUser.uid, transaction.accountId!);
 
   if (bankA == null) {
     print("Fehler: Konto nicht gefunden.");
-    return balanceBefore; // Falls Konto nicht gefunden wird, ebenfalls 0.0 zurückgeben
+    return balanceBefore;
   }
-
-  balanceBefore = bankA.balance ?? 0.0; // Hier setzen wir den korrekten Kontostand
+  balanceBefore = bankA.balance ?? 0.0;
   return balanceBefore;
 }

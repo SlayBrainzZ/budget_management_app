@@ -646,7 +646,6 @@ class FirestoreService {
       }
       double totalBalanceBefore = bankA.balance ?? 0.0;
 
-      print("Balance before transaction: $totalBalanceBefore");
 
 
       await createTransaction2(userId, transaction, categoryId: categoryId, accountId: accountId);
@@ -659,7 +658,6 @@ class FirestoreService {
       // 6. Berechne den Kontostand nach der Transaktion
       double totalBalanceAfter = await calculateBankAccountBalance(userId, bankA);
 
-      print("Balance nach transaction: $totalBalanceAfter");
 
       // 7. Budgetprüfung und Benachrichtigung
       await _checkAndHandleBudgetNotifications(userId, transaction.categoryId!, totalSpentBefore, totalSpentAfter);
@@ -1013,7 +1011,7 @@ class FirestoreService {
 
         if (alreadyExists) {
           await deleteNotification(userId, categoryId, "budget_overflow");
-          print("Benachrichtigung entfernt: Budgetlimit ist wieder innerhalb des Limits.");
+
         }
         await createNotification(
           userId,
@@ -1029,7 +1027,7 @@ class FirestoreService {
           "budget_still_overflow",
           categoryId: categoryId,
         );
-        print("Neue Benachrichtigung erstellt: Budgetlimit weiterhin überschritten.");
+
       }
 
     } catch (e) {
@@ -1054,7 +1052,6 @@ class FirestoreService {
 
   Future<double> calculateBankAccountBalance(String documentId, BankAccount bankAccount) async {
     try {
-      print("Berechne Balance für Konto: ${bankAccount.id}");
       // Start mit dem aktuellen Kontostand im Bankkonto
       //double totalBalance = bankAccount.balance ?? 0.0;
       double totalBalance = 0.0;
@@ -1065,7 +1062,7 @@ class FirestoreService {
       List<Transaction> transactions = await FirestoreService()
           .getTransactionsByAccountIds(documentId, [bankAccount.id!]);
 
-      print("Gefundene Transaktionen: ${transactions.length}");
+
 
       transactions.forEach((transaction) {
         totalBalance += transaction.amount;
@@ -1082,7 +1079,7 @@ class FirestoreService {
           }
         }
       }*/
-      print("Berechnete Balance: $totalBalance");
+
       // Kontostand und Aktualisierungszeitpunkt speichern
       bankAccount.balance = totalBalance;
       bankAccount.lastUpdated = DateTime.now();

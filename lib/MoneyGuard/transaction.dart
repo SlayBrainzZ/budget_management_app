@@ -156,7 +156,6 @@ class _AddTransactionPageState extends State<AddTransactionPage>
 
   Future<double> checkBudgetBefore() async {
     double totalSpentBefore = 0.0;
-
     try {
       totalSpentBefore = await _firestoreService.getCurrentMonthTotalSpent(
           _userId!,
@@ -166,7 +165,6 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     } catch (e) {
       print("Fehler beim Abrufen des Budgets: $e");
     }
-
     return totalSpentBefore;
   }
 
@@ -175,19 +173,11 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       print("Fehler: Kein Konto ausgewählt.");
       return 0.0;
     }
-
-    print("Lade Balance für Konto ID: $_selectedAccount");
-
     BankAccount? account = await _firestoreService.getBankAccount(_userId!, _selectedAccount!);
-
     if (account == null) {
       print("Fehler: Konto nicht gefunden in Firestore.");
       return 0.0;
     }
-
-    print("Balance before transaction (direkt aus Firestore, geladen): ${account.balance}");
-
-    // Falls `account.balance` null ist, überprüfe, ob Firestore richtig aktualisiert wurde
     return account.balance ?? 0.0;
   }
 
@@ -201,7 +191,6 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     if (widget.transaction == null) return;
     _firestoreService
         .handleTransactionDeletionAndBudgetCheck(_userId!, widget.transaction!.id!, widget.transaction!.categoryId!, budget)
-        //.deleteTransaction(_userId!, widget.transaction!.id!)
         .then((_) {
     });
 
@@ -410,7 +399,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
             ElevatedButton(
               onPressed: () async { // Muss async sein, weil wir await verwenden
                 double balance = await checkBalanceBefore();
-                double budget = await checkBudgetBefore(); // Warte auf den Wert
+                double budget = await checkBudgetBefore();
                 _deleteTransaction(budget, balance); // Löscht die Transaktion mit korrektem Budget
                 Navigator.of(context).pop(); // Zurück zur vorherigen Seite
               },
