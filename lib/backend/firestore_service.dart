@@ -330,7 +330,6 @@ class FirestoreService {
       final userBankAccountsRef = usersRef.doc(userId).collection('bankAccounts');
       if (account.id != null) {
         await userBankAccountsRef.doc(account.id).update(account.toMap());
-        print("Bankkonto aktualisiert: ${account.toMap()}");
       } else {
         throw Exception("Account ID ist null. Kann nicht aktualisieren.");
       }
@@ -953,24 +952,18 @@ class FirestoreService {
       double totalSpentBefore = budget;
       double totalBalanceBefore = balance;
 
-      // 1. Importierte Transaktion aktualisieren
       await updateImportedTransaction(userId, transactionId, transaction);
 
-      // 2. Neue Ausgaben abrufen
       double totalSpentAfter = await getCurrentMonthTotalSpent(userId, categoryId);
-
-      // 3. Kontostand nach Transaktion abrufen (für importierte Transaktionen)
       BankAccount? bankA = await getBankAccount(userId, transaction.accountId!);
       if (bankA == null) {
         print("Fehler: Konto nicht gefunden.");
         return;
       }
-
       double totalBalanceAfter = await calculateImportBankAccountBalance(userId, bankA);
 
-      // 4. Benachrichtigungen prüfen und ggf. senden
-      await _checkAndHandleBalanceNotifications(userId, totalBalanceBefore, totalBalanceAfter, transaction.accountId!);
 
+      await _checkAndHandleBalanceNotifications(userId, totalBalanceBefore, totalBalanceAfter, transaction.accountId!);
       await _checkAndHandleBudgetNotifications(userId, categoryId, totalSpentBefore, totalSpentAfter);
 
     } catch (e) {
@@ -990,50 +983,30 @@ class FirestoreService {
   }
 
   Future<void> handleTransactionDeletionAndBudgetCheck(
-      String userId, String transactionId, String categoryId, double budget) async {
+      String userId, String transactionId, String accountId, String categoryId, double budget, double balance) async {
     try {
       double totalSpentBefore = budget;
-      // 2. Transaktion direkt löschen
+      double totalBalanceBefore = balance;
+
+      // 1. Transaktion löschen
       await deleteTransaction(userId, transactionId);
 
-      // 3. Neue Ausgaben abrufen (kein `Future.delayed()`)
       double totalSpentAfter = await getCurrentMonthTotalSpent(userId, categoryId);
-
-      // 4. Budgetlimit abrufen
-      Category? category = await getCategory(userId, categoryId);
-      double? budgetLimit = category?.budgetLimit;
-
-      if (budgetLimit == null || budgetLimit == 0) return;
-
-      // 5. Falls Budgetlimit vorher überschritten war, aber jetzt nicht mehr
-      if (totalSpentBefore > budgetLimit && totalSpentAfter <= budgetLimit) {
-        bool alreadyExists = await doesNotificationExist(userId, categoryId, "budget_overflow");
-
-        if (alreadyExists) {
-          await deleteNotification(userId, categoryId, "budget_overflow");
-
-        }
-        await createNotification(
-          userId,
-          "Budgetlimit für ${category!.name} wieder eingehalten um ${(totalSpentAfter - budgetLimit).abs().toStringAsFixed(2)}€!",
-          "budget_nomore_overflow",
-          categoryId: categoryId,
-        );
-
-      } else if (totalSpentBefore > budgetLimit && totalSpentAfter > budgetLimit){
-        await createNotification(
-          userId,
-          "Budgetlimit für ${category!.name} weiterhin überschritten um ${(totalSpentAfter - budgetLimit).toStringAsFixed(2)}€!",
-          "budget_still_overflow",
-          categoryId: categoryId,
-        );
-
+      BankAccount? bankA = await getBankAccount(userId, accountId);
+      if (bankA == null) {
+        print("Fehler: Konto nicht gefunden.");
+        return;
       }
+      double totalBalanceAfter = await calculateImportBankAccountBalance(userId, bankA);
+
+      await _checkAndHandleBalanceNotifications(userId, totalBalanceBefore, totalBalanceAfter, accountId);
+      await _checkAndHandleBudgetNotifications(userId, categoryId, totalSpentBefore, totalSpentAfter);
 
     } catch (e) {
       print("Fehler bei der Bearbeitung der Transaktionslöschung: $e");
     }
   }
+
 
 
 
@@ -2201,7 +2174,7 @@ class FirestoreService {
 
       await createNotification(
         userId,
-        "✅ Budgetlimit für ${category!.name} wieder eingehalten um ${(totalSpentAfter - budgetLimit).abs().toStringAsFixed(2)}€!",
+        "Budgetlimit für ${category!.name} wieder eingehalten um ${(totalSpentAfter - budgetLimit).abs().toStringAsFixed(2)}€!",
         "budget_nomore_overflow",
         categoryId: categoryId,
       );
@@ -2213,7 +2186,7 @@ class FirestoreService {
       if (!alreadyExists) {
         await createNotification(
           userId,
-          "⚠️ Budgetlimit für ${category!.name} überschritten um ${(totalSpentAfter - budgetLimit).toStringAsFixed(2)}€!",
+          "Budgetlimit für ${category!.name} überschritten um ${(totalSpentAfter - budgetLimit).toStringAsFixed(2)}€!",
           "budget_overflow",
           categoryId: categoryId,
         );
@@ -2223,7 +2196,7 @@ class FirestoreService {
     else if (totalSpentBefore > budgetLimit && totalSpentAfter > budgetLimit) {
       await createNotification(
         userId,
-        "🔴 Budgetlimit für ${category!.name} weiterhin überschritten um ${(totalSpentAfter - budgetLimit).toStringAsFixed(2)}€!",
+        "Budgetlimit für ${category!.name} weiterhin überschritten um ${(totalSpentAfter - budgetLimit).toStringAsFixed(2)}€!",
         "budget_still_overflow",
         categoryId: categoryId,
       );
@@ -2239,7 +2212,7 @@ class FirestoreService {
       if (!alreadyExists) {
         await createNotification(
           userId,
-          "⚠️ Achtung! Kontostand bei ${totalBalanceAfter.toStringAsFixed(2)}€!",
+          "Achtung! Kontostand bei ${totalBalanceAfter.toStringAsFixed(2)}€!",
           "balance_low",
           accountId: accountId,
         );
@@ -2252,7 +2225,7 @@ class FirestoreService {
       if (!alreadyExists) {
         await createNotification(
           userId,
-          "🔴 Warnung! Kontostand weiterhin negativ: ${totalBalanceAfter.toStringAsFixed(2)}€!",
+          "Warnung! Kontostand weiterhin negativ: ${totalBalanceAfter.toStringAsFixed(2)}€!",
           "balance_still_low",
           accountId: accountId,
         );

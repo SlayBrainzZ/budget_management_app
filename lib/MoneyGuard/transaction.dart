@@ -190,7 +190,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
   void _deleteTransaction(double budget, double balance) {
     if (widget.transaction == null) return;
     _firestoreService
-        .handleTransactionDeletionAndBudgetCheck(_userId!, widget.transaction!.id!, widget.transaction!.categoryId!, budget)
+        .handleTransactionDeletionAndBudgetCheck(_userId!, widget.transaction!.id!, widget.transaction!.accountId!, widget.transaction!.categoryId!, budget, balance)
         .then((_) {
     });
 
