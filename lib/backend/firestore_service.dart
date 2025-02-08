@@ -2263,7 +2263,7 @@ class FirestoreService {
       }
     }
 
-    else if (totalBalanceBefore < 0 && totalBalanceAfter > 0) {
+    else if (totalBalanceBefore < 0 && totalBalanceAfter >= 0) {
       await deleteNotification(userId, accountId, "balance_low");
       await createNotification(
         userId,
