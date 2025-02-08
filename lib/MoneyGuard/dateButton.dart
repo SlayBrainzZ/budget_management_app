@@ -812,6 +812,7 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                         // Aktualisiere die Kategorie in der Transaktion
                         transaction.categoryId = selectedCategory!.id;
                         double budget = await checkBudgetBefore(transaction.categoryId!);
+                        double balance = await checkBalanceBefore(transaction);
                         //print("budget für diese kategorie: ${transaction.categoryId!} ist: $budget");
                         // Speichere die Transaktion in Firestore
                         final currentUser = FirebaseAuth.instance.currentUser;
@@ -821,7 +822,8 @@ class _DateButtonScreenState extends State<DateButtonScreen> with SingleTickerPr
                             transaction.id!,
                             transaction,
                             transaction.categoryId!,
-                            budget
+                            budget,
+                            balance
                           );
                         }
 
@@ -979,4 +981,24 @@ Future<double> checkBudgetBefore(String categoryId) async {
   }
 
   return totalSpentBefore; // Rückgabe des Werts
+}
+
+Future<double> checkBalanceBefore(ImportedTransaction transaction) async {
+  double balanceBefore = 0.0;
+  final currentUser = FirebaseAuth.instance.currentUser;
+
+  if (currentUser == null) {
+    print("Fehler: Kein Benutzer angemeldet.");
+    return balanceBefore; // Rückgabe von 0.0, falls kein Nutzer eingeloggt ist
+  }
+
+  BankAccount? bankA = await FirestoreService().getBankAccount(currentUser.uid, transaction.accountId!);
+
+  if (bankA == null) {
+    print("Fehler: Konto nicht gefunden.");
+    return balanceBefore; // Falls Konto nicht gefunden wird, ebenfalls 0.0 zurückgeben
+  }
+
+  balanceBefore = bankA.balance ?? 0.0; // Hier setzen wir den korrekten Kontostand
+  return balanceBefore;
 }

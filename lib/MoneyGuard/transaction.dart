@@ -30,6 +30,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
   final TextEditingController _amountController = TextEditingController();
 
   List<BankAccount> userAccounts = [];
+  List<double> balanceBefore = [];
   List<Category> categories = [];
   final FirestoreService _firestoreService = FirestoreService();
 
@@ -58,6 +59,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     _loadUserAndData();
 
   }
+
 
 
 
@@ -134,7 +136,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
 
     print(transaction.userId!);
     _firestoreService
-        .createTransactionAndCheckBudgetLimit(_userId!, transaction, categoryId: _selectedCategory)
+        .handleTransactionAdditionAndBudgetCheck(_userId!, transaction, categoryId: _selectedCategory)
         //.createTransaction2(_userId!, transaction, categoryId: _selectedCategory)
         .then((_) {
       Navigator.of(context).pushAndRemoveUntil(
@@ -154,7 +156,6 @@ class _AddTransactionPageState extends State<AddTransactionPage>
 
   Future<double> checkBudgetBefore() async {
     double totalSpentBefore = 0.0; // Standardwert setzen
-
     try {
       totalSpentBefore = await _firestoreService.getCurrentMonthTotalSpent(
           _userId!,
@@ -168,22 +169,44 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     return totalSpentBefore; // Rückgabe des Werts
   }
 
+  Future<double> checkBalanceBefore() async {
+    if (_selectedAccount == null) {
+      print("Fehler: Kein Konto ausgewählt.");
+      return 0.0;
+    }
 
-  void _deleteTransaction(double budget) {
+    print("Lade Balance für Konto ID: $_selectedAccount");
+
+    BankAccount? account = await _firestoreService.getBankAccount(_userId!, _selectedAccount!);
+
+    if (account == null) {
+      print("Fehler: Konto nicht gefunden in Firestore.");
+      return 0.0;
+    }
+
+    print("Balance before transaction (direkt aus Firestore, geladen): ${account.balance}");
+
+    // Falls `account.balance` null ist, überprüfe, ob Firestore richtig aktualisiert wurde
+    return account.balance ?? 0.0;
+  }
+
+
+
+
+
+
+
+  void _deleteTransaction(double budget, double balance) {
     if (widget.transaction == null) return;
-
-
-
     _firestoreService
         .handleTransactionDeletionAndBudgetCheck(_userId!, widget.transaction!.id!, widget.transaction!.categoryId!, budget)
-
         //.deleteTransaction(_userId!, widget.transaction!.id!)
         .then((_) {
-
     });
 
 
   }
+
 
   void _saveOrUpdateTransaction(String type) async {
     if (_selectedAccount == null || _selectedCategory == null) {
@@ -196,7 +219,8 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       return;
     }
 
-    double budget = await checkBudgetBefore();
+
+
 
     double amount = double.tryParse(_amountController.text) ?? 0.0;
     if (type == 'Ausgabe' && amount > 0) {
@@ -214,10 +238,12 @@ class _AddTransactionPageState extends State<AddTransactionPage>
         note: _noteController.text,
         accountId: _selectedAccount,
       );
-      print("Updated Transaction: ${updatedTransaction.toString()}");
 
+      double balance = await checkBalanceBefore();
+      double budget = await checkBudgetBefore();
+      print("Updated Transaction: ${updatedTransaction.toString()}");
       _firestoreService
-          .handleTransactionUpdateAndBudgetCheck(_userId!, widget.transaction!.id!, updatedTransaction, widget.transaction!.categoryId! ,budget)
+          .handleTransactionUpdateAndBudgetCheck(_userId!, widget.transaction!.id!, updatedTransaction, widget.transaction!.categoryId! ,budget, balance)
           //.updateTransaction(_userId!, widget.transaction!.id!, updatedTransaction)
           .then((_) {
         Navigator.of(context).pop();
@@ -391,8 +417,9 @@ class _AddTransactionPageState extends State<AddTransactionPage>
           if (widget.transaction != null) // Zeige Löschen-Button nur bei existierenden Transaktionen
             ElevatedButton(
               onPressed: () async { // Muss async sein, weil wir await verwenden
+                double balance = await checkBalanceBefore();
                 double budget = await checkBudgetBefore(); // Warte auf den Wert
-                _deleteTransaction(budget); // Löscht die Transaktion mit korrektem Budget
+                _deleteTransaction(budget, balance); // Löscht die Transaktion mit korrektem Budget
                 Navigator.of(context).pop(); // Zurück zur vorherigen Seite
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red[300]),
