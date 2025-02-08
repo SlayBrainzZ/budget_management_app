@@ -27,9 +27,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
       setState(() {
         _userId = user.uid;
       });
-
-      // Alle Benachrichtigungen als gelesen markieren
-      //_firestoreService.markAllNotificationsAsRead(user.uid);
     }
   }
 

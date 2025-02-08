@@ -19,13 +19,12 @@ class _SavingPlanState extends State<SavingPlan> {
 
   double totalIncome = 0.0;
   List<Transaction> monthlyTransactionCategoryAll = [];
-  List<double> remainingBudget = []; // Liste, um verbleibende Budgets für jede Kategorie zu speichern
+  List<double> remainingBudget = [];
   List<double> combinedTransactions = [];
 
 
   Map<String, int> streakCounterDictionary = {};
 
-  // Methode zum Laden der Kategorien und Benutzerinformationen
   Future<void> _loadUserAndCategories() async {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -41,10 +40,7 @@ class _SavingPlanState extends State<SavingPlan> {
     });
 
     try {
-      // Nutzer-ID sicher abrufen
       _userId = user.uid;
-
-      // Lade Kategorien mit sicherer User-ID
       List<Category> userCategories = await _firestoreService.getUserCategoriesWithBudget(_userId!);
 
       if (userCategories.isEmpty) {
@@ -102,14 +98,13 @@ class _SavingPlanState extends State<SavingPlan> {
 
 
 
-// Berechne die Daten für das Balkendiagramm
+
   List<BarChartGroupData> _buildCategoryData() {
     List<BarChartGroupData> barGroups = [];
 
     for (var i = 0; i < categories.length; i++) {
       var category = categories[i];
 
-      // Sicherstellen, dass category.budgetLimit und totalIncome gültig sind
       double percentage = 0;
       if (totalIncome > 0 && category.budgetLimit != null) {
         percentage = (category.budgetLimit! / totalIncome) * 100;
@@ -120,8 +115,8 @@ class _SavingPlanState extends State<SavingPlan> {
           x: i,
           barRods: [
             BarChartRodData(
-              toY: percentage, // Nur wenn gültig berechnet
-              color: category.color ?? Colors.blue, // Default-Farbe, falls null
+              toY: percentage,
+              color: category.color ?? Colors.blue,
               width: 30,
               borderRadius: BorderRadius.circular(8),
             ),
@@ -147,7 +142,6 @@ class _SavingPlanState extends State<SavingPlan> {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          // Statischer Bereich oben (Budgetlimit in einer SliverAppBar)
           SliverAppBar(
             backgroundColor: Theme.of(context).colorScheme.surface,
             pinned: true,
@@ -236,21 +230,21 @@ class _SavingPlanState extends State<SavingPlan> {
                 padding: const EdgeInsets.only(right: 20, left: 5, bottom: 10, top: 10),
                 child: BarChart(
                   BarChartData(
-                    alignment: BarChartAlignment.spaceEvenly, // Mehr Platz zwischen den Balken
-                    maxY: 100, // Maximaler Y-Wert für die Prozentanzeige
+                    alignment: BarChartAlignment.spaceEvenly,
+                    maxY: 100,
                     titlesData: FlTitlesData(
                       rightTitles: AxisTitles(
                         sideTitles: SideTitles(
-                          showTitles: false, // Rechte Achse deaktivieren
+                          showTitles: false,
                         ),
                       ),
                       leftTitles: AxisTitles(
                         sideTitles: SideTitles(
-                          showTitles: true, // Aktiviere die linke Achse
-                          reservedSize: 40, // Vergrößere den Platz links
+                          showTitles: true,
+                          reservedSize: 40,
                           getTitlesWidget: (value, meta) {
                             return Text(
-                              '${value.toInt()}%', // Beschriftung für linke Achse
+                              '${value.toInt()}%',
                               style: const TextStyle(fontSize: 10),
                             );
                           },
@@ -258,12 +252,12 @@ class _SavingPlanState extends State<SavingPlan> {
                       ),
                       bottomTitles: AxisTitles(
                         sideTitles: SideTitles(
-                          showTitles: false, // Kategorienamen unter dem Balken anzeigen
+                          showTitles: false,
                           getTitlesWidget: (double value, TitleMeta meta) {
                             int index = value.toInt();
                             if (index < categories.length) {
                               return Text(
-                                categories[index].name, // Kategorienname
+                                categories[index].name,
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
@@ -283,13 +277,13 @@ class _SavingPlanState extends State<SavingPlan> {
                         border: const Border(
                       left: BorderSide(
                           color: Colors.black,
-                          width: 1), // Linke Linie
+                          width: 1),
                       bottom: BorderSide
                         (color: Colors.black,
-                          width: 1), // Untere Linie
-                      top: BorderSide.none, // Keine obere Linie
-                      right: BorderSide.none, // Keine rechte Linie
-                    )), // Keine Border anzeigen
+                          width: 1),
+                      top: BorderSide.none,
+                      right: BorderSide.none,
+                    )),
                     barGroups: _buildCategoryData(),
                     gridData: FlGridData(
                       show: true,
@@ -298,8 +292,8 @@ class _SavingPlanState extends State<SavingPlan> {
                       getDrawingHorizontalLine: (value) {
                         return FlLine(
                           color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white.withOpacity(0.2) // Helle Linien im Dark Mode
-                              : Colors.black.withOpacity(0.1), // Dunkle Linien im Light Mode
+                              ? Colors.white.withOpacity(0.2)
+                              : Colors.black.withOpacity(0.1),
                           strokeWidth: 1,
                         );
                       },
@@ -318,10 +312,10 @@ class _SavingPlanState extends State<SavingPlan> {
                           return Theme.of(context).colorScheme.onSecondary;
                         },
                         tooltipBorder: BorderSide(
-                          color: Colors.black, // Farbe des Randes
-                          width: 1, // Dicke des Randes
+                          color: Colors.black,
+                          width: 1,
                         ),
-                        tooltipPadding: EdgeInsets.all(8), // Abstand innerhalb des Tooltips
+                        tooltipPadding: EdgeInsets.all(8),
                         getTooltipItem: (group, groupIndex, rod, rodIndex) {
                           final category = categories[groupIndex];
                           final double percentage = (category.budgetLimit! / totalIncome) * 100;
@@ -371,7 +365,6 @@ class _SavingPlanState extends State<SavingPlan> {
                 final spentAmount = (category.budgetLimit ?? 0) - remaining;
                 final spentPercent = 1 - (remaining / (category.budgetLimit ?? 1)).clamp(0.0, 1.0);
 
-                    // Neue Anzeige-Bedingung
                     String spentMessage;
                     if (remaining < 0) {
                       spentMessage = "${(spentAmount).toStringAsFixed(2)}€ ausgegeben";
@@ -382,7 +375,6 @@ class _SavingPlanState extends State<SavingPlan> {
                     }
 
 
-                    // Bedingte Nachricht je nach Budgetstatus
                 String statusMessage = remaining < 0
                     ? "Limit um ${(remaining * -1).toStringAsFixed(2)}€ überschritten!"
                     : remaining == 0
@@ -413,7 +405,6 @@ class _SavingPlanState extends State<SavingPlan> {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            // Icon und Kategoriename auf der linken Seite
                             Icon(
                               category.icon,
                               color: category.color,
@@ -436,7 +427,6 @@ class _SavingPlanState extends State<SavingPlan> {
 
                         const SizedBox(height: 8),
 
-                        // Anzeige der verbleibenden Budgetanzeige
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -461,22 +451,13 @@ class _SavingPlanState extends State<SavingPlan> {
                                     ? Colors.red
                                     : Colors.green,
                                 fontFamily: 'Roboto',
-                                /*foreground: Paint()
-                                  ..style = PaintingStyle.stroke
-                                  ..strokeWidth = 2 // Dicke der Umrandung
-                                  ..color = Colors.white, // Farbe der Umrandung
-
-                              */),
+                               ),
                             ),
                           ],
                         ),
 
 
-
-
                         const SizedBox(height: 8),
-
-                        // LinearProgressIndicator
                         LinearProgressIndicator(
                           value: spentPercent, // Dieser Wert wird nun angepasst
                           backgroundColor: Theme.of(context).colorScheme.onSecondary,

@@ -1,12 +1,9 @@
-//import 'dart:nativewrappers/_internal/vm/lib/ffi_native_type_patch.dart';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:budget_management_app/backend/Category.dart';
 import 'package:budget_management_app/backend/firestore_service.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'home_page.dart';
 import 'package:budget_management_app/backend/BankAccount.dart';
 
 class StatisticsPage extends StatefulWidget {
@@ -16,44 +13,35 @@ class StatisticsPage extends StatefulWidget {
 
 class _StatisticsPageState extends State<StatisticsPage> {
 
-  String? _userId;
   String selectedAmountType = 'Gesamtbetrag';
   String selectedTimeCategory = 'Monat';
   String selectedTimeImportance = 'Monat';
-  //String selectedYear = '2025';
   String selectedYear = DateTime.now().year.toString();
-
   String selectedMonth = 'Monat';
-
-  //final List<int> availableYears = List.generate(
-  //    100, (index) => 2000 + index); // letze 20 und nächste 80 jare
   final List<int> availableYears =
-  List.generate(DateTime.now().year - 2023 + 1, (index) => 2023 + index);
-
-
+  List.generate(DateTime.now().year - 2020 + 1, (index) => 2020 + index);
   double urgentExpenses = 0.0;
   double nonUrgentExpenses = 0.0;
   final ScrollController _scrollController = ScrollController();
   final FirestoreService _firestoreService = FirestoreService();
-  String selectedAccount = 'Gesamtübersicht'; // Standardmäßig "Gesamtübersicht"
+  String selectedAccount = 'Gesamtübersicht';
   String selectedAccountID = "";
   List<LineChartBarData>? cachedYearlyLineChartData;
   List<double>? cachedImportantChartData;
   List<LineChartBarData>? cachedCategoryLineChartData;
-  //Map<String, LineChartData> chartCache = {};
   List<Category> categories = [];
   List<BankAccount> allBankAccounts = [];
-  //double lastMonthBalance = 0.0;
   Map<String, double> monthlyBalanceList = {};
   bool importedTypeOfBankAccount = false;
   User? user1;
+  String? _userId;
+
 
   @override
   void initState() {
     super.initState();
     _initializeData();
   }
-
   void _initializeData() async {
     await _loadCategories();
     await _loadBankAccounts();
@@ -62,10 +50,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
       selectedAccountID = "null";
       importedTypeOfBankAccount = false;
     });
-
     await loadBigChartBarData(selectedYear, selectedMonth);
-
-    print("NAME UND ID: $selectedAccount, $selectedAccountID, $importedTypeOfBankAccount");
   }
   Future<void> _reloadAllStatistics() async {
     try {
@@ -98,7 +83,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
     }
   }
   Future<void> _loadCategories() async {
-    print("Entering loadcategories");
     final user = await _loadUser();
     if (user == null) {
       print('Kein Benutzer gefunden.');
@@ -125,7 +109,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
         SnackBar(content: Text("Fehler beim Laden der Daten")),
       );
     }
-    //print("Leaving loadcategories");
   }
   Future<void> _loadBankAccounts() async {
     final user = await _loadUser();
@@ -145,7 +128,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
       }
 
       setState(() {
-        //_userId = user.uid;
         allBankAccounts = userBankAccounts;
       });
     } catch (e) {
@@ -155,9 +137,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
       );
     }
   }
-
-
-
 
   Future<void> loadBigChartBarData(String chosenYear, String chosenMonth) async {
     try {
@@ -193,7 +172,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
             cachedYearlyLineChartData = [einnahmeDaten, ausgabeDaten, gesamtDaten];
           });
         }
-      print("leaving bigchartdata");
     } catch (e) {
       print('Fehler beim Laden der Diagrammdaten: ${e.toString()}');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -216,10 +194,10 @@ class _StatisticsPageState extends State<StatisticsPage> {
             show: true,
             getDotPainter: (FlSpot spot, double xPercentage, LineChartBarData bar, int index, {double? size}) {
               return FlDotCirclePainter(
-                radius: 3, // Größe der Dots (Standard ist 4)
-                color: bar.color ?? Colors.black, // Nutzt die Linienfarbe
-                strokeWidth: 1, // Randdicke
-                strokeColor: Colors.white, // Randfarbe der Dots
+                radius: 3,
+                color: bar.color ?? Colors.black,
+                strokeWidth: 1,
+                strokeColor: Colors.white,
               );
             },
           ),
@@ -234,8 +212,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
         getDrawingHorizontalLine: (value) {
           return FlLine(
             color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white.withOpacity(0.2) // Helle Linien im Dark Mode
-                : Colors.black.withOpacity(0.1), // Dunkle Linien im Light Mode
+                ? Colors.white.withOpacity(0.2)
+                : Colors.black.withOpacity(0.1),
             strokeWidth: 1,
           );
         },
@@ -253,12 +231,12 @@ class _StatisticsPageState extends State<StatisticsPage> {
         border: const Border(
           left: BorderSide(
               color: Colors.black,
-              width: 1), // Linke Linie
+              width: 1),
           bottom: BorderSide(
               color: Colors.black,
-              width: 1), // Untere Linie
-          top: BorderSide.none, // Keine obere Linie
-          right: BorderSide.none, // Keine rechte Linie
+              width: 1),
+          top: BorderSide.none,
+          right: BorderSide.none,
         ),
       ),
       titlesData: categoryChartTitlesDataYear,
@@ -267,14 +245,12 @@ class _StatisticsPageState extends State<StatisticsPage> {
         touchTooltipData: LineTouchTooltipData(
           getTooltipColor: (LineBarSpot spot) {
             return Theme.of(context).colorScheme.onSecondary;
-
-            //return Color.fromARGB(255, 255, 255, 255); // Weißer Hintergrund
           },
           tooltipBorder: BorderSide(
-            color: Colors.black, // Farbe des Randes
-            width: 1, // Dicke des Randes
+            color: Colors.black,
+            width: 1,
           ),
-          tooltipPadding: EdgeInsets.all(8), // Abstand innerhalb des Tooltips
+          tooltipPadding: EdgeInsets.all(8),
           getTooltipItems: (List<LineBarSpot> touchedSpots) {
             return touchedSpots.map((spot) {
               Map<int, String> lineLabels = {
@@ -282,7 +258,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
               };
               String label = lineLabels[spot.barIndex] ?? "Wert";
               return LineTooltipItem(
-                "$label: ${spot.y.toStringAsFixed(2)} €", // Individueller Text
+                "$label: ${spot.y.toStringAsFixed(2)} €",
                 TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
@@ -297,10 +273,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
     );
   }
-
-
-
-
   Future<List<FlSpot>> generateSpotsforMonth(String chosenYear, chosenMonth, String type) async {
     final user = await _loadUser();
     if (user == null) {
@@ -312,9 +284,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
     List<double> data = [];
 
     try {
-      print(monthlyBalanceList);
-      //lastMonthBalance = findLastMonthBalance(monthlyBalanceList, chosenYear, chosenMonth);
-      //print("lastMonthBalance nach Monatsangabe: $lastMonthBalance");
       if(importedTypeOfBankAccount == false) {
         if (selectedAccountID == "null") {
 
@@ -373,7 +342,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
 
           for (var entry in monthlySpending.entries) {
-            String monthKey = entry.key; // Beispiel: "2024-01"
+            String monthKey = entry.key;
             DateTime dateTime = DateTime.parse(monthKey + "-01");
             double y = entry.value;
             FlSpotlist.add(FlSpot(double.parse(dateTime.month.toString()), y));
@@ -383,7 +352,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
         monthlySpending = monthlyTransactions[2];
         monthlyBalanceList.addAll(monthlySpending);
-        print(monthlyBalanceList);
       }
     } catch (e) {
       print("Fehler beim Laden der Ausgaben für ein Jahr: ${e.toString()}");
@@ -448,7 +416,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
       } else {
         print("importedTypeofBankAcout unklar");
       }
-      //print(categoryTransactions); die transactions jeder einezelenen kategorrie!
 
       categoryTransactions.forEach((day, amount) {
         categoryList.add(FlSpot(day.toDouble(), amount));
@@ -467,9 +434,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   Future<LineChartBarData> defineLineChartBarData(Color color, String chosenYear, String chosenMonth, String type, List<FlSpot> spotsList) async {
     return LineChartBarData(
-      //show: false,
       isCurved: true,
-      //shadow: Shadow(color: Colors.black),
       curveSmoothness: 0.35,
       preventCurveOverShooting: true,
       color: color,
@@ -479,10 +444,10 @@ class _StatisticsPageState extends State<StatisticsPage> {
         show: true,
         getDotPainter: (FlSpot spot, double xPercentage, LineChartBarData bar, int index, {double? size}) {
           return FlDotCirclePainter(
-            radius: 4, // Größe der Dots (Standard ist 4)
-            color: bar.color ?? Colors.black, // Nutzt die Linienfarbe
-            strokeWidth: 1, // Randdicke
-            strokeColor: Colors.white, // Randfarbe der Dots
+            radius: 4,
+            color: bar.color ?? Colors.black,
+            strokeWidth: 1,
+            strokeColor: Colors.white,
           );
         },
       ),
@@ -490,7 +455,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
       spots: spotsList,
     );
   }
-  LineChartData get chartData { //getterfunktion für die große Statistik
+  LineChartData get chartData {
     if (cachedYearlyLineChartData == null || cachedYearlyLineChartData!.isEmpty) {
       return LineChartData(
         lineBarsData: [],
@@ -507,8 +472,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
         getDrawingHorizontalLine: (value) {
           return FlLine(
             color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white.withOpacity(0.2) // Helle Linien im Dark Mode
-                : Colors.black.withOpacity(0.1), // Dunkle Linien im Light Mode
+                ? Colors.white.withOpacity(0.2)
+                : Colors.black.withOpacity(0.1),
             strokeWidth: 1,
           );
         },
@@ -527,12 +492,12 @@ class _StatisticsPageState extends State<StatisticsPage> {
         border: const Border(
           left: BorderSide(
               color: Colors.black,
-              width: 1), // Linke Linie
+              width: 1),
           bottom: BorderSide
             (color: Colors.black,
-              width: 1), // Untere Linie
-          top: BorderSide.none, // Keine obere Linie
-          right: BorderSide.none, // Keine rechte Linie
+              width: 1),
+          top: BorderSide.none,
+          right: BorderSide.none,
     ),
     ),
       titlesData: bigChartTitlesDataYear,
@@ -546,10 +511,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
           },
           tooltipBorder: BorderSide(
             color: Colors.black,
-            //color: Theme.of(context).textTheme.bodyLarge?.color,// Farbe des Randes
-            width: 1, // Dicke des Randes
+            width: 1,
           ),
-          tooltipPadding: EdgeInsets.all(8), // Abstand innerhalb des Tooltips
+          tooltipPadding: EdgeInsets.all(8),
           getTooltipItems: (List<LineBarSpot> touchedSpots) {
             return touchedSpots.map((spot) {
               Map<int, String> lineLabels = {
@@ -559,7 +523,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
               };
               String label = lineLabels[spot.barIndex] ?? "Wert";
               return LineTooltipItem(
-                "$label: ${spot.y.toStringAsFixed(2)} €", // Individueller Text
+                "$label: ${spot.y.toStringAsFixed(2)} €",
                 TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
@@ -575,8 +539,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
   }
 
 
-
-
   FlTitlesData get categoryChartTitlesDataYear => FlTitlesData(
     bottomTitles: AxisTitles(
       sideTitles: categoryBottomTitles
@@ -589,11 +551,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
     ),
     leftTitles: AxisTitles(
       sideTitles: SideTitles(
-        showTitles: true, // Aktiviere die linke Achse
-        reservedSize: 40, // Vergrößere den Platz links
+        showTitles: true,
+        reservedSize: 40,
         getTitlesWidget: (value, meta) {
           return Text(
-            '${value.toInt()}€', // Beschriftung für linke Achse
+            '${value.toInt()}€',
             style: const TextStyle(fontSize: 10),
           );
         },
@@ -612,11 +574,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
     ),
     leftTitles: AxisTitles(
       sideTitles: SideTitles(
-        showTitles: true, // Aktiviere die linke Achse
-        reservedSize: 40, // Vergrößere den Platz links
+        showTitles: true,
+        reservedSize: 40,
         getTitlesWidget: (value, meta) {
           return Text(
-            '${value.toInt()}€', // Beschriftung für linke Achse
+            '${value.toInt()}€',
             style: const TextStyle(fontSize: 10),
           );
         },
@@ -630,14 +592,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
     getTitlesWidget: bottomTitleWidgets,
   );
   SideTitles get categoryBottomTitles => SideTitles(
-    showTitles: true, // Aktiviere die linke Achse
+    showTitles: true,
     reservedSize: 25,
     interval: 1,
     getTitlesWidget: categoryBottomTitleWidgets
   );
   Widget categoryBottomTitleWidgets(double value, TitleMeta meta) {
     const style = TextStyle(
-      //fontWeight: FontWeight.bold,
       fontSize: 11,
     );
     Widget text;
@@ -721,7 +682,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
   }
   Widget bottomTitleWidgets(double value, TitleMeta meta) {
     const style = TextStyle(
-      //fontWeight: FontWeight.bold,
       fontSize: 11,
     );
     Widget text;
@@ -810,10 +770,10 @@ class _StatisticsPageState extends State<StatisticsPage> {
       context: context,
       builder: (BuildContext context) {
         return Container(
-          height: 300, // Erhöhe die Höhe des Containers
+          height: 300,
           child: CupertinoPicker(
             backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-            itemExtent: 50.0, // Erhöht die Höhe der Picker-Elemente
+            itemExtent: 50.0,
             scrollController: FixedExtentScrollController(
                 initialItem: initialYearIndex),
             onSelectedItemChanged: (int index) {
@@ -835,17 +795,17 @@ class _StatisticsPageState extends State<StatisticsPage> {
   }
   void _showMonthPicker(BuildContext context) {
     int maxMonth = (selectedYear == DateTime.now().year.toString())
-        ? DateTime.now().month // Falls aktuelles Jahr → Nur bis zum aktuellen Monat
-        : 12; // Falls vergangenes Jahr → Alle 12 Monate
+        ? DateTime.now().month
+        : 12;
 
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
         return Container(
-          height: 300, // Höhe des Containers
+          height: 300,
           child: CupertinoPicker(
             backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-            itemExtent: 50.0, // Höhe jedes Elements
+            itemExtent: 50.0,
             scrollController: FixedExtentScrollController(
               initialItem: selectedMonth == "Monat" ? 0 : int.parse(selectedMonth),
             ),
@@ -862,7 +822,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
                   style: TextStyle(fontSize: 18,
                       color: Theme.of(context).textTheme.bodyLarge?.color
                   ))),
-              // Dynamische Monatserzeugung basierend auf maxMonth
               ...List.generate(maxMonth, (index) =>
                   Center(child: Text((index + 1).toString().padLeft(2, '0'),
                       style: TextStyle(fontSize: 18,
@@ -897,7 +856,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      //color: Colors.black,
                       color: Theme.of(context).textTheme.bodyLarge?.color
                     ),
                   ),
@@ -907,7 +865,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                   DropdownButton<String>(
                     value: allBankAccounts.any((account) => account.id == selectedAccount)
                         ? selectedAccount
-                        : 'Gesamtübersicht', // Standardwert als Fallback
+                        : 'Gesamtübersicht',
 
                     items: [
                       DropdownMenuItem(
@@ -926,7 +884,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                           .where((account) => account.id != null && account.id != '')
                           .map((BankAccount account) {
                         return DropdownMenuItem<String>(
-                          value: account.id, // ID statt Name als value
+                          value: account.id,
                           child: Row(
                             children: [
                               Icon(
@@ -947,11 +905,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
                       setState(() {
                         selectedAccount = newValue ?? 'Gesamtübersicht';
 
-                      // Aktualisiere die Account-ID basierend auf der Auswahl
                       if (selectedAccount == 'Gesamtübersicht') {
-                      selectedAccountID = 'null'; // Keine spezifische ID für die Gesamtübersicht
-                      print("Accountname gefunden!!!");
-                      print("$selectedAccount");
+                      selectedAccountID = 'null';
                       importedTypeOfBankAccount = false;
                       } else {
                         // Suche nach dem Konto anhand der ID
@@ -963,8 +918,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
                         }
                       }
 
-                        // Reset cache to force data reload
-                        //chartCache.clear();
                         cachedYearlyLineChartData = null;
                       });
 
@@ -979,15 +932,15 @@ class _StatisticsPageState extends State<StatisticsPage> {
               ),
 
               const Divider(
-                thickness: 1, // Stärke der Linie
-                color: Colors.black, // Farbe der Linie
-                height: 0, // Kein zusätzlicher Abstand unter der Linie
+                thickness: 1,
+                color: Colors.black,
+                height: 0,
               ),
 
               const SizedBox(height: 20),
 
 
-              // Gesamtübersicht im Zeitraum (Jahr und Monat nebeneinander)
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
@@ -996,12 +949,12 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     'Gesamtverlauf:  ',
                     style: TextStyle(fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        //color: Colors.black
+
                         color: Theme.of(context).textTheme.bodyLarge?.color
                     ),
                   ),
                   const SizedBox(width: 10),
-                  // Jahr Picker
+
                   GestureDetector(
                     onTap: () => _showYearPicker(context),
                     child: Container(
@@ -1009,21 +962,20 @@ class _StatisticsPageState extends State<StatisticsPage> {
                           horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.surface,
-                        //color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.grey),
                       ),
                       child: Text(
                         selectedYear,
                         style: TextStyle(fontSize: 16,
-                            //color: Colors.black
+
                             color: Theme.of(context).textTheme.bodyLarge?.color
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 20),
-                  // Monat Picker
+
                   GestureDetector(
                     onTap: () => _showMonthPicker(context),
                     child: Container(
@@ -1032,14 +984,14 @@ class _StatisticsPageState extends State<StatisticsPage> {
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.surface,
 
-                        //color: Colors.white,
+
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.grey),
                       ),
                       child: Text(
                         selectedMonth,
                         style: TextStyle(fontSize: 16,
-                            //color: Colors.black
+
                             color: Theme.of(context).textTheme.bodyLarge?.color
                         ),
                       ),
@@ -1048,7 +1000,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 ],
               ),
               const SizedBox(height: 20),
-              // Diagramm-Widget
+
               cachedYearlyLineChartData == null || cachedYearlyLineChartData!.isEmpty
                   ? Center(child: Text("Noch keine Daten verfügbar"))
                   : Container(
@@ -1056,7 +1008,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 height: 300,
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
-                  //color: Colors.white,
+
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: [
                     BoxShadow(
@@ -1072,7 +1024,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
               const SizedBox(height: 40),
 
-              // Kategorieübersicht (mit einem Picker zur Auswahl des Zeitraums)
+
               Row(
                 children: [
                   const SizedBox(width: 30),
@@ -1081,27 +1033,27 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     style: TextStyle(fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).textTheme.bodyLarge?.color
-                        //color: Colors.black
+
                     ),
                   ),
                   const SizedBox(width: 20),
                   GestureDetector(
                     onTap: () => _showCategoryPicker(context),
-                    // Picker anzeigen
+
                     child: Container(
                       padding: EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.surface,
-                        //color: Colors.white,
+
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.grey),
                       ),
                       child: Text(
-                        selectedTimeCategory, // Zeigt "Monat" oder "Woche" an
+                        selectedTimeCategory,
                         style: TextStyle(fontSize: 16,
                             color: Theme.of(context).textTheme.bodyLarge?.color
-                            //color: Colors.black
+
                         ),
                       ),
                     ),
@@ -1142,40 +1094,33 @@ class _StatisticsPageState extends State<StatisticsPage> {
       ),
     );
   }
-
   void _showCategoryPicker(BuildContext context) {
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
         return Container(
-          height: 220, // Höhe des Containers
+          height: 220,
           child: CupertinoPicker(
             backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-            //backgroundColor: Colors.white,
             itemExtent: 50.0,
-            // Höhe jedes Elements
             scrollController: FixedExtentScrollController(
               initialItem: selectedTimeCategory == "Monat"
                   ? 0
-                  : 1, // Setzt den initialen Wert (Monat oder Woche)
+                  : 1,
             ),
             onSelectedItemChanged: (int index) {
               setState(() {
-                // "Monat" oder "Woche" auswählen
                 selectedTimeCategory = index == 0 ? "Monat" : "Jahr";
-                // Daten nach der Auswahl neu laden
               });
             },
             children: [
               Center(child: Text("Monat",
                   style: TextStyle(fontSize: 18,
                       color: Theme.of(context).textTheme.bodyLarge?.color
-                      //color: Colors.black
                   ))),
               Center(child: Text("Jahr",
                   style: TextStyle(fontSize: 18,
                       color: Theme.of(context).textTheme.bodyLarge?.color
-                      //color: Colors.black
                   ))),
             ],
           ),
@@ -1183,8 +1128,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
       },
     );
   }
-
-
 }
 
 
@@ -1220,7 +1163,6 @@ class CategoryStatWidget extends StatelessWidget {
           width: 410,
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            //color: Colors.white,
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
@@ -1241,7 +1183,6 @@ class CategoryStatWidget extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                       color: Theme.of(context).textTheme.bodyLarge?.color
-                      //color: category.color,
                     ),
                   ),
                   const SizedBox(width: 5),
@@ -1257,7 +1198,6 @@ class CategoryStatWidget extends StatelessWidget {
                 height: 220,
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
-                  //color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: LineChart(snapshot.data!),
@@ -1281,6 +1221,6 @@ class CustomScrollPhysics extends ScrollPhysics {
 
   @override
   double applyPhysicsToUserOffset(ScrollMetrics position, double offset) {
-    return offset / 1; // Hier kannst du den Scrollfaktor anpassen, um die Geschwindigkeit zu reduzieren
+    return offset / 1;
   }
 }
