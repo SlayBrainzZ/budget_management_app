@@ -2239,7 +2239,7 @@ class FirestoreService {
       if (!alreadyExists) {
         await createNotification(
           userId,
-          "⚠️ Achtung! Ihr Kontostand ist nun ${totalBalanceAfter.toStringAsFixed(2)}€!",
+          "⚠️ Achtung! Kontostand bei ${totalBalanceAfter.toStringAsFixed(2)}€!",
           "balance_low",
           accountId: accountId,
         );
@@ -2252,7 +2252,7 @@ class FirestoreService {
       if (!alreadyExists) {
         await createNotification(
           userId,
-          "🔴 Warnung! Ihr Kontostand ist weiterhin negativ: ${totalBalanceAfter.toStringAsFixed(2)}€!",
+          "🔴 Warnung! Kontostand weiterhin negativ: ${totalBalanceAfter.toStringAsFixed(2)}€!",
           "balance_still_low",
           accountId: accountId,
         );
@@ -2263,7 +2263,7 @@ class FirestoreService {
       await deleteNotification(userId, accountId, "balance_low");
       await createNotification(
         userId,
-        "Gute Nachrichten! Ihr Kontostand ist wieder positiv: ${totalBalanceAfter.toStringAsFixed(2)}€.",
+        "Gute Nachrichten! Kontostand wieder positiv: ${totalBalanceAfter.toStringAsFixed(2)}€.",
         "balance_recovered",
         accountId: accountId,
       );
