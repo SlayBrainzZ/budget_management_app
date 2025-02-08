@@ -2235,7 +2235,7 @@ class FirestoreService {
   Future<void> _checkAndHandleBalanceNotifications(
       String userId, double totalBalanceBefore, double totalBalanceAfter, String accountId) async {
 
-    if (totalBalanceBefore > 0 && totalBalanceAfter < 0) {
+    if (totalBalanceBefore >= 0 && totalBalanceAfter < 0) {
       bool alreadyExists = await doesNotificationExist(userId, accountId, "balance_low");
 
       if (!alreadyExists) {
