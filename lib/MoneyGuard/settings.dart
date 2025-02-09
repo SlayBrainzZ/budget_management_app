@@ -10,8 +10,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  //bool isDarkMode = false; // Zustand für den Dark Mode
-  bool notificationsEnabled = true; // Zustand für Benachrichtigungen
+  bool notificationsEnabled = true;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -20,7 +19,6 @@ class _SettingsPageState extends State<SettingsPage> {
       await _auth.signOut();
       print("User ausgeloggt");
 
-      // Stelle sicher, dass kein BuildContext verloren geht
       if (mounted) {
         Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
       }
@@ -40,14 +38,11 @@ class _SettingsPageState extends State<SettingsPage> {
       User? user = _auth.currentUser;
 
       if (user != null) {
-        // First, delete the user document from Firestore
         await FirestoreService().deleteUser(user.uid);
 
-        // Then delete the user from Firebase Authentication
         await user.delete();
         print("Account gelöscht");
 
-        // Navigate to the login screen
         Navigator.of(context).pushReplacementNamed('/login');
       } else {
         print("Kein eingeloggter Nutzer gefunden.");
@@ -80,11 +75,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 themeProvider.toggleTheme();
               },
             ),
-            const Divider(),
 
             const Divider(),
 
-            // Logout Button
             ListTile(
               title: const Text("Ausloggen"),
               trailing: const Icon(Icons.logout),
@@ -93,7 +86,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
             const Divider(),
 
-            // Account löschen
             ListTile(
               title: const Text(
                 "Account löschen",
