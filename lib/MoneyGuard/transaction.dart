@@ -1,4 +1,3 @@
-import 'package:budget_management_app/MoneyGuard/dateButton.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
@@ -48,7 +47,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       _amountController.text = transaction.amount.toStringAsFixed(2);
       _selectedCategory = transaction.categoryId;
       _isUrgent = transaction.importance;
-      _selectedAccount = transaction.accountId; // Bankkonto setzen
+      _selectedAccount = transaction.accountId;
 
       if (transaction.type == 'Einnahme') {
         _tabController.index = 1;
@@ -74,7 +73,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
         setState(() {
           _userId = user.uid;
           categories = userCategories;
-          userAccounts = userBankAccounts; // Echte Konten laden
+          userAccounts = userBankAccounts;
         });
       } catch (e) {
         print("Fehler beim Laden der Daten: $e");
@@ -121,7 +120,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
 
     double amount = double.tryParse(_amountController.text) ?? 0.0;
     if (type == 'Ausgabe' && amount > 0) {
-      amount = -amount; // Betrag negativ machen für Ausgaben
+      amount = -amount;
     }
 
     final transaction = Transaction(
@@ -161,7 +160,6 @@ class _AddTransactionPageState extends State<AddTransactionPage>
           _userId!,
           widget.transaction!.categoryId!
       );
-      //print("Gesamtausgaben vor Löschung: $totalSpentBefore");
     } catch (e) {
       print("Fehler beim Abrufen des Budgets: $e");
     }
@@ -183,8 +181,6 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     print("account balance vor allem ist ${account.balance}");
     return balance ?? 0.0;
   }
-
-
 
 
 
@@ -241,7 +237,6 @@ class _AddTransactionPageState extends State<AddTransactionPage>
         print("Fehler beim Aktualisieren der Transaktion: $e");
       });
     } else {
-      // Neue Transaktion erstellen
       _saveTransaction(type);
     }
   }
@@ -318,16 +313,16 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                   .where((account) => account.forImport == false) // Filterung
                   .map((account) {
                 final icon = account.accountType == "Bargeld"
-                    ? Icons.attach_money // Symbol für Bargeld
-                    : Icons.account_balance; // Symbol für Bankkonto
+                    ? Icons.attach_money
+                    : Icons.account_balance;
 
                 return DropdownMenuItem(
                   value: account.id,
                   child: Row(
                     children: [
-                      Icon(icon, color: Colors.blue), // Füge das Symbol hinzu
+                      Icon(icon, color: Colors.blue),
                       const SizedBox(width: 8),
-                      Text(account.accountName ?? 'Unbenanntes Konto'), // Kontoname
+                      Text(account.accountName ?? 'Unbenanntes Konto'),
                     ],
                   ),
                 );
@@ -400,11 +395,11 @@ class _AddTransactionPageState extends State<AddTransactionPage>
           const SizedBox(height: 16),
           if (widget.transaction != null)
             ElevatedButton(
-              onPressed: () async { // Muss async sein, weil wir await verwenden
+              onPressed: () async {
                 double balance = await checkBalanceBefore();
                 double budget = await checkBudgetBefore();
-                _deleteTransaction(budget, balance); // Löscht die Transaktion mit korrektem Budget
-                Navigator.of(context).pop(); // Zurück zur vorherigen Seite
+                _deleteTransaction(budget, balance);
+                Navigator.of(context).pop();
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red[300]),
               child: const Text('Löschen',
