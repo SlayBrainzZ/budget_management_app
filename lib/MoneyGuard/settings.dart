@@ -80,7 +80,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 themeProvider.toggleTheme();
               },
             ),
-            const Divider(),
 
             const Divider(),
 
