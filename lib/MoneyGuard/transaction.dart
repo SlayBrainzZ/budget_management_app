@@ -173,12 +173,15 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       print("Fehler: Kein Konto ausgewählt.");
       return 0.0;
     }
+
     BankAccount? account = await _firestoreService.getBankAccount(_userId!, _selectedAccount!);
     if (account == null) {
       print("Fehler: Konto nicht gefunden in Firestore.");
       return 0.0;
     }
-    return account.balance ?? 0.0;
+    double balance = await _firestoreService.calculateBankAccountBalance(_userId!, account);
+    print("account balance vor allem ist ${account.balance}");
+    return balance ?? 0.0;
   }
 
 

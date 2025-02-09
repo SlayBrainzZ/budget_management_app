@@ -987,6 +987,7 @@ class FirestoreService {
       try {
         double totalSpentBefore = budget;
         double totalBalanceBefore = balance;
+        print("totalBalancebefore ist $totalBalanceBefore");
 
         await deleteTransaction(userId, transactionId);
 
@@ -999,6 +1000,7 @@ class FirestoreService {
           return;
         }
         double totalBalanceAfter = await calculateBankAccountBalance(userId, bankA);
+
         print("totalBalanceAfter ist $totalBalanceAfter");
         await _checkAndHandleBalanceNotifications(userId, totalBalanceBefore, totalBalanceAfter, accountId);
         await _checkAndHandleBudgetNotifications(userId, categoryId, totalSpentBefore, totalSpentAfter);
