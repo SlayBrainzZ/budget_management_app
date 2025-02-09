@@ -643,26 +643,26 @@ class FirestoreService {
         print("Fehler: Konto nicht gefunden.");
         return;
       }
-      double totalBalanceBefore = bankA.balance ?? 0.0;
-
+      double totalBalanceBefore = await calculateBankAccountBalance(userId, bankA);
+      print("totalBalanceBefore ist $totalBalanceBefore");
 
 
       await createTransaction2(userId, transaction, categoryId: categoryId, accountId: accountId);
 
 
-      await Future.delayed(Duration(milliseconds: 500));
+      //await Future.delayed(Duration(milliseconds: 500));
 
       double totalSpentAfter = await getCurrentMonthTotalSpent(userId, transaction.categoryId!);
 
       // 6. Berechne den Kontostand nach der Transaktion
       double totalBalanceAfter = await calculateBankAccountBalance(userId, bankA);
-
+      print("totalBalanceAfter ist $totalBalanceAfter");
 
       // 7. Budgetprüfung und Benachrichtigung
       await _checkAndHandleBudgetNotifications(userId, transaction.categoryId!, totalSpentBefore, totalSpentAfter);
 
       // 8. Überprüfung, ob der Kontostand negativ wurde
-      await _checkAndHandleBalanceNotifications(userId, totalBalanceBefore, totalBalanceAfter, transaction.accountId!);
+      await _checkAndHandleBalanceNotifications(userId, totalBalanceBefore, totalBalanceAfter, transaction.accountId!, bankA);
 
 
     } catch (e) {
@@ -911,7 +911,7 @@ class FirestoreService {
       double totalBalanceAfter = await calculateBankAccountBalance(userId, bankA);
 
       // 4. Benachrichtigungen prüfen und ggf. senden
-      await _checkAndHandleBalanceNotifications(userId, totalBalanceBefore, totalBalanceAfter, transaction.accountId!);
+      await _checkAndHandleBalanceNotifications(userId, totalBalanceBefore, totalBalanceAfter, transaction.accountId!, bankA);
 
       await _checkAndHandleBudgetNotifications(userId, categoryId, totalSpentBefore, totalSpentAfter);
 
@@ -963,7 +963,7 @@ class FirestoreService {
       double totalBalanceAfter = await calculateImportBankAccountBalance(userId, bankA);
 
 
-      await _checkAndHandleBalanceNotifications(userId, totalBalanceBefore, totalBalanceAfter, transaction.accountId!);
+      await _checkAndHandleBalanceNotifications(userId, totalBalanceBefore, totalBalanceAfter, transaction.accountId!, bankA);
       await _checkAndHandleBudgetNotifications(userId, categoryId, totalSpentBefore, totalSpentAfter);
 
     } catch (e) {
@@ -1002,7 +1002,7 @@ class FirestoreService {
         double totalBalanceAfter = await calculateBankAccountBalance(userId, bankA);
 
         print("totalBalanceAfter ist $totalBalanceAfter");
-        await _checkAndHandleBalanceNotifications(userId, totalBalanceBefore, totalBalanceAfter, accountId);
+        await _checkAndHandleBalanceNotifications(userId, totalBalanceBefore, totalBalanceAfter, accountId, bankA);
         await _checkAndHandleBudgetNotifications(userId, categoryId, totalSpentBefore, totalSpentAfter);
 
       } catch (e) {
@@ -2169,11 +2169,11 @@ class FirestoreService {
     if (budgetLimit == null || budgetLimit == 0) return;
 
     if (totalSpentBefore > budgetLimit && totalSpentAfter <= budgetLimit) {
-      bool alreadyExists = await doesNotificationExist(userId, categoryId, "budget_overflow");
+      /*bool alreadyExists = await doesNotificationExist(userId, categoryId, "budget_overflow");
 
       if (alreadyExists) {
         await deleteNotification(userId, categoryId, "budget_overflow");
-      }
+      }*/
 
       await createNotification(
         userId,
@@ -2186,14 +2186,14 @@ class FirestoreService {
     else if (totalSpentBefore <= budgetLimit && totalSpentAfter > budgetLimit) {
       bool alreadyExists = await doesNotificationExist(userId, categoryId, "budget_overflow");
 
-      if (!alreadyExists) {
+      //if (!alreadyExists) {
         await createNotification(
           userId,
           "Budgetlimit für ${category!.name} überschritten um ${(totalSpentAfter - budgetLimit).toStringAsFixed(2)}€!",
           "budget_overflow",
           categoryId: categoryId,
         );
-      }
+      //}
     }
 
     else if (totalSpentBefore > budgetLimit && totalSpentAfter > budgetLimit) {
@@ -2207,12 +2207,12 @@ class FirestoreService {
   }
 
   Future<void> _checkAndHandleBalanceNotifications(
-      String userId, double totalBalanceBefore, double totalBalanceAfter, String accountId) async {
+      String userId, double totalBalanceBefore, double totalBalanceAfter, String accountId, BankAccount bankA) async {
 
     if (totalBalanceBefore >= 0 && totalBalanceAfter < 0) {
         await createNotification(
           userId,
-          "Achtung! Kontostand bei ${totalBalanceAfter.toStringAsFixed(2)}€!",
+          "Achtung! Kontostand für '${bankA.accountName}' bei ${totalBalanceAfter.toStringAsFixed(2)}€!",
           "balance_low",
           accountId: accountId,
         );
@@ -2223,7 +2223,7 @@ class FirestoreService {
 
         await createNotification(
           userId,
-          "Warnung! Kontostand weiterhin negativ: ${totalBalanceAfter.toStringAsFixed(2)}€!",
+          "Warnung! Kontostand für '${bankA.accountName}' weiterhin negativ: ${totalBalanceAfter.toStringAsFixed(2)}€!",
           "balance_still_low",
           accountId: accountId,
         );

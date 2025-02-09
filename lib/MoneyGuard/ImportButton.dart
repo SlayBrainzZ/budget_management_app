@@ -93,6 +93,39 @@ class ImportButton extends StatelessWidget {
     return await firestoreService.getUserBankAccounts(user.uid);
   }
 
+  void checkBalance(selectedAccount) async {
+    final firestoreService = FirestoreService();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception('Kein Benutzer angemeldet.');
+    if (selectedAccount == null) {
+      print("Fehler: Kein Konto ausgewählt.");
+    }
+
+    BankAccount? bankAcc = await firestoreService.getBankAccount(user.uid, selectedAccount!);
+    if (bankAcc == null) {
+      print("Fehler: Konto nicht gefunden in Firestore.");
+    }
+    double balance = await firestoreService.calculateImportBankAccountBalance(user.uid, bankAcc!);
+    print("balance lautet $balance");
+
+    if (balance < 0){
+      await firestoreService.createNotification(
+        user.uid,
+        "Achtung! Kontostand für '${bankAcc.accountName}' bei negativ!",
+        "balance_Imported_low",
+        accountId: bankAcc.id,
+      );
+    }
+    await firestoreService.createNotification(
+      user.uid,
+      "Erfolgreicher CSV-Import!",
+      "csv_import",
+      accountId: bankAcc.id,
+    );
+
+  }
+
+
   Widget _buildBankAccountDialog(
       BuildContext context, List<BankAccount> accounts) {
     String? selectedAccount;
@@ -167,6 +200,7 @@ class ImportButton extends StatelessWidget {
 
                       if (importedCount > 0) {
                         onImportCompleted();
+                        checkBalance(selectedAccount);
                         Navigator.pop(context);
                       } else {
                         showDialog(
