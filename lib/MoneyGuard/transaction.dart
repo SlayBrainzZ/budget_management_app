@@ -161,7 +161,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
           _userId!,
           widget.transaction!.categoryId!
       );
-      print("Gesamtausgaben vor Löschung: $totalSpentBefore");
+      //print("Gesamtausgaben vor Löschung: $totalSpentBefore");
     } catch (e) {
       print("Fehler beim Abrufen des Budgets: $e");
     }

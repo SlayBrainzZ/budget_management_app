@@ -984,25 +984,28 @@ class FirestoreService {
 
   Future<void> handleTransactionDeletionAndBudgetCheck(
       String userId, String transactionId, String accountId, String categoryId, double budget, double balance) async {
-    try {
-      double totalSpentBefore = budget;
-      double totalBalanceBefore = balance;
+      try {
+        double totalSpentBefore = budget;
+        double totalBalanceBefore = balance;
 
-      await deleteTransaction(userId, transactionId);
+        await deleteTransaction(userId, transactionId);
 
-      double totalSpentAfter = await getCurrentMonthTotalSpent(userId, categoryId);
-      BankAccount? bankA = await getBankAccount(userId, accountId);
-      if (bankA == null) {
-        print("Fehler: Konto nicht gefunden.");
-        return;
+
+
+        double totalSpentAfter = await getCurrentMonthTotalSpent(userId, categoryId);
+        BankAccount? bankA = await getBankAccount(userId, accountId);
+        if (bankA == null) {
+          print("Fehler: Konto nicht gefunden.");
+          return;
+        }
+        double totalBalanceAfter = await calculateBankAccountBalance(userId, bankA);
+        print("totalBalanceAfter ist $totalBalanceAfter");
+        await _checkAndHandleBalanceNotifications(userId, totalBalanceBefore, totalBalanceAfter, accountId);
+        await _checkAndHandleBudgetNotifications(userId, categoryId, totalSpentBefore, totalSpentAfter);
+
+      } catch (e) {
+        print("Fehler bei der Bearbeitung der Transaktionslöschung: $e");
       }
-      double totalBalanceAfter = await calculateImportBankAccountBalance(userId, bankA);
-      await _checkAndHandleBalanceNotifications(userId, totalBalanceBefore, totalBalanceAfter, accountId);
-      await _checkAndHandleBudgetNotifications(userId, categoryId, totalSpentBefore, totalSpentAfter);
-
-    } catch (e) {
-      print("Fehler bei der Bearbeitung der Transaktionslöschung: $e");
-    }
   }
 
 
@@ -1055,7 +1058,7 @@ class FirestoreService {
       bankAccount.balance = totalBalance;
       bankAccount.lastUpdated = DateTime.now();
 
-      await updateBankAccount(documentId, bankAccount);
+      //await updateBankAccount(documentId, bankAccount);
 
       return totalBalance;
     } catch (e) {
@@ -2211,7 +2214,6 @@ class FirestoreService {
           "balance_low",
           accountId: accountId,
         );
-
     }
 
     else if (totalBalanceBefore < 0 && totalBalanceAfter < 0) {
@@ -2226,14 +2228,14 @@ class FirestoreService {
 
     }
 
-    else if (totalBalanceBefore < 0 && totalBalanceAfter >= 0) {
+    /*else if (totalBalanceBefore < 0 && totalBalanceAfter >= 0) {
       await createNotification(
         userId,
         "Gute Nachrichten! Kontostand wieder positiv: ${totalBalanceAfter.toStringAsFixed(2)}€.",
         "balance_recovered",
         accountId: accountId,
       );
-    }
+    }*/
   }
 
 
