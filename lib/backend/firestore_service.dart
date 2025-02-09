@@ -988,7 +988,6 @@ class FirestoreService {
       double totalSpentBefore = budget;
       double totalBalanceBefore = balance;
 
-      // 1. Transaktion löschen
       await deleteTransaction(userId, transactionId);
 
       double totalSpentAfter = await getCurrentMonthTotalSpent(userId, categoryId);
@@ -998,7 +997,6 @@ class FirestoreService {
         return;
       }
       double totalBalanceAfter = await calculateImportBankAccountBalance(userId, bankA);
-
       await _checkAndHandleBalanceNotifications(userId, totalBalanceBefore, totalBalanceAfter, accountId);
       await _checkAndHandleBudgetNotifications(userId, categoryId, totalSpentBefore, totalSpentAfter);
 
@@ -2207,33 +2205,28 @@ class FirestoreService {
       String userId, double totalBalanceBefore, double totalBalanceAfter, String accountId) async {
 
     if (totalBalanceBefore >= 0 && totalBalanceAfter < 0) {
-      bool alreadyExists = await doesNotificationExist(userId, accountId, "balance_low");
-
-      if (!alreadyExists) {
         await createNotification(
           userId,
           "Achtung! Kontostand bei ${totalBalanceAfter.toStringAsFixed(2)}€!",
           "balance_low",
           accountId: accountId,
         );
-      }
+
     }
 
     else if (totalBalanceBefore < 0 && totalBalanceAfter < 0) {
-      bool alreadyExists = await doesNotificationExist(userId, accountId, "balance_low");
 
-      if (!alreadyExists) {
+
         await createNotification(
           userId,
           "Warnung! Kontostand weiterhin negativ: ${totalBalanceAfter.toStringAsFixed(2)}€!",
           "balance_still_low",
           accountId: accountId,
         );
-      }
+
     }
 
     else if (totalBalanceBefore < 0 && totalBalanceAfter >= 0) {
-      await deleteNotification(userId, accountId, "balance_low");
       await createNotification(
         userId,
         "Gute Nachrichten! Kontostand wieder positiv: ${totalBalanceAfter.toStringAsFixed(2)}€.",
